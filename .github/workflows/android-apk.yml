@@ -48,14 +48,25 @@ jobs:
           PY
       - name: Build debug APK
         run: flutter build apk --debug
+      - name: Sign APK with stable RVAZ test key
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$APKSIGNER" sign \
+            --ks android-signing/rvaz-test.jks \
+            --ks-key-alias rvaztest \
+            --ks-pass pass:rvaz-test-2026 \
+            --key-pass pass:rvaz-test-2026 \
+            --out build/app/outputs/flutter-apk/RVAZ-Android.apk \
+            build/app/outputs/flutter-apk/app-debug.apk
+          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/RVAZ-Android.apk
       - name: Verify APK package
         run: |
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
-          "$AAPT" dump badging build/app/outputs/flutter-apk/app-debug.apk | grep "package: name='nl.regiovoorneaanzee.rvaz_android'"
-          "$AAPT" dump badging build/app/outputs/flutter-apk/app-debug.apk | grep "application-label:'Regio Voorne aan Zee'"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/RVAZ-Android.apk | grep "package: name='nl.regiovoorneaanzee.rvaz_android'"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/RVAZ-Android.apk | grep "application-label:'Regio Voorne aan Zee'"
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Android-test-APK
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: RVAZ-Android-stable-test-APK
+          path: build/app/outputs/flutter-apk/RVAZ-Android.apk
           if-no-files-found: error
