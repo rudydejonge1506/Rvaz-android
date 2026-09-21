@@ -86,21 +86,7 @@ class _ShellState extends State<Shell> {
           backgroundColor: Colors.white,
           foregroundColor: navy,
           title: const Row(children: [
-            LogoMark(),
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Regio Voorne aan Zee',
-                      style:
-                          TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                  Text('Actueel · Betrokken · Dichtbij',
-                      style:
-                          TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
-                ],
-              ),
-            ),
+            Expanded(child: LogoMark()),
           ]),
           actions: [
             IconButton(
@@ -133,29 +119,7 @@ class _ShellState extends State<Shell> {
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key});
   @override
-  Widget build(BuildContext context) => SizedBox(
-        width: 42,
-        height: 42,
-        child: Stack(children: [
-          Positioned(
-              left: 14,
-              top: 0,
-              child: Container(width: 24, height: 30, color: navy)),
-          Positioned(
-              left: 0,
-              top: 12,
-              child: Container(width: 26, height: 24, color: green)),
-          Positioned(
-              left: 5,
-              bottom: 0,
-              child: Container(width: 37, height: 14, color: cyan)),
-          const Positioned(
-              left: 20,
-              top: 19,
-              child:
-                  Icon(Icons.water_drop, color: Color(0xFFFFC400), size: 16)),
-        ]),
-      );
+  Widget build(BuildContext context) => Image.asset('assets/rvaz-logo.png', width: 150, fit: BoxFit.contain);
 }
 
 class AppAd {
