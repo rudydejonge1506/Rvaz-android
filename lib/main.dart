@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -155,7 +156,7 @@ class _ShellState extends State<Shell> {
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key});
   @override
-  Widget build(BuildContext context) => Image.asset('assets/rvaz-logo.png', height: 34, fit: BoxFit.contain, alignment: Alignment.centerLeft);
+  Widget build(BuildContext context) => SizedBox(height: 41, child: Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft, errorBuilder: (_,__,___)=>const Text('REGIO VOORNE AAN ZEE',style:TextStyle(color:navy,fontWeight:FontWeight.w900))));
 }
 
 class AppAd {
@@ -538,10 +539,10 @@ class _AccountPageState extends State<AccountPage> {
       TextField(controller:pass,obscureText:true,decoration:const InputDecoration(labelText:'Wachtwoord')),
     ]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Inloggen'))]));
     if(ok!=true)return;
-    final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/login'),headers:{'Content-Type':'application/json'},body:jsonEncode({'login':login.text.trim(),'password':pass.text}));
+    final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/login'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode({'login':login.text.trim(),'password_b64':base64Encode(utf8.encode(pass.text))}));
     if(!context.mounted)return;
-    if(r.statusCode==200){final d=jsonDecode(r.body);setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
-    else {ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Inloggen mislukt. Controleer je gegevens.')));}
+    if(r.statusCode==200){final d=jsonDecode(r.body); final token=d['token']?.toString()??''; if(token.isNotEmpty) await const FlutterSecureStorage().write(key:'rvaz_token',value:token); setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
+    else { String msg='Inloggen mislukt. Controleer je gegevens.'; try { final e=jsonDecode(r.body); msg=e['message']?.toString()??msg; } catch(_){} ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(msg)));}
   }
   Future<void> topic(String name,bool on) async { final m=FirebaseMessaging.instance; if(on){await m.subscribeToTopic(name);}else{await m.unsubscribeFromTopic(name);} }
   bool breaking = true, emergency = true, traffic = true, events = false, weekblad = true;
