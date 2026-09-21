@@ -1,9 +1,21 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-void main() => runApp(const RvazApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  final messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission(alert: true, badge: true, sound: true);
+  await messaging.subscribeToTopic('rvaz_all');
+  await messaging.subscribeToTopic('breaking');
+  await messaging.subscribeToTopic('traffic');
+  await messaging.subscribeToTopic('weekblad');
+  runApp(const RvazApp());
+}
 
 const site = 'https://regiovoorneaanzee.nl';
 const navy = Color(0xFF203253);
