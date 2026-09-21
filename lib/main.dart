@@ -459,7 +459,7 @@ class _AccountPageState extends State<AccountPage> {
     ]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Inloggen'))]));
     if(ok!=true)return;
     final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/login'),headers:{'Content-Type':'application/json'},body:jsonEncode({'login':login.text.trim(),'password':pass.text}));
-    if(!mounted)return;
+    if(!context.mounted)return;
     if(r.statusCode==200){final d=jsonDecode(r.body);setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
     else {ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Inloggen mislukt. Controleer je gegevens.')));}
   }
