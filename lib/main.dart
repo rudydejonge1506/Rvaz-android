@@ -38,7 +38,7 @@ Future<void> main() async {
   messaging.onTokenRefresh.listen((_) => registerDeviceToken());
   FirebaseMessaging.onMessage.listen((m) {
     final ctx = navigatorKey.currentContext;
-    if (ctx != null) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(m.notification?.title ?? 'Nieuwe RVAZ-melding')));
+    if (ctx != null && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(m.notification?.title ?? 'Nieuwe RVAZ-melding')));
   });
   runApp(const RvazApp());
 }
