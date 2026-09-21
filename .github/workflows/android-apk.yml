@@ -46,27 +46,30 @@ jobs:
           m = m.replace('android:label="rvaz_android"', 'android:label="Regio Voorne aan Zee"')
           manifest.write_text(m)
           PY
-      - name: Build debug APK
-        run: flutter build apk --debug
-      - name: Sign APK with stable RVAZ test key
+      - name: Build smaller release APKs per architecture
+        run: flutter build apk --release --split-per-abi
+      - name: Sign APKs with stable RVAZ test key
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
-          "$APKSIGNER" sign \
-            --ks android-signing/rvaz-test.jks \
-            --ks-key-alias rvaztest \
-            --ks-pass pass:rvaz-test-2026 \
-            --key-pass pass:rvaz-test-2026 \
-            --out build/app/outputs/flutter-apk/RVAZ-Android.apk \
-            build/app/outputs/flutter-apk/app-debug.apk
-          "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/RVAZ-Android.apk
+          for APK in build/app/outputs/flutter-apk/app-*-release.apk; do
+            "$APKSIGNER" sign \
+              --ks android-signing/rvaz-test.jks \
+              --ks-key-alias rvaztest \
+              --ks-pass pass:rvaz-test-2026 \
+              --key-pass pass:rvaz-test-2026 \
+              "$APK"
+            "$APKSIGNER" verify --verbose --print-certs "$APK"
+          done
       - name: Verify APK package
         run: |
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
-          "$AAPT" dump badging build/app/outputs/flutter-apk/RVAZ-Android.apk | grep "package: name='nl.regiovoorneaanzee.rvaz_android'"
-          "$AAPT" dump badging build/app/outputs/flutter-apk/RVAZ-Android.apk | grep "application-label:'Regio Voorne aan Zee'"
+          for APK in build/app/outputs/flutter-apk/app-*-release.apk; do
+            "$AAPT" dump badging "$APK" | grep "package: name='nl.regiovoorneaanzee.rvaz_android'"
+            "$AAPT" dump badging "$APK" | grep "application-label:'Regio Voorne aan Zee'"
+          done
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Android-stable-test-APK
-          path: build/app/outputs/flutter-apk/RVAZ-Android.apk
+          name: RVAZ-Android-small-release-APKs
+          path: build/app/outputs/flutter-apk/app-*-release.apk
           if-no-files-found: error
