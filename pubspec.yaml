@@ -9,7 +9,7 @@ dependencies:
     sdk: flutter
   http: ^1.2.2
   url_launcher: ^6.3.0
-  flutter_html: ^3.0.0
+  flutter_html: ^3.0.0-beta.2
   flutter_secure_storage: ^9.2.4
   firebase_core: ^4.1.0
   firebase_messaging: ^16.0.1
