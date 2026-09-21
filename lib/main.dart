@@ -35,10 +35,10 @@ class _ShellState extends State<Shell> {
   int index = 0;
   final pages = const [
     NewsPage(),
-    InfoPage('Nieuws', 'Al het nieuws uit Voorne aan Zee.'),
-    InfoPage('Weekblad', 'Het digitale Weekblad Voorne aan Zee.'),
-    InfoPage('Agenda', 'Evenementen en activiteiten in de regio.'),
-    InfoPage('Account', 'Mijn RVAZ: favorieten, meldingen en bijdragen.'),
+    NewsPage(),
+    WeekbladPage(),
+    AgendaPage(),
+    AccountPage(),
   ];
 
   @override
@@ -306,30 +306,115 @@ class _NewsPageState extends State<NewsPage> {
       );
 }
 
-class InfoPage extends StatelessWidget {
-  final String title;
-  final String text;
-  const InfoPage(this.title, this.text, {super.key});
 
+class AgendaPage extends StatefulWidget {
+  const AgendaPage({super.key});
+  @override
+  State<AgendaPage> createState() => _AgendaPageState();
+}
+class _AgendaPageState extends State<AgendaPage> {
+  late Future<List<dynamic>> future;
+  @override
+  void initState() { super.initState(); future = load(); }
+  Future<List<dynamic>> load() async {
+    for (final endpoint in ['evenementen', 'events']) {
+      final r = await http.get(Uri.parse('$site/wp-json/wp/v2/$endpoint?per_page=20&_embed=1'));
+      if (r.statusCode == 200) return jsonDecode(r.body);
+    }
+    return [];
+  }
+  String clean(String s) => s.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;', '&');
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
+    future: future,
+    builder: (context, s) {
+      if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+      final items = s.data ?? [];
+      return ListView(padding: const EdgeInsets.all(18), children: [
+        const Text('Agenda', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
+        const SizedBox(height: 4),
+        const Text('Evenementen en activiteiten op Voorne.'),
+        const SizedBox(height: 18),
+        if (items.isEmpty) const Card(child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('De agenda wordt rechtstreeks met de RVAZ-agenda gekoppeld. Er zijn via de openbare WordPress-API nu nog geen evenementen beschikbaar.', style: TextStyle(fontSize: 16, height: 1.45)),
+        )),
+        ...items.map((p) => Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(14),
+            leading: const CircleAvatar(backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.event, color: navy)),
+            title: Text(clean(p['title']?['rendered']?.toString() ?? ''), style: const TextStyle(fontWeight: FontWeight.w800, color: navy)),
+            subtitle: Text(clean(p['excerpt']?['rendered']?.toString() ?? ''), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ),
+        )),
+      ]);
+    },
+  );
+}
+
+class WeekbladPage extends StatelessWidget {
+  const WeekbladPage({super.key});
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 28, fontWeight: FontWeight.w900, color: navy)),
-          const SizedBox(height: 12),
-          Card(
-              child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(text,
-                      style: const TextStyle(fontSize: 17, height: 1.5)))),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-              onPressed: () =>
-                  launchUrl(Uri.parse(site), mode: LaunchMode.externalApplication),
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Open website')),
-        ],
-      );
+    padding: const EdgeInsets.all(18),
+    children: [
+      const Text('Weekblad', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
+      const SizedBox(height: 4),
+      const Text('Weekblad Voorne aan Zee'),
+      const SizedBox(height: 18),
+      Card(
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.menu_book_rounded, size: 54, color: cyan),
+            const SizedBox(height: 14),
+            const Text('Digitale krant in de app', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: navy)),
+            const SizedBox(height: 8),
+            const Text('De reader blijft binnen RVAZ: editie kiezen, bladeren, zoomen en volledig scherm. De koppeling gebruikt straks dezelfde edities als de Weekblad-plugin.', style: TextStyle(fontSize: 16, height: 1.45)),
+          ]),
+        ),
+      ),
+    ],
+  );
+}
+
+class AccountPage extends StatefulWidget {
+  const AccountPage({super.key});
+  @override
+  State<AccountPage> createState() => _AccountPageState();
+}
+class _AccountPageState extends State<AccountPage> {
+  bool breaking = true, emergency = true, traffic = true, events = false, weekblad = true;
+  Widget sw(String title, String subtitle, bool value, ValueChanged<bool> change) => SwitchListTile(
+    value: value, onChanged: change, title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+    subtitle: Text(subtitle), activeThumbColor: cyan);
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(18), children: [
+    const Text('Mijn RVAZ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
+    const SizedBox(height: 14),
+    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Row(children: [CircleAvatar(radius: 25, backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.person, color: navy)), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('RVAZ-account', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: navy)), Text('Hetzelfde account als op de website')]))]),
+      const SizedBox(height: 16),
+      FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.login), label: const Text('Inloggen / account koppelen')),
+    ]))),
+    const SizedBox(height: 14),
+    const Text('Pushmeldingen', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: navy)),
+    Card(child: Column(children: [
+      sw('Breaking nieuws', 'Belangrijk regionaal nieuws', breaking, (v)=>setState(()=>breaking=v)),
+      sw('112', 'Grote incidenten en hulpdiensten', emergency, (v)=>setState(()=>emergency=v)),
+      sw('Verkeer', 'Afsluitingen en belangrijke verkeersmeldingen', traffic, (v)=>setState(()=>traffic=v)),
+      sw('Agenda', 'Uitgelichte activiteiten', events, (v)=>setState(()=>events=v)),
+      sw('Nieuw Weekblad', 'Melding bij een nieuwe editie', weekblad, (v)=>setState(()=>weekblad=v)),
+    ])),
+    const SizedBox(height: 14),
+    Card(child: Column(children: const [
+      ListTile(leading: Icon(Icons.bookmark_outline), title: Text('Opgeslagen artikelen'), trailing: Icon(Icons.chevron_right)),
+      Divider(height: 1),
+      ListTile(leading: Icon(Icons.campaign_outlined), title: Text('Tip de redactie'), trailing: Icon(Icons.chevron_right)),
+      Divider(height: 1),
+      ListTile(leading: Icon(Icons.article_outlined), title: Text('Mijn bijdragen'), trailing: Icon(Icons.chevron_right)),
+    ])),
+  ]);
 }
