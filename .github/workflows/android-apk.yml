@@ -37,8 +37,22 @@ jobs:
         run: flutter pub get
       - name: Analyze
         run: flutter analyze
+      - name: Configure RVAZ app identity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          m = manifest.read_text()
+          m = m.replace('android:label="rvaz_android"', 'android:label="Regio Voorne aan Zee"')
+          manifest.write_text(m)
+          PY
       - name: Build debug APK
         run: flutter build apk --debug
+      - name: Verify APK package
+        run: |
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
+          "$AAPT" dump badging build/app/outputs/flutter-apk/app-debug.apk | grep "package: name='nl.regiovoorneaanzee.rvaz_android'"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/app-debug.apk | grep "application-label:'Regio Voorne aan Zee'"
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
