@@ -10,9 +10,11 @@ Future<void> main() async {
   await Firebase.initializeApp();
   final messaging = FirebaseMessaging.instance;
   await messaging.requestPermission(alert: true, badge: true, sound: true);
-  await messaging.subscribeToTopic('rvaz_all');
+  await messaging.subscribeToTopic('all');
   await messaging.subscribeToTopic('breaking');
+  await messaging.subscribeToTopic('112');
   await messaging.subscribeToTopic('traffic');
+  await messaging.subscribeToTopic('agenda');
   await messaging.subscribeToTopic('weekblad');
   runApp(const RvazApp());
 }
@@ -388,10 +390,8 @@ class _AgendaPageState extends State<AgendaPage> {
   @override
   void initState() { super.initState(); future = load(); }
   Future<List<dynamic>> load() async {
-    for (final endpoint in ['evenementen', 'events']) {
-      final r = await http.get(Uri.parse('$site/wp-json/wp/v2/$endpoint?per_page=20&_embed=1'));
-      if (r.statusCode == 200) return jsonDecode(r.body);
-    }
+    final r = await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda'));
+    if (r.statusCode == 200) return jsonDecode(r.body);
     return [];
   }
   String clean(String s) => s.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;', '&');
@@ -424,31 +424,24 @@ class _AgendaPageState extends State<AgendaPage> {
   );
 }
 
-class WeekbladPage extends StatelessWidget {
+class WeekbladPage extends StatefulWidget {
   const WeekbladPage({super.key});
-  @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(18),
-    children: [
-      const Text('Weekblad', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
-      const SizedBox(height: 4),
-      const Text('Weekblad Voorne aan Zee'),
-      const SizedBox(height: 18),
-      Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.menu_book_rounded, size: 54, color: cyan),
-            const SizedBox(height: 14),
-            const Text('Digitale krant in de app', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: navy)),
-            const SizedBox(height: 8),
-            const Text('De reader blijft binnen RVAZ: editie kiezen, bladeren, zoomen en volledig scherm. De koppeling gebruikt straks dezelfde edities als de Weekblad-plugin.', style: TextStyle(fontSize: 16, height: 1.45)),
-          ]),
-        ),
-      ),
-    ],
-  );
+  @override State<WeekbladPage> createState()=>_WeekbladPageState();
+}
+class _WeekbladPageState extends State<WeekbladPage> {
+  late Future<List<dynamic>> future;
+  @override void initState(){super.initState();future=load();}
+  Future<List<dynamic>> load() async { final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/weekblad')); if(r.statusCode==200)return jsonDecode(r.body); return []; }
+  @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
+    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
+    final issues=s.data??[];
+    return ListView(padding:const EdgeInsets.all(18),children:[
+      const Text('Weekblad',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
+      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),
+      if(issues.isEmpty) const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Er zijn nog geen gepubliceerde edities via de app-API beschikbaar.'))),
+      ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
+    ]);
+  });
 }
 
 class AccountPage extends StatefulWidget {
@@ -457,6 +450,20 @@ class AccountPage extends StatefulWidget {
   State<AccountPage> createState() => _AccountPageState();
 }
 class _AccountPageState extends State<AccountPage> {
+  String? userName;
+  Future<void> _login(BuildContext context) async {
+    final login=TextEditingController(), pass=TextEditingController();
+    final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:const Text('Inloggen bij RVAZ'),content:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:login,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mail of gebruikersnaam')),
+      TextField(controller:pass,obscureText:true,decoration:const InputDecoration(labelText:'Wachtwoord')),
+    ]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Inloggen'))]));
+    if(ok!=true)return;
+    final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/login'),headers:{'Content-Type':'application/json'},body:jsonEncode({'login':login.text.trim(),'password':pass.text}));
+    if(!mounted)return;
+    if(r.statusCode==200){final d=jsonDecode(r.body);setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
+    else {ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Inloggen mislukt. Controleer je gegevens.')));}
+  }
+  Future<void> topic(String name,bool on) async { final m=FirebaseMessaging.instance; if(on){await m.subscribeToTopic(name);}else{await m.unsubscribeFromTopic(name);} }
   bool breaking = true, emergency = true, traffic = true, events = false, weekblad = true;
   Widget sw(String title, String subtitle, bool value, ValueChanged<bool> change) => SwitchListTile(
     value: value, onChanged: change, title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -468,16 +475,16 @@ class _AccountPageState extends State<AccountPage> {
     Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Row(children: [CircleAvatar(radius: 25, backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.person, color: navy)), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('RVAZ-account', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: navy)), Text('Hetzelfde account als op de website')]))]),
       const SizedBox(height: 16),
-      FilledButton.icon(onPressed: () {}, icon: const Icon(Icons.login), label: const Text('Inloggen / account koppelen')),
+      FilledButton.icon(onPressed: () => _login(context), icon: const Icon(Icons.login), label: const Text('Inloggen / account koppelen')),
     ]))),
     const SizedBox(height: 14),
     const Text('Pushmeldingen', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: navy)),
     Card(child: Column(children: [
-      sw('Breaking nieuws', 'Belangrijk regionaal nieuws', breaking, (v)=>setState(()=>breaking=v)),
-      sw('112', 'Grote incidenten en hulpdiensten', emergency, (v)=>setState(()=>emergency=v)),
-      sw('Verkeer', 'Afsluitingen en belangrijke verkeersmeldingen', traffic, (v)=>setState(()=>traffic=v)),
-      sw('Agenda', 'Uitgelichte activiteiten', events, (v)=>setState(()=>events=v)),
-      sw('Nieuw Weekblad', 'Melding bij een nieuwe editie', weekblad, (v)=>setState(()=>weekblad=v)),
+      sw('Breaking nieuws', 'Belangrijk regionaal nieuws', breaking, (v){setState(()=>breaking=v);topic('breaking',v);}),
+      sw('112', 'Grote incidenten en hulpdiensten', emergency, (v){setState(()=>emergency=v);topic('112',v);}),
+      sw('Verkeer', 'Afsluitingen en belangrijke verkeersmeldingen', traffic, (v){setState(()=>traffic=v);topic('traffic',v);}),
+      sw('Agenda', 'Uitgelichte activiteiten', events, (v){setState(()=>events=v);topic('agenda',v);}),
+      sw('Nieuw Weekblad', 'Melding bij een nieuwe editie', weekblad, (v){setState(()=>weekblad=v);topic('weekblad',v);}),
     ])),
     const SizedBox(height: 14),
     Card(child: Column(children: const [
