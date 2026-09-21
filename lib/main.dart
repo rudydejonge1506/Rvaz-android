@@ -21,6 +21,36 @@ Future<void> registerDeviceToken() async {
   } catch (_) {}
 }
 
+
+Future<void> openPushMessage(RemoteMessage message) async {
+  final data = message.data;
+  final rawId = data['post_id'] ?? data['postId'] ?? data['id'];
+  final postId = int.tryParse('${rawId ?? ''}');
+  final link = data['url']?.toString() ?? data['link']?.toString() ?? '';
+  dynamic post;
+  try {
+    if (postId != null && postId > 0) {
+      final r = await http.get(Uri.parse('$site/wp-json/wp/v2/posts/$postId?_embed=1'));
+      if (r.statusCode == 200) post = jsonDecode(r.body);
+    } else if (link.isNotEmpty) {
+      final uri = Uri.tryParse(link);
+      final slug = uri?.pathSegments.where((x) => x.isNotEmpty).lastOrNull;
+      if (slug != null) {
+        final r = await http.get(Uri.parse('$site/wp-json/wp/v2/posts?slug=${Uri.encodeQueryComponent(slug)}&_embed=1'));
+        if (r.statusCode == 200) {
+          final list = jsonDecode(r.body);
+          if (list is List && list.isNotEmpty) post = list.first;
+        }
+      }
+    }
+  } catch (_) {}
+  if (post != null) {
+    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ArticlePage(post: post)));
+  } else if (link.isNotEmpty) {
+    launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -36,6 +66,11 @@ Future<void> main() async {
   await messaging.subscribeToTopic('weekblad');
   await registerDeviceToken();
   messaging.onTokenRefresh.listen((_) => registerDeviceToken());
+  FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
+  final initialMessage = await messaging.getInitialMessage();
+  if (initialMessage != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
+  }
   FirebaseMessaging.onMessage.listen((m) {
     final ctx = navigatorKey.currentContext;
     if (ctx != null && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(m.notification?.title ?? 'Nieuwe RVAZ-melding')));
