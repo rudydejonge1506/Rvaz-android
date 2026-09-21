@@ -16,6 +16,8 @@ jobs:
           cache: true
       - name: Generate Android project
         run: flutter create --platforms=android --org nl.regiovoorneaanzee --project-name rvaz_android .
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
       - name: Get packages
         run: flutter pub get
       - name: Analyze
