@@ -119,6 +119,75 @@ class LogoMark extends StatelessWidget {
       );
 }
 
+String postImage(dynamic p) {
+  try {
+    final media = p['_embedded']?['wp:featuredmedia'];
+    if (media is List && media.isNotEmpty) {
+      return media.first['source_url']?.toString() ?? '';
+    }
+  } catch (_) {}
+  return '';
+}
+
+class ArticlePage extends StatelessWidget {
+  final dynamic post;
+  const ArticlePage({super.key, required this.post});
+
+  String clean(String s) => s
+      .replaceAll(RegExp(r'<[^>]*>'), '')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&#8217;', "'")
+      .replaceAll('&#8211;', '–');
+
+  @override
+  Widget build(BuildContext context) {
+    final image = postImage(post);
+    final title = clean(post['title']?['rendered']?.toString() ?? '');
+    final body = clean(post['content']?['rendered']?.toString() ?? '');
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: navy,
+        title: const Text('Regio Voorne aan Zee',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+      ),
+      body: ListView(
+        children: [
+          if (image.isNotEmpty)
+            Image.network(image, height: 240, width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('NIEUWS',
+                    style: TextStyle(color: cyan, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                Text(title,
+                    style: const TextStyle(
+                        color: navy, fontSize: 29, height: 1.08,
+                        fontWeight: FontWeight.w900)),
+                const SizedBox(height: 18),
+                Text(body, style: const TextStyle(fontSize: 17, height: 1.55)),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () => launchUrl(Uri.parse(post['link']),
+                      mode: LaunchMode.externalApplication),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Bekijk origineel op de website'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
   @override
@@ -192,9 +261,15 @@ class _NewsPageState extends State<NewsPage> {
                     margin: const EdgeInsets.only(bottom: 12),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () => launchUrl(Uri.parse(p['link']),
-                          mode: LaunchMode.externalApplication),
-                      child: Padding(
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ArticlePage(post: p))),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (postImage(p).isNotEmpty)
+                            Image.network(postImage(p), height: 190, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                          Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,6 +293,8 @@ class _NewsPageState extends State<NewsPage> {
                                 style: const TextStyle(height: 1.4)),
                           ],
                         ),
+                      ),
+                        ],
                       ),
                     ),
                   ),
