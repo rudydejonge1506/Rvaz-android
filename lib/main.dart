@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_html/flutter_html.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -244,7 +245,7 @@ class ArticlePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = postImage(post);
     final title = clean(post['title']?['rendered']?.toString() ?? '');
-    final body = clean(post['content']?['rendered']?.toString() ?? '');
+    final bodyHtml = post['content']?['rendered']?.toString() ?? '';
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -271,7 +272,7 @@ class ArticlePage extends StatelessWidget {
                         color: navy, fontSize: 29, height: 1.08,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
-                Text(body.replaceAll(RegExp(r'\n{3,}'), '\n\n').replaceAll(RegExp(r'\n\s*\n'), '\n'), style: const TextStyle(fontSize: 17, height: 1.32)),
+                Html(data: bodyHtml, style: {'body': Style(fontSize: FontSize(17), lineHeight: const LineHeight(1.45), margin: Margins.zero), 'p': Style(margin: Margins.only(bottom: 14)), 'h2': Style(color: navy, fontWeight: FontWeight.w800), 'h3': Style(color: navy, fontWeight: FontWeight.w800)}),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () => launchUrl(Uri.parse(post['link']),
@@ -306,7 +307,7 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<List<dynamic>> load() async {
     final r =
-        await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=12&_embed=1'));
+        await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=30&_embed=1'));
     if (r.statusCode != 200) {
       throw Exception('Nieuws kon niet worden geladen');
     }
@@ -357,7 +358,21 @@ class _NewsPageState extends State<NewsPage> {
                     'Brielle',
                     'Rockanje',
                     'Oostvoorne'
-                  ].map((x) => Chip(label: Text(x))).toList(),
+                  ].map((x) => ActionChip(
+                      label: Text(x),
+                      onPressed: () {
+                        final filtered = x == 'Voorne aan Zee'
+                            ? load()
+                            : http.get(Uri.parse('$site/wp-json/wp/v2/search?search=${Uri.encodeQueryComponent(x)}&subtype=post&per_page=30')).then((r) async {
+                                if (r.statusCode != 200) return <dynamic>[];
+                                final ids = (jsonDecode(r.body) as List).map((e) => e['id']).whereType<int>().toList();
+                                if (ids.isEmpty) return <dynamic>[];
+                                final pr = await http.get(Uri.parse('$site/wp-json/wp/v2/posts?include=${ids.join(',')}&per_page=30&_embed=1'));
+                                return pr.statusCode == 200 ? List<dynamic>.from(jsonDecode(pr.body)) : <dynamic>[];
+                              });
+                        setState(() => future = filtered);
+                      },
+                    )).toList(),
                 ),
                 const SizedBox(height: 12),
                 ...posts.asMap().entries.expand((entry) {
@@ -442,7 +457,19 @@ class _AgendaPageState extends State<AgendaPage> {
     future: future,
     builder: (context, s) {
       if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-      final items = s.data ?? [];
+      final allItems = s.data ?? [];
+      DateTime? eventDate(dynamic p) {
+        for (final k in ['start_date','date']) {
+          final raw = p[k]?.toString() ?? '';
+          final d = DateTime.tryParse(raw);
+          if (d != null) return d;
+        }
+        return null;
+      }
+      final today = DateTime.now();
+      final startToday = DateTime(today.year, today.month, today.day);
+      final items = allItems.where((p) { final d = eventDate(p); return d == null || !d.isBefore(startToday); }).toList()
+        ..sort((a,b) { final da=eventDate(a), db=eventDate(b); if(da==null)return 1; if(db==null)return -1; return da.compareTo(db); });
       String titleOf(dynamic p) {
         final t=p['title'];
         return clean(t is Map ? (t['rendered']?.toString() ?? '') : (t?.toString() ?? ''));
