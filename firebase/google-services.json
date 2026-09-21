@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "580587294652",
+    "project_id": "rvaz-98fd7",
+    "storage_bucket": "rvaz-98fd7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:580587294652:android:d227dc36301cc3c9d9a5b9",
+        "android_client_info": {
+          "package_name": "nl.regiovoorneaanzee.rvaz_android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1KNkmh_eiGuKIBqJidOGkajg1H5hVTag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
