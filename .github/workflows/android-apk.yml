@@ -16,6 +16,21 @@ jobs:
           cache: true
       - name: Generate Android project
         run: flutter create --platforms=android --org nl.regiovoorneaanzee --project-name rvaz_android .
+      - name: Configure Firebase Android
+        run: |
+          cp firebase/google-services.json android/app/google-services.json
+          python3 - <<'PY'
+          from pathlib import Path
+          settings = Path('android/settings.gradle.kts')
+          s = settings.read_text()
+          needle = 'plugins {'
+          s = s.replace(needle, needle + '\n    id("com.google.gms.google-services") version "4.4.4" apply false', 1)
+          settings.write_text(s)
+          app = Path('android/app/build.gradle.kts')
+          a = app.read_text()
+          a = a.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services")', 1)
+          app.write_text(a)
+          PY
       - name: Remove generated sample test
         run: rm -f test/widget_test.dart
       - name: Get packages
