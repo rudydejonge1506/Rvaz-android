@@ -119,7 +119,7 @@ class _ShellState extends State<Shell> {
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key});
   @override
-  Widget build(BuildContext context) => Image.asset('assets/rvaz-logo.png', width: 150, fit: BoxFit.contain);
+  Widget build(BuildContext context) => Image.asset('assets/rvaz-logo.png', height: 34, fit: BoxFit.contain, alignment: Alignment.centerLeft);
 }
 
 class AppAd {
@@ -226,7 +226,7 @@ class ArticlePage extends StatelessWidget {
                         color: navy, fontSize: 29, height: 1.08,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
-                Text(body, style: const TextStyle(fontSize: 17, height: 1.55)),
+                Text(body.replaceAll(RegExp(r'\n{3,}'), '\n\n').replaceAll(RegExp(r'\n\s*\n'), '\n'), style: const TextStyle(fontSize: 17, height: 1.32)),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () => launchUrl(Uri.parse(post['link']),
@@ -390,6 +390,17 @@ class _AgendaPageState extends State<AgendaPage> {
     builder: (context, s) {
       if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
       final items = s.data ?? [];
+      String titleOf(dynamic p) {
+        final t=p['title'];
+        return clean(t is Map ? (t['rendered']?.toString() ?? '') : (t?.toString() ?? ''));
+      }
+      String subOf(dynamic p) {
+        final parts=<String>[];
+        for(final k in ['date','start_date','start_time','location']) { final v=p[k]?.toString()??''; if(v.isNotEmpty) parts.add(v); }
+        if(parts.isNotEmpty) return parts.join(' · ');
+        final e=p['excerpt'];
+        return clean(e is Map ? (e['rendered']?.toString() ?? '') : (e?.toString() ?? ''));
+      }
       return ListView(padding: const EdgeInsets.all(18), children: [
         const Text('Agenda', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
         const SizedBox(height: 4),
@@ -404,8 +415,8 @@ class _AgendaPageState extends State<AgendaPage> {
           child: ListTile(
             contentPadding: const EdgeInsets.all(14),
             leading: const CircleAvatar(backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.event, color: navy)),
-            title: Text(clean(p['title']?['rendered']?.toString() ?? ''), style: const TextStyle(fontWeight: FontWeight.w800, color: navy)),
-            subtitle: Text(clean(p['excerpt']?['rendered']?.toString() ?? ''), maxLines: 2, overflow: TextOverflow.ellipsis),
+            title: Text(titleOf(p), style: const TextStyle(fontWeight: FontWeight.w800, color: navy)),
+            subtitle: Text(subOf(p), maxLines: 3, overflow: TextOverflow.ellipsis),
           ),
         )),
       ]);
