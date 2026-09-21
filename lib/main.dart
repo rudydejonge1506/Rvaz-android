@@ -541,7 +541,7 @@ class _AccountPageState extends State<AccountPage> {
     if(ok!=true)return;
     final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/login'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode({'login':login.text.trim(),'password_b64':base64Encode(utf8.encode(pass.text))}));
     if(!context.mounted)return;
-    if(r.statusCode==200){final d=jsonDecode(r.body); final token=d['token']?.toString()??''; if(token.isNotEmpty) await const FlutterSecureStorage().write(key:'rvaz_token',value:token); setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
+    if(r.statusCode==200){final d=jsonDecode(r.body); final token=d['token']?.toString()??''; if(token.isNotEmpty) await const FlutterSecureStorage().write(key:'rvaz_token',value:token); if(!context.mounted)return; setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
     else { String msg='Inloggen mislukt. Controleer je gegevens.'; try { final e=jsonDecode(r.body); msg=e['message']?.toString()??msg; } catch(_){} ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(msg)));}
   }
   Future<void> topic(String name,bool on) async { final m=FirebaseMessaging.instance; if(on){await m.subscribeToTopic(name);}else{await m.unsubscribeFromTopic(name);} }
