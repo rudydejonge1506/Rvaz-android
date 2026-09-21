@@ -131,6 +131,58 @@ class LogoMark extends StatelessWidget {
       );
 }
 
+class AppAd {
+  final int id;
+  final String title, image, url, label;
+  const AppAd(this.id, this.title, this.image, this.url, this.label);
+  factory AppAd.fromJson(dynamic j) => AppAd(
+    int.tryParse('${j['id'] ?? 0}') ?? 0,
+    '${j['title'] ?? j['name'] ?? 'Advertentie'}',
+    '${j['image'] ?? j['image_url'] ?? ''}',
+    '${j['url'] ?? j['link'] ?? ''}',
+    '${j['label'] ?? 'Advertentie'}',
+  );
+}
+
+Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
+  final uris = [
+    Uri.parse('$site/wp-json/rvaz/v1/app-ads?placement=$placement'),
+    Uri.parse('$site/wp-json/rvaz-app/v1/ads?placement=$placement'),
+  ];
+  for (final uri in uris) {
+    try {
+      final r = await http.get(uri);
+      if (r.statusCode == 200) {
+        final decoded = jsonDecode(r.body);
+        final list = decoded is List ? decoded : (decoded['ads'] is List ? decoded['ads'] : []);
+        return list.map<AppAd>((x) => AppAd.fromJson(x)).toList();
+      }
+    } catch (_) {}
+  }
+  return [];
+}
+
+class AppAdCard extends StatelessWidget {
+  final AppAd ad;
+  const AppAdCard({super.key, required this.ad});
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: ad.url.isEmpty ? null : () => launchUrl(Uri.parse(ad.url), mode: LaunchMode.externalApplication),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (ad.image.isNotEmpty) Image.network(ad.image, height: 150, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+        Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(ad.label.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black54)),
+          const SizedBox(height: 4),
+          Text(ad.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: navy)),
+        ])),
+      ]),
+    ),
+  );
+}
+
 String postImage(dynamic p) {
   try {
     final media = p['_embedded']?['wp:featuredmedia'];
@@ -208,10 +260,12 @@ class NewsPage extends StatefulWidget {
 
 class _NewsPageState extends State<NewsPage> {
   late Future<List<dynamic>> future;
+  late Future<List<AppAd>> adsFuture;
   @override
   void initState() {
     super.initState();
     future = load();
+    adsFuture = loadAppAds();
   }
 
   Future<List<dynamic>> load() async {
@@ -245,6 +299,8 @@ class _NewsPageState extends State<NewsPage> {
               ]);
             }
             final posts = snapshot.data ?? [];
+            return FutureBuilder<List<AppAd>>(future: adsFuture, builder: (context, adSnapshot) {
+            final ads = adSnapshot.data ?? [];
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -268,8 +324,9 @@ class _NewsPageState extends State<NewsPage> {
                   ].map((x) => Chip(label: Text(x))).toList(),
                 ),
                 const SizedBox(height: 12),
-                ...posts.map(
-                  (p) => Card(
+                ...posts.asMap().entries.expand((entry) {
+                  final p = entry.value;
+                  final widgets = <Widget>[Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -309,10 +366,12 @@ class _NewsPageState extends State<NewsPage> {
                         ],
                       ),
                     ),
-                  ),
-                ),
+                  )];
+                  if (ads.isNotEmpty && (entry.key == 2 || entry.key == 7)) widgets.add(AppAdCard(ad: ads[(entry.key == 2 ? 0 : 1) % ads.length]));
+                  return widgets;
+                }),
               ],
-            );
+            ); });
           },
         ),
       );
