@@ -5,17 +5,41 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
+
+final navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> registerDeviceToken() async {
+  final m = FirebaseMessaging.instance;
+  final token = await m.getToken();
+  if (token == null || token.isEmpty) return;
+  try {
+    await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/device'), headers: {'Content-Type':'application/json'}, body: jsonEncode({'token':token,'topics':['all','breaking','112','verkeer','agenda','weekblad']}));
+  } catch (_) {}
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
   await messaging.requestPermission(alert: true, badge: true, sound: true);
   await messaging.subscribeToTopic('all');
   await messaging.subscribeToTopic('breaking');
   await messaging.subscribeToTopic('112');
-  await messaging.subscribeToTopic('traffic');
+  await messaging.unsubscribeFromTopic('traffic');
+  await messaging.subscribeToTopic('verkeer');
   await messaging.subscribeToTopic('agenda');
   await messaging.subscribeToTopic('weekblad');
+  await registerDeviceToken();
+  messaging.onTokenRefresh.listen((_) => registerDeviceToken());
+  FirebaseMessaging.onMessage.listen((m) {
+    final ctx = navigatorKey.currentContext;
+    if (ctx != null) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(m.notification?.title ?? 'Nieuwe RVAZ-melding')));
+  });
   runApp(const RvazApp());
 }
 
@@ -28,6 +52,7 @@ class RvazApp extends StatelessWidget {
   const RvazApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Regio Voorne aan Zee',
         theme: ThemeData(
@@ -482,7 +507,7 @@ class _AccountPageState extends State<AccountPage> {
     Card(child: Column(children: [
       sw('Breaking nieuws', 'Belangrijk regionaal nieuws', breaking, (v){setState(()=>breaking=v);topic('breaking',v);}),
       sw('112', 'Grote incidenten en hulpdiensten', emergency, (v){setState(()=>emergency=v);topic('112',v);}),
-      sw('Verkeer', 'Afsluitingen en belangrijke verkeersmeldingen', traffic, (v){setState(()=>traffic=v);topic('traffic',v);}),
+      sw('Verkeer', 'Afsluitingen en belangrijke verkeersmeldingen', traffic, (v){setState(()=>traffic=v);topic('verkeer',v);}),
       sw('Agenda', 'Uitgelichte activiteiten', events, (v){setState(()=>events=v);topic('agenda',v);}),
       sw('Nieuw Weekblad', 'Melding bij een nieuwe editie', weekblad, (v){setState(()=>weekblad=v);topic('weekblad',v);}),
     ])),
