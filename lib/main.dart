@@ -209,6 +209,16 @@ class AppAdCard extends StatelessWidget {
   );
 }
 
+String formatPostDate(dynamic p) {
+  final raw = p['date']?.toString() ?? '';
+  final d = DateTime.tryParse(raw)?.toLocal();
+  if (d == null) return '';
+  const months = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+  final hh = d.hour.toString().padLeft(2, '0');
+  final mm = d.minute.toString().padLeft(2, '0');
+  return '${d.day} ${months[d.month - 1]} ${d.year} · $hh:$mm';
+}
+
 String postImage(dynamic p) {
   try {
     final media = p['_embedded']?['wp:featuredmedia'];
@@ -381,7 +391,15 @@ class _NewsPageState extends State<NewsPage> {
                                     height: 1.15,
                                     fontWeight: FontWeight.w900,
                                     color: navy)),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
+                            if (formatPostDate(p).isNotEmpty) ...[
+                              Row(children: [
+                                const Icon(Icons.schedule, size: 14, color: Colors.black54),
+                                const SizedBox(width: 5),
+                                Text(formatPostDate(p), style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
+                              ]),
+                              const SizedBox(height: 8),
+                            ],
                             Text(clean(p['excerpt']['rendered']),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
