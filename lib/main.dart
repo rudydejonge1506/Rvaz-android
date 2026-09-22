@@ -512,79 +512,12 @@ class _NewsPageState extends State<NewsPage> {
 }
 
 
-class AgendaPage extends StatefulWidget {
-  const AgendaPage({super.key});
-  @override
-  State<AgendaPage> createState() => _AgendaPageState();
-}
-class _AgendaPageState extends State<AgendaPage> {
-  late Future<List<dynamic>> future;
-  @override
-  void initState() { super.initState(); future = load(); }
-  Future<List<dynamic>> load() async {
-    final r = await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda'));
-    if (r.statusCode == 200) return jsonDecode(r.body);
-    return [];
-  }
-  String clean(String s) => s.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;', '&').replaceAll('&#8211;', '–').replaceAll('&#8217;', "'");
-  @override
-  Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
-    future: future,
-    builder: (context, s) {
-      if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-      final allItems = s.data ?? [];
-      DateTime? eventDate(dynamic p) {
-        for (final k in ['start_date','date']) {
-          final raw = p[k]?.toString() ?? '';
-          final d = DateTime.tryParse(raw);
-          if (d != null) return d;
-        }
-        return null;
-      }
-      final today = DateTime.now();
-      final startToday = DateTime(today.year, today.month, today.day);
-      final items = allItems.where((p) { final d = eventDate(p); return d == null || !d.isBefore(startToday); }).toList()
-        ..sort((a,b) { final da=eventDate(a), db=eventDate(b); if(da==null)return 1; if(db==null)return -1; return da.compareTo(db); });
-      String titleOf(dynamic p) {
-        final t=p['title'];
-        return clean(t is Map ? (t['rendered']?.toString() ?? '') : (t?.toString() ?? ''));
-      }
-      String subOf(dynamic p) {
-        final parts=<String>[];
-        final display=p['display_date']?.toString()??'';
-        final raw=p['start_date']?.toString()??p['date']?.toString()??'';
-        if (display.isNotEmpty) { parts.add(display); } else if (raw.isNotEmpty) { parts.add(raw); }
-        final time=p['time']?.toString()??p['start_time']?.toString()??'';
-        if(time.isNotEmpty) parts.add(time);
-        final location=p['location']?.toString()??'';
-        if(location.isNotEmpty) parts.add(location);
-        if(parts.isNotEmpty) return parts.join(' · ');
-        return 'Bekijk evenement';
-      }
-      return ListView(padding: const EdgeInsets.all(18), children: [
-        const Text('Agenda', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
-        const SizedBox(height: 4),
-        const Text('Evenementen en activiteiten op Voorne.'),
-        const SizedBox(height: 18),
-        if (items.isEmpty) const Card(child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Text('De agenda wordt rechtstreeks met de RVAZ-agenda gekoppeld. Er zijn via de openbare WordPress-API nu nog geen evenementen beschikbaar.', style: TextStyle(fontSize: 16, height: 1.45)),
-        )),
-        ...items.map((p) => Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(14),
-            leading: const CircleAvatar(backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.event, color: navy)),
-            title: Text(titleOf(p), style: const TextStyle(fontWeight: FontWeight.w800, color: navy)),
-            subtitle: Text(subOf(p), maxLines: 3, overflow: TextOverflow.ellipsis),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EventDetailPage(event: p))),
-          ),
-        )),
-      ]);
-    },
-  );
-}
+class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override State<AgendaPage> createState()=>_AgendaPageState();}
+class _AgendaPageState extends State<AgendaPage>{late Future<List<dynamic>> future;String place='Alle plaatsen',category='Alle categorieën',period='Alles';@override void initState(){super.initState();future=load();}
+Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=200'));if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
+String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','date']));String clean(dynamic s)=>'$s'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}String placeOf(dynamic p)=>val(p,['place','city','town','plaats']);String catOf(dynamic p){final x=p['category']??p['categories']??p['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}
+bool periodOk(dynamic p){final d=date(p);if(period=='Alles'||d==null)return true;final n=DateTime.now(),t=DateTime(n.year,n.month,n.day);if(period=='Vandaag')return d.year==t.year&&d.month==t.month&&d.day==t.day;if(period=='Deze week')return !d.isBefore(t)&&d.isBefore(t.add(const Duration(days:7)));return d.year==t.year&&d.month==t.month;}
+@override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final places=<String>{'Alle plaatsen',...all.map(placeOf).where((x)=>x.isNotEmpty)}.toList();final cats=<String>{'Alle categorieën',...all.map(catOf).where((x)=>x.isNotEmpty)}.toList();final n=DateTime.now(),today=DateTime(n.year,n.month,n.day);final items=all.where((p){final d=date(p);return(d==null||!d.isBefore(today))&&(place=='Alle plaatsen'||placeOf(p)==place)&&(category=='Alle categorieën'||catOf(p).contains(category))&&periodOk(p);}).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));return ListView(padding:const EdgeInsets.all(18),children:[Text(appConfig.agendaTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),const Text('Evenementen en activiteiten op Voorne.'),const SizedBox(height:12),Wrap(spacing:10,runSpacing:6,children:[DropdownButton<String>(value:places.contains(place)?place:'Alle plaatsen',items:places.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>place=v??'Alle plaatsen')),DropdownButton<String>(value:cats.contains(category)?category:'Alle categorieën',items:cats.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>category=v??'Alle categorieën')),DropdownButton<String>(value:period,items:['Alles','Vandaag','Deze week','Deze maand'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>period=v??'Alles'))]),const SizedBox(height:12),if(items.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden met deze filters.'))),...items.map((p)=>Card(child:ListTile(contentPadding:const EdgeInsets.all(14),leading:const CircleAvatar(child:Icon(Icons.event)),title:Text(title(p),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text([val(p,['display_date','start_date','date']),val(p,['time','start_time']),val(p,['venue','location']),placeOf(p),catOf(p)].where((x)=>x.isNotEmpty).join(' · '),maxLines:4),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p)))))]);});}
 
 class WeekbladPage extends StatefulWidget {
   const WeekbladPage({super.key});
