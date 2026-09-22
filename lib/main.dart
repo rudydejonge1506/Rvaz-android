@@ -13,7 +13,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 const site = 'https://regiovoorneaanzee.nl';
-const bool _keepLegacyHelpers = false;
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
