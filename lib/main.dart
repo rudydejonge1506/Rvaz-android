@@ -165,19 +165,18 @@ class _ShellState extends State<Shell> {
   static const pageMap = <String,Widget>{
     'home': HomePage(),
     'news': NewsPage(),
-    'weekblad': WeekbladPage(),
+    'emergency': EmergencyTrafficPage(),
     'agenda': AgendaPage(),
     'account': AccountPage(),
   };
   static const iconMap = <String,IconData>{
-    'home':Icons.home_outlined,'news':Icons.article_outlined,'weekblad':Icons.menu_book_outlined,'agenda':Icons.event_outlined,'account':Icons.person_outline,
+    'home':Icons.home_outlined,'news':Icons.article_outlined,'emergency':Icons.siren_outlined,'agenda':Icons.event_outlined,'account':Icons.more_horiz,
   };
-  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','weekblad':'Weekblad','agenda':'Agenda','account':'Account'};
+  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112 & Verkeer','agenda':'Agenda','account':'Meer'};
 
   @override
   Widget build(BuildContext context) {
-    final keys=appConfig.navOrder.where((k)=>pageMap.containsKey(k)&&appConfig.nav(k)).toList();
-    if(keys.isEmpty) keys.addAll(['home','news','weekblad','agenda','account']);
+    final keys=<String>['home','news','emergency','agenda','account'];
     if(index>=keys.length) index=0;
     return Scaffold(
       appBar: AppBar(
@@ -378,72 +377,39 @@ class _HomePageState extends State<HomePage>{
   late Future<List<AppAd>> ads;
   @override void initState(){super.initState();_reload();}
   void _reload(){posts=_posts();events=_events();ads=loadAppAds(placement:'home');}
-  Future<List<dynamic>> _posts() async {
-    final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=${appConfig.limit('home_news',8)}&_embed=1'));
-    return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];
-  }
-  Future<List<dynamic>> _events() async {
-    final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=20'));
-    if(r.statusCode!=200)return [];
-    final d=jsonDecode(r.body);
-    return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);
-  }
-  String clean(dynamic s)=>'$s'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
-  @override Widget build(BuildContext context)=>RefreshIndicator(
-    onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads]);},
-    child:ListView(padding:const EdgeInsets.all(16),children:[
-      FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){
-        final image=defaultRVAZHero;
-        return Container(
-          constraints:const BoxConstraints(minHeight:210),
-          padding:const EdgeInsets.all(20),
-          decoration:BoxDecoration(
-            borderRadius:BorderRadius.circular(18),
-            gradient:image.isEmpty?const LinearGradient(colors:[navy,Color(0xFF087BA8)]):null,
-            image:image.isEmpty?null:DecorationImage(image:NetworkImage(image),fit:BoxFit.cover,colorFilter:ColorFilter.mode(navy.withValues(alpha:.64),BlendMode.srcOver)),
-          ),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.end,children:[
-            if(appConfig.breakingBanner.isNotEmpty)Text(appConfig.breakingBanner,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
-            const Spacer(),Text('Welkom bij\nRegio Voorne aan Zee',style:const TextStyle(color:Colors.white,fontSize:28,height:1.05,fontWeight:FontWeight.w900)),
-            const SizedBox(height:8),Text(appConfig.homeIntro,style:const TextStyle(color:Colors.white)),
-          ]),
-        );
-      }),
-      const SizedBox(height:12),
-      Row(children:[
-        Expanded(child:_HomeShortcut(icon:Icons.location_on,color:Colors.blue,label:'Plaatsnieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage())))),
-        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage())))),
-        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.calendar_month,color:Colors.blue,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage())))),
-        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.menu_book,color:green,label:'Weekblad',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WeekbladPage())))),
-      ]),
-      const SizedBox(height:18),
-      if(appConfig.homeBlocks.contains('news')) ...[
-        Text(appConfig.latestTitle,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),
-        FutureBuilder<List<dynamic>>(future:posts,builder:(context,s)=>Column(children:(s.data??[]).take(5).map<Widget>((p)=>Card(child:ListTile(
-          leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover),
-          title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),
-          subtitle:Text(formatPostDate(p)),
-          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))),
-        ))).toList())),
-        const SizedBox(height:12),
-      ],
-      if(appConfig.homeBlocks.contains('ads')) FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final x=s.data??[];return x.isEmpty?const SizedBox.shrink():AppAdCard(ad:x.first);}),
-      if(appConfig.homeBlocks.contains('agenda')) ...[
-        const SizedBox(height:12),Text(appConfig.agendaTitle,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),
-        FutureBuilder<List<dynamic>>(future:events,builder:(context,s)=>Column(children:(s.data??[]).take(appConfig.limit('agenda_home',4)).map<Widget>((e)=>Card(child:ListTile(
-          leading:const Icon(Icons.event_outlined,color:navy),
-          title:Text(clean(e['title'] is Map?e['title']['rendered']:e['title']??''),style:const TextStyle(fontWeight:FontWeight.w800)),
-          subtitle:Text([e['display_date'],e['location'],e['place']].where((x)=>x!=null&&'$x'.isNotEmpty).join(' · ')),
-          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:e))),
-        ))).toList())),
-      ],
-    ]),
-  );
+  Future<List<dynamic>> _posts() async {final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=8&_embed=1'));return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}
+  Future<List<dynamic>> _events() async {final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=5'));if(r.statusCode!=200)return [];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
+  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+  @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads]);},child:ListView(padding:EdgeInsets.zero,children:[
+    Container(height:245,padding:const EdgeInsets.fromLTRB(22,22,22,18),decoration:BoxDecoration(image:DecorationImage(image:const NetworkImage(defaultRVAZHero),fit:BoxFit.cover,colorFilter:ColorFilter.mode(navy.withValues(alpha:.38),BlendMode.srcOver))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.end,children:[
+      const Text('Welkom in\nRegio Voorne aan Zee',style:TextStyle(color:Colors.white,fontSize:31,height:1.03,fontWeight:FontWeight.w900)),
+      const SizedBox(height:9),Text(appConfig.homeIntro,style:const TextStyle(color:Colors.white,fontSize:15,height:1.35,fontWeight:FontWeight.w500)),
+    ])),
+    Container(transform:Matrix4.translationValues(0,-12,0),padding:const EdgeInsets.symmetric(horizontal:14),child:GridView.count(crossAxisCount:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.25,children:[
+      _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
+      _HomeShortcut(icon:Icons.siren_outlined,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
+      _HomeShortcut(icon:Icons.calendar_month,color:Colors.teal,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage()))),
+      _HomeShortcut(icon:Icons.location_on,color:Colors.green,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
+      _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
+      _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>launchUrl(Uri.parse('$site/bedrijven/'),mode:LaunchMode.externalApplication)),
+    ])),
+    Padding(padding:const EdgeInsets.fromLTRB(16,0,16,22),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Laatste nieuws',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage())),child:const Text('Meer →'))]),
+      FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final x=s.data??[];if(x.isEmpty)return const SizedBox.shrink();final p=x.first;return Column(children:[
+        Card(clipBehavior:Clip.antiAlias,margin:EdgeInsets.zero,child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          if(postImage(p).isNotEmpty)Image.network(postImage(p),height:175,width:double.infinity,fit:BoxFit.cover),
+          Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title']?['rendered']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
+        const SizedBox(height:10),
+        ...x.skip(1).take(3).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))))),
+      ]);}),
+      FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final x=s.data??[];return x.isEmpty?const SizedBox.shrink():Padding(padding:const EdgeInsets.only(top:8),child:AppAdCard(ad:x.first));}),
+    ]))
+  ]));
 }
 class _HomeShortcut extends StatelessWidget{
   final IconData icon;final Color color;final String label;final VoidCallback? onTap;
   const _HomeShortcut({required this.icon,required this.color,required this.label,this.onTap});
-  @override Widget build(BuildContext context)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(12),child:Container(padding:const EdgeInsets.symmetric(vertical:12,horizontal:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:const Color(0xFFE2E8EE))),child:Column(children:[Icon(icon,color:color),const SizedBox(height:5),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy))])));
+  @override Widget build(BuildContext context)=>Material(color:Colors.white,elevation:1,borderRadius:BorderRadius.circular(11),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(11),child:Padding(padding:const EdgeInsets.symmetric(vertical:10,horizontal:3),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:color,size:26),const SizedBox(height:5),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy))]))));
 }
 
 class EmergencyTrafficPage extends StatefulWidget{const EmergencyTrafficPage({super.key});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
@@ -593,41 +559,18 @@ class _NewsPageState extends State<NewsPage> {
 
 class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override State<AgendaPage> createState()=>_AgendaPageState();}
 class _AgendaPageState extends State<AgendaPage>{
-  late Future<List<dynamic>> future; String place='Alle plaatsen',category='Alle categorieën',period='Alles';
-  @override void initState(){super.initState();future=load();}
-  Future<List<dynamic>> load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250'));if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
-  String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
-  DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','date']));
-  String clean(dynamic s)=>'$s'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
-  String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
-  String placeOf(dynamic p)=>val(p,['place','city','town','plaats']);
-  String catOf(dynamic p){final x=p['category']??p['categories']??p['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}
-  bool periodOk(dynamic p){final d=date(p);if(period=='Alles'||d==null)return true;final n=DateTime.now(),t=DateTime(n.year,n.month,n.day);if(period=='Vandaag')return d.year==t.year&&d.month==t.month&&d.day==t.day;if(period=='Deze week')return !d.isBefore(t)&&d.isBefore(t.add(const Duration(days:7)));return d.year==t.year&&d.month==t.month;}
-  @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
-    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
-    final all=s.data??[];
-    final places=<String>{'Alle plaatsen',...all.map(placeOf).where((x)=>x.isNotEmpty)}.toList()..sort();
-    final cats=<String>{'Alle categorieën',...all.map(catOf).where((x)=>x.isNotEmpty)}.toList()..sort();
-    final n=DateTime.now(),today=DateTime(n.year,n.month,n.day);
-    final items=all.where((p){final d=date(p);return(d==null||!d.isBefore(today))&&(place=='Alle plaatsen'||placeOf(p)==place)&&(category=='Alle categorieën'||catOf(p).contains(category))&&periodOk(p);}).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));
-    return ListView(padding:const EdgeInsets.all(18),children:[
-      const Text('AGENDA',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:cyan,letterSpacing:1.1)),const SizedBox(height:4),Text(appConfig.agendaTitle,style:const TextStyle(fontSize:30,height:1.05,fontWeight:FontWeight.w900,color:navy)),const Text('Evenementen en activiteiten op Voorne aan Zee.',style:TextStyle(color:Color(0xFF536577))),const SizedBox(height:16),
-      Column(children:[
-        DropdownButtonFormField<String>(isExpanded:true,initialValue:places.contains(place)?place:'Alle plaatsen',decoration:const InputDecoration(labelText:'Plaats',border:OutlineInputBorder()),items:places.map((x)=>DropdownMenuItem(value:x,child:Text(x,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>place=v??'Alle plaatsen')),
-        const SizedBox(height:10),
-        DropdownButtonFormField<String>(isExpanded:true,initialValue:cats.contains(category)?category:'Alle categorieën',decoration:const InputDecoration(labelText:'Categorie',border:OutlineInputBorder()),items:cats.map((x)=>DropdownMenuItem(value:x,child:Text(x,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>category=v??'Alle categorieën')),
-        const SizedBox(height:10),
-        DropdownButtonFormField<String>(isExpanded:true,initialValue:period,decoration:const InputDecoration(labelText:'Periode',border:OutlineInputBorder()),items:['Alles','Vandaag','Deze week','Deze maand'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>period=v??'Alles')),
-      ]),
-      const SizedBox(height:12),
-      if(items.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden met deze filters.'))),
-      ...items.map<Widget>((p)=>Card(child:ListTile(
-        contentPadding:const EdgeInsets.all(14),leading:const CircleAvatar(child:Icon(Icons.event)),title:Text(title(p),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),
-        subtitle:Text([val(p,['display_date','start_date','date']),val(p,['time','start_time']),val(p,['venue','location']),placeOf(p),catOf(p)].where((x)=>x.isNotEmpty).join(' · '),maxLines:4),
-        trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),
-      ))),
-    ]);
-  });
+ late Future<List<dynamic>> future;String place='Alle';
+ @override void initState(){super.initState();future=load();}
+ Future<List<dynamic>> load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250'));if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
+ String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
+ String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+ String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
+ String placeOf(dynamic p)=>val(p,['place','city','town','plaats']);
+ DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','date']));
+ @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final places=<String>['Alle',...appConfig.places.where((x)=>x!='Voorne aan Zee')];final items=all.where((p)=>place=='Alle'||placeOf(p).toLowerCase()==place.toLowerCase()).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));return Column(children:[
+   SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(14,9,14,7),itemCount:places.length,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i){final x=places[i],on=x==place;return ChoiceChip(label:Text(x),selected:on,onSelected:(_)=>setState(()=>place=x),selectedColor:cyan,labelStyle:TextStyle(color:on?Colors.white:navy,fontSize:11,fontWeight:FontWeight.w700),side:BorderSide(color:on?cyan:const Color(0xFFDCE5ED)),showCheckmark:false); })),
+   Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
+ ]);});
 }
 
 class WeekbladPage extends StatefulWidget {
