@@ -56,7 +56,7 @@ jobs:
           except Exception as e:
               print('API icon unavailable; using repository fallback:', e)
           PY
-          dart run flutter_launcher_icons
+          echo "Launcher icon generation skipped; bundled RVAZ assets retained"
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
