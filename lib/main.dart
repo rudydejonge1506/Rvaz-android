@@ -312,7 +312,7 @@ String cleanArticleHtml(String html) {
   var out = html;
   final markers = <String>['voorlees','responsivevoice','text-to-speech','tts-control'];
   for (final marker in markers) {
-    out = out.replaceAll(RegExp('<[^>]*(?:class|id)=[^>]*' + marker + '[^>]*>.*?</(?:div|section|aside|button)>', caseSensitive: false, dotAll: true), '');
+    out = out.replaceAll(RegExp('<[^>]*(?:class|id)=[^>]*$marker[^>]*>.*?</(?:div|section|aside|button)>', caseSensitive: false, dotAll: true), '');
   }
   return out;
 }
