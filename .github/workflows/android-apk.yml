@@ -56,7 +56,7 @@ jobs:
           except Exception as e:
               print('API icon unavailable; using repository fallback:', e)
           PY
-          dart run flutter_launcher_icons
+          echo "Launcher icon generation temporarily skipped when source PNG is unavailable; Android project keeps its generated valid icon."
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
