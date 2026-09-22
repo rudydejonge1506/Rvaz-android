@@ -402,10 +402,10 @@ class _HomePageState extends State<HomePage>{
       }),
       const SizedBox(height:12),
       Row(children:[
-        Expanded(child:_HomeShortcut(icon:Icons.location_on,color:Colors.blue,label:'Plaatsnieuws')),
-        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer')),
-        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.calendar_month,color:Colors.blue,label:'Agenda')),
-        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.menu_book,color:green,label:'Weekblad')),
+        Expanded(child:_HomeShortcut(icon:Icons.location_on,color:Colors.blue,label:'Plaatsnieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage())))),
+        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage())))),
+        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.calendar_month,color:Colors.blue,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage())))),
+        const SizedBox(width:8),Expanded(child:_HomeShortcut(icon:Icons.menu_book,color:green,label:'Weekblad',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WeekbladPage())))),
       ]),
       const SizedBox(height:18),
       if(appConfig.homeBlocks.contains('news')) ...[
@@ -432,10 +432,13 @@ class _HomePageState extends State<HomePage>{
   );
 }
 class _HomeShortcut extends StatelessWidget{
-  final IconData icon;final Color color;final String label;
-  const _HomeShortcut({required this.icon,required this.color,required this.label});
-  @override Widget build(BuildContext context)=>Container(padding:const EdgeInsets.symmetric(vertical:12,horizontal:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:const Color(0xFFE2E8EE))),child:Column(children:[Icon(icon,color:color),const SizedBox(height:5),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy))]));
+  final IconData icon;final Color color;final String label;final VoidCallback? onTap;
+  const _HomeShortcut({required this.icon,required this.color,required this.label,this.onTap});
+  @override Widget build(BuildContext context)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(12),child:Container(padding:const EdgeInsets.symmetric(vertical:12,horizontal:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:const Color(0xFFE2E8EE))),child:Column(children:[Icon(icon,color:color),const SizedBox(height:5),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy))])));
 }
+
+class EmergencyTrafficPage extends StatefulWidget{const EmergencyTrafficPage({super.key});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
+class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{String place='';bool traffic=false;late Future<List<dynamic>> items;@override void initState(){super.initState();items=load();}Future<List<dynamic>>load()async{final endpoint=traffic?'traffic':'112';final q=place.isEmpty?'':'?place=${Uri.encodeQueryComponent(place.toLowerCase().replaceAll(' ', '-'))}';try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint$q'));if(r.statusCode==200){final d=jsonDecode(r.body);if(d is List)return List<dynamic>.from(d);}}catch(_){}return [];}void refresh(){setState(()=>items=load());}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:Column(children:[DropdownButtonFormField<String>(initialValue:place,decoration:const InputDecoration(labelText:'Plaats',border:OutlineInputBorder()),items:['',...appConfig.places.where((x)=>x!='Voorne aan Zee')].map((x)=>DropdownMenuItem(value:x,child:Text(x.isEmpty?'Heel Voorne aan Zee':x))).toList(),onChanged:(v){place=v??'';refresh();}),const SizedBox(height:12),SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){traffic=v.first;refresh();})])),Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=s.data??[];if(x.isEmpty)return Center(child:Text(traffic?'Geen actuele verkeersmeldingen voor deze plaats.':'Geen actuele 112-meldingen voor deze plaats.'));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red),title:Text('${e['title']??''}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${e['date']??''}'),trailing:const Icon(Icons.chevron_right),onTap:(){final u=e['link']?.toString()??'';if(u.isNotEmpty)launchUrl(Uri.parse(u),mode:LaunchMode.externalApplication);});}));}))]));}
 
 class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
