@@ -9,10 +9,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp();\n  await loadConfig();
 }
 
-final navigatorKey = GlobalKey<NavigatorState>();
+final navigatorKey = GlobalKey<NavigatorState>();\n\nclass AppConfig {\n  final String logoUrl, accentColor, homeIntro, breakingBanner;\n  final List<String> places, features;\n  final Map<String,dynamic> navigation;\n  const AppConfig({this.logoUrl='',this.accentColor='#11BDEB',this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.',this.breakingBanner='',this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne'],this.features=const [],this.navigation=const {}});\n  factory AppConfig.fromJson(Map<String,dynamic> j)=>AppConfig(logoUrl:'${j['logo_url']??''}',accentColor:'${j['accent_color']??'#11BDEB'}',homeIntro:'${j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.'}',breakingBanner:'${j['breaking_banner']??''}',places:List<String>.from((j['places'] is List?j['places']:const []).map((e)=>'$e')),features:List<String>.from((j['features'] is List?j['features']:const []).map((e)=>'$e')),navigation:j['navigation'] is Map?Map<String,dynamic>.from(j['navigation']):const {});\n}\nAppConfig appConfig=const AppConfig();\nFuture<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));if(r.statusCode==200)appConfig=AppConfig.fromJson(Map<String,dynamic>.from(jsonDecode(r.body)));}catch(_){}}
 
 Future<void> registerDeviceToken() async {
   final m = FirebaseMessaging.instance;
@@ -224,7 +224,7 @@ class AppAdCard extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 12),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
-      onTap: ad.url.isEmpty ? null : () => launchUrl(Uri.parse(ad.url), mode: LaunchMode.externalApplication),
+      onTap: ad.url.isEmpty ? null : () async { try { await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/ad-event'),headers:{'Content-Type':'application/json'},body:jsonEncode({'id':ad.id,'type':'click'})); } catch(_){} launchUrl(Uri.parse(ad.url), mode: LaunchMode.externalApplication); },
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (ad.image.isNotEmpty) Image.network(ad.image, height: 150, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
         Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -374,7 +374,7 @@ class _NewsPageState extends State<NewsPage> {
                         fontWeight: FontWeight.w900,
                         color: navy)),
                 const SizedBox(height: 5),
-                const Text('Actueel nieuws van Regio Voorne aan Zee.'),
+                Text(appConfig.homeIntro),
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 7,
@@ -478,7 +478,7 @@ class _AgendaPageState extends State<AgendaPage> {
     if (r.statusCode == 200) return jsonDecode(r.body);
     return [];
   }
-  String clean(String s) => s.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;', '&');
+  String clean(String s) => s.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;', '&').replaceAll('&#8211;', '–').replaceAll('&#8217;', "'");
   @override
   Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
     future: future,
@@ -546,7 +546,7 @@ class _WeekbladPageState extends State<WeekbladPage> {
       const Text('Weekblad',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),
       if(issues.isEmpty) const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Er zijn nog geen gepubliceerde edities via de app-API beschikbaar.'))),
-      ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
+      ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
     ]);
   });
 }
@@ -603,3 +603,4 @@ class _AccountPageState extends State<AccountPage> {
     ])),
   ]);
 }
+\n\nclass SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }\nclass _SearchPageState extends State<SearchPage>{final c=TextEditingController();List<dynamic> results=[];bool busy=false;Future<void> go()async{final q=c.text.trim();if(q.isEmpty)return;setState(()=>busy=true);try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(q)}&per_page=30&_embed=1'));if(r.statusCode==200)results=List<dynamic>.from(jsonDecode(r.body));}catch(_){}if(mounted)setState(()=>busy=false);}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const LogoMark(),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:c,textInputAction:TextInputAction.search,onSubmitted:(_)=>go(),decoration:InputDecoration(hintText:'Zoek nieuws op Voorne',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:go,icon:const Icon(Icons.arrow_forward))))),if(busy)const LinearProgressIndicator(),Expanded(child:ListView.builder(itemCount:results.length,itemBuilder:(context,i){final p=results[i];final title=(p['title']?['rendered']??'').toString().replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–').replaceAll('&amp;','&');return ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:72,height:54,fit:BoxFit.cover),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))));}))]));}\n
