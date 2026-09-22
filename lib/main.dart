@@ -148,7 +148,37 @@ class RvazApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: appConfig.accent),
           useMaterial3: true,
-          scaffoldBackgroundColor: appConfig.background,
+          scaffoldBackgroundColor: const Color(0xFFF4F7FA),
+          fontFamily: 'Roboto',
+          cardTheme: const CardThemeData(
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
+          ),
+          appBarTheme: const AppBarTheme(
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            centerTitle: false,
+            backgroundColor: Colors.white,
+            foregroundColor: navy,
+          ),
+          navigationBarTheme: NavigationBarThemeData(
+            height: 68,
+            backgroundColor: Colors.white,
+            indicatorColor: cyan.withValues(alpha:.14),
+            labelTextStyle: WidgetStateProperty.resolveWith((s)=>TextStyle(
+              fontSize: 11,
+              fontWeight: s.contains(WidgetState.selected)?FontWeight.w800:FontWeight.w600,
+              color: navy,
+            )),
+          ),
+          inputDecorationTheme: const InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
+          ),
         ),
         home: const Shell(),
       );
@@ -172,7 +202,7 @@ class _ShellState extends State<Shell> {
   static const iconMap = <String,IconData>{
     'home':Icons.home_outlined,'news':Icons.article_outlined,'emergency':Icons.warning_amber_rounded,'agenda':Icons.event_outlined,'account':Icons.more_horiz,
   };
-  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112 & Verkeer','agenda':'Agenda','account':'Meer'};
+  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112','agenda':'Agenda','account':'Mijn RVAZ'};
 
   @override
   Widget build(BuildContext context) {
@@ -183,8 +213,8 @@ class _ShellState extends State<Shell> {
         backgroundColor: Colors.white, foregroundColor: appConfig.primary,
         title: const Row(children: [Expanded(child: LogoMark())]),
         actions: [
-          if(appConfig.feature('push') && keys.contains('account')) IconButton(onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.notifications_none)),
-          if(appConfig.feature('search')) IconButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage())),icon:const Icon(Icons.search)),
+          if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage())),icon:const Icon(Icons.search)),
+          if(appConfig.feature('push') && keys.contains('account')) IconButton(tooltip:'Mijn RVAZ',onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.person_outline)),
         ],
       ),
       body: ColoredBox(color: const Color(0xFFF7F9FB), child: pageMap[keys[index]]!),
@@ -382,10 +412,25 @@ class _HomePageState extends State<HomePage>{
   Future<List<dynamic>> _events() async {final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=5'));if(r.statusCode!=200)return [];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
   String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads]);},child:ListView(padding:EdgeInsets.zero,children:[
-    Container(height:245,padding:const EdgeInsets.fromLTRB(22,22,22,18),decoration:BoxDecoration(image:DecorationImage(image:const NetworkImage(defaultRVAZHero),fit:BoxFit.cover,colorFilter:ColorFilter.mode(navy.withValues(alpha:.38),BlendMode.srcOver))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.end,children:[
-      const Text('Welkom in\nRegio Voorne aan Zee',style:TextStyle(color:Colors.white,fontSize:31,height:1.03,fontWeight:FontWeight.w900)),
-      const SizedBox(height:9),Text(appConfig.homeIntro,style:const TextStyle(color:Colors.white,fontSize:15,height:1.35,fontWeight:FontWeight.w500)),
-    ])),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16,16,16,8),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(children:[
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Dichtbij op Voorne',style:TextStyle(color:Colors.white,fontSize:24,height:1.05,fontWeight:FontWeight.w900)),
+            const SizedBox(height:7),
+            Text('Jouw nieuws, 112, verkeer en agenda. Persoonlijk en direct.',style:TextStyle(color:Colors.white.withValues(alpha:.88),fontSize:14,height:1.35)),
+          ])),
+          const SizedBox(width:12),
+          Container(width:52,height:52,decoration:BoxDecoration(color:Colors.white.withValues(alpha:.13),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.location_on_outlined,color:Colors.white,size:28)),
+        ]),
+      ),
+    ),
     Container(transform:Matrix4.translationValues(0,-12,0),padding:const EdgeInsets.symmetric(horizontal:14),child:GridView.count(crossAxisCount:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.25,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
       _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
