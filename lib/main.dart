@@ -163,7 +163,7 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int index = 0;
   static const pageMap = <String,Widget>{
-    'home': NewsPage(),
+    'home': HomePage(),
     'news': NewsPage(),
     'weekblad': WeekbladPage(),
     'agenda': AgendaPage(),
@@ -355,6 +355,20 @@ class ArticlePage extends StatelessWidget {
     );
   }
 }
+
+class HomePage extends StatefulWidget { const HomePage({super.key}); @override State<HomePage> createState()=>_HomePageState(); }
+class _HomePageState extends State<HomePage>{late Future<List<dynamic>> posts,events;late Future<List<AppAd>> ads;@override void initState(){super.initState();posts=_posts();events=_events();ads=loadAppAds(placement:'home');}
+Future<List<dynamic>> _posts()async{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=${appConfig.limit('home_news',8)}&_embed=1'));return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}
+Future<List<dynamic>> _events()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=20'));if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
+String clean(dynamic s)=>'$s'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+@override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState((){posts=_posts();events=_events();ads=loadAppAds(placement:'home');});},child:ListView(padding:const EdgeInsets.all(16),children:[
+if(appConfig.breakingBanner.isNotEmpty)Card(child:ListTile(leading:const Icon(Icons.campaign,color:Colors.red),title:Text(appConfig.breakingBanner,style:const TextStyle(fontWeight:FontWeight.w800)))),
+Text(appConfig.homeTitle,style:const TextStyle(fontSize:28,fontWeight:FontWeight.w900,color:navy)),Text(appConfig.homeIntro),const SizedBox(height:18),
+if(appConfig.homeBlocks.contains('news'))...[Text(appConfig.latestTitle,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),FutureBuilder<List<dynamic>>(future:posts,builder:(context,s)=>Column(children:(s.data??[]).take(5).map((p)=>Card(child:ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover),title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))))).toList())),const SizedBox(height:12)],
+if(appConfig.homeBlocks.contains('ads'))FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final x=s.data??[];return x.isEmpty?const SizedBox.shrink():AppAdCard(ad:x.first);}),
+if(appConfig.homeBlocks.contains('agenda'))...[const SizedBox(height:12),Text(appConfig.agendaTitle,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),FutureBuilder<List<dynamic>>(future:events,builder:(context,s)=>Column(children:(s.data??[]).take(appConfig.limit('agenda_home',4)).map((e)=>Card(child:ListTile(leading:const Icon(Icons.event_outlined,color:navy),title:Text(clean(e['title'] is Map?e['title']['rendered']:e['title']??''),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text([e['display_date'],e['location'],e['place']].where((x)=>x!=null&&'$x'.isNotEmpty).join(' · ')),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:e))))).toList()))],
+if(appConfig.homeBlocks.contains('weekblad'))Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text(appConfig.weekbladTitle,style:const TextStyle(fontWeight:FontWeight.w900)),subtitle:const Text('Lees de nieuwste editie'))),
+]));}
 
 class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
