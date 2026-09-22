@@ -9,10 +9,22 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();\n  await loadConfig();
+  await Firebase.initializeApp();
 }
 
-final navigatorKey = GlobalKey<NavigatorState>();\n\nclass AppConfig {\n  final String logoUrl, accentColor, homeIntro, breakingBanner;\n  final List<String> places, features;\n  final Map<String,dynamic> navigation;\n  const AppConfig({this.logoUrl='',this.accentColor='#11BDEB',this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.',this.breakingBanner='',this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne'],this.features=const [],this.navigation=const {}});\n  factory AppConfig.fromJson(Map<String,dynamic> j)=>AppConfig(logoUrl:'${j['logo_url']??''}',accentColor:'${j['accent_color']??'#11BDEB'}',homeIntro:'${j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.'}',breakingBanner:'${j['breaking_banner']??''}',places:List<String>.from((j['places'] is List?j['places']:const []).map((e)=>'$e')),features:List<String>.from((j['features'] is List?j['features']:const []).map((e)=>'$e')),navigation:j['navigation'] is Map?Map<String,dynamic>.from(j['navigation']):const {});\n}\nAppConfig appConfig=const AppConfig();\nFuture<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));if(r.statusCode==200)appConfig=AppConfig.fromJson(Map<String,dynamic>.from(jsonDecode(r.body)));}catch(_){}}
+const site = 'https://regiovoorneaanzee.nl';
+
+final navigatorKey = GlobalKey<NavigatorState>();
+
+class AppConfig {
+  final String logoUrl, accentColor, homeIntro, breakingBanner;
+  final List<String> places, features;
+  final Map<String,dynamic> navigation;
+  const AppConfig({this.logoUrl='',this.accentColor='#11BDEB',this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.',this.breakingBanner='',this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne'],this.features=const [],this.navigation=const {}});
+  factory AppConfig.fromJson(Map<String,dynamic> j)=>AppConfig(logoUrl:'${j['logo_url']??''}',accentColor:'${j['accent_color']??'#11BDEB'}',homeIntro:'${j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.'}',breakingBanner:'${j['breaking_banner']??''}',places:List<String>.from((j['places'] is List?j['places']:const []).map((e)=>'$e')),features:List<String>.from((j['features'] is List?j['features']:const []).map((e)=>'$e')),navigation:j['navigation'] is Map?Map<String,dynamic>.from(j['navigation']):const {});
+}
+AppConfig appConfig=const AppConfig();
+Future<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));if(r.statusCode==200)appConfig=AppConfig.fromJson(Map<String,dynamic>.from(jsonDecode(r.body)));}catch(_){}}
 
 Future<void> registerDeviceToken() async {
   final m = FirebaseMessaging.instance;
@@ -597,6 +609,10 @@ class _AccountPageState extends State<AccountPage> {
     ])),
   ]);
 }
-\n\nclass SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }\nclass _SearchPageState extends State<SearchPage>{final c=TextEditingController();List<dynamic> results=[];bool busy=false;Future<void> go()async{final q=c.text.trim();if(q.isEmpty)return;setState(()=>busy=true);try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(q)}&per_page=30&_embed=1'));if(r.statusCode==200)results=List<dynamic>.from(jsonDecode(r.body));}catch(_){}if(mounted)setState(()=>busy=false);}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const LogoMark(),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:c,textInputAction:TextInputAction.search,onSubmitted:(_)=>go(),decoration:InputDecoration(hintText:'Zoek nieuws op Voorne',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:go,icon:const Icon(Icons.arrow_forward))))),if(busy)const LinearProgressIndicator(),Expanded(child:ListView.builder(itemCount:results.length,itemBuilder:(context,i){final p=results[i];final title=(p['title']?['rendered']??'').toString().replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–').replaceAll('&amp;','&');return ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:72,height:54,fit:BoxFit.cover),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))));}))]));}\n
+
+
+class SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }
+class _SearchPageState extends State<SearchPage>{final c=TextEditingController();List<dynamic> results=[];bool busy=false;Future<void> go()async{final q=c.text.trim();if(q.isEmpty)return;setState(()=>busy=true);try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(q)}&per_page=30&_embed=1'));if(r.statusCode==200)results=List<dynamic>.from(jsonDecode(r.body));}catch(_){}if(mounted)setState(()=>busy=false);}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const LogoMark(),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:c,textInputAction:TextInputAction.search,onSubmitted:(_)=>go(),decoration:InputDecoration(hintText:'Zoek nieuws op Voorne',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:go,icon:const Icon(Icons.arrow_forward))))),if(busy)const LinearProgressIndicator(),Expanded(child:ListView.builder(itemCount:results.length,itemBuilder:(context,i){final p=results[i];final title=(p['title']?['rendered']??'').toString().replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–').replaceAll('&amp;','&');return ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:72,height:54,fit:BoxFit.cover),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))));}))]));}
+
 
 class NativeInfoPage extends StatelessWidget { final String title,text; final IconData icon; const NativeInfoPage({super.key,required this.title,required this.icon,required this.text}); @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(title),backgroundColor:Colors.white,foregroundColor:navy),body:Padding(padding:const EdgeInsets.all(22),child:Card(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,size:42,color:cyan),const SizedBox(height:16),Text(title,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),Text(text,style:const TextStyle(fontSize:16,height:1.5))]))))); }
