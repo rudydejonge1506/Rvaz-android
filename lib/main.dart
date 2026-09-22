@@ -153,10 +153,36 @@ class _ShellState extends State<Shell> {
       );
 }
 
-class LogoMark extends StatelessWidget {
+class LogoMark extends StatefulWidget {
   const LogoMark({super.key});
   @override
-  Widget build(BuildContext context) => SizedBox(height: 41, child: Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft, errorBuilder: (_,__,___)=>const Text('REGIO VOORNE AAN ZEE',style:TextStyle(color:navy,fontWeight:FontWeight.w900))));
+  State<LogoMark> createState() => _LogoMarkState();
+}
+class _LogoMarkState extends State<LogoMark> {
+  String logoUrl = '';
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+  Future<void> _load() async {
+    try {
+      final r = await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));
+      if (r.statusCode == 200) {
+        final j = jsonDecode(r.body);
+        final u = j['logo_url']?.toString() ?? '';
+        if (mounted && u.isNotEmpty) setState(() => logoUrl = u);
+      }
+    } catch (_) {}
+  }
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 41,
+    child: logoUrl.isNotEmpty
+      ? Image.network(logoUrl, width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft,
+          errorBuilder: (_, __, ___) => Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft))
+      : Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft),
+  );
 }
 
 class AppAd {
