@@ -393,7 +393,6 @@ class _HomePageState extends State<HomePage>{
     onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads]);},
     child:ListView(padding:const EdgeInsets.all(16),children:[
       FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){
-        final x=s.data??[];
         final image=defaultRVAZHero;
         return Container(
           constraints:const BoxConstraints(minHeight:210),
