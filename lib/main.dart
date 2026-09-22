@@ -31,7 +31,7 @@ class AppConfig {
     this.homeBlocks=const ['news','agenda','weekblad','ads'],
     this.accountBlocks=const ['saved','notifications','tips','contributions','weekblad','profile'],
     this.navigation=const {'home':true,'news':true,'weekblad':true,'agenda':true,'account':true},
-    this.features=const {'search':true,'saved':true,'tips':true,'contributions':true,'push':true,'share':true,'listen':true,'traffic':true,'emergency112':true},
+    this.features=const {'search':true,'saved':true,'tips':true,'contributions':true,'push':true,'share':true,'listen':false,'traffic':true,'emergency112':true},
     this.limits=const {'news_per_page':20,'home_news':8,'agenda_home':4,'ad_frequency':5},
     this.primary=navy, this.accent=cyan, this.success=green, this.background=const Color(0xFFF7F9FB),
   });
@@ -279,6 +279,16 @@ class _AppAdCardState extends State<AppAdCard> {
   }
 }
 
+String cleanArticleHtml(String html) {
+  var out = html;
+  final block = RegExp(r'<(div|section|aside|button)[^>]*(?:class|id)=["\\'][^"\\']*(?:voorlees|listen|speech|tts|responsivevoice)[^"\\']*["\\'][^>]*>.*?</\\1>', caseSensitive: false, dotAll: true);
+  out = out.replaceAll(block, '');
+  out = out.replaceAll(RegExp(r'<[^>]*(?:voorlees|listen|speech|tts|responsivevoice)[^>]*>', caseSensitive: false), '');
+  return out;
+}
+
+const defaultRVAZHero = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg/1280px-Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg';
+
 String formatPostDate(dynamic p) {
   final raw = p['date']?.toString() ?? '';
   final d = DateTime.tryParse(raw)?.toLocal();
@@ -314,7 +324,7 @@ class ArticlePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = postImage(post);
     final title = clean(post['title']?['rendered']?.toString() ?? '');
-    final bodyHtml = post['content']?['rendered']?.toString() ?? '';
+    final bodyHtml = cleanArticleHtml(post['content']?['rendered']?.toString() ?? '');
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -384,7 +394,7 @@ class _HomePageState extends State<HomePage>{
     child:ListView(padding:const EdgeInsets.all(16),children:[
       FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){
         final x=s.data??[];
-        final image=appConfig.homeHeroUrl;
+        final image=defaultRVAZHero;
         return Container(
           constraints:const BoxConstraints(minHeight:210),
           padding:const EdgeInsets.all(20),
@@ -603,10 +613,12 @@ class _AgendaPageState extends State<AgendaPage>{
     final items=all.where((p){final d=date(p);return(d==null||!d.isBefore(today))&&(place=='Alle plaatsen'||placeOf(p)==place)&&(category=='Alle categorieën'||catOf(p).contains(category))&&periodOk(p);}).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));
     return ListView(padding:const EdgeInsets.all(18),children:[
       const Text('AGENDA',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:cyan,letterSpacing:1.1)),const SizedBox(height:4),Text(appConfig.agendaTitle,style:const TextStyle(fontSize:30,height:1.05,fontWeight:FontWeight.w900,color:navy)),const Text('Evenementen en activiteiten op Voorne aan Zee.',style:TextStyle(color:Color(0xFF536577))),const SizedBox(height:16),
-      Wrap(spacing:10,runSpacing:6,children:[
-        DropdownButton<String>(value:places.contains(place)?place:'Alle plaatsen',items:places.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>place=v??'Alle plaatsen')),
-        DropdownButton<String>(value:cats.contains(category)?category:'Alle categorieën',items:cats.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>category=v??'Alle categorieën')),
-        DropdownButton<String>(value:period,items:['Alles','Vandaag','Deze week','Deze maand'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>period=v??'Alles')),
+      Column(children:[
+        DropdownButtonFormField<String>(isExpanded:true,initialValue:places.contains(place)?place:'Alle plaatsen',decoration:const InputDecoration(labelText:'Plaats',border:OutlineInputBorder()),items:places.map((x)=>DropdownMenuItem(value:x,child:Text(x,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>place=v??'Alle plaatsen')),
+        const SizedBox(height:10),
+        DropdownButtonFormField<String>(isExpanded:true,initialValue:cats.contains(category)?category:'Alle categorieën',decoration:const InputDecoration(labelText:'Categorie',border:OutlineInputBorder()),items:cats.map((x)=>DropdownMenuItem(value:x,child:Text(x,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>category=v??'Alle categorieën')),
+        const SizedBox(height:10),
+        DropdownButtonFormField<String>(isExpanded:true,initialValue:period,decoration:const InputDecoration(labelText:'Periode',border:OutlineInputBorder()),items:['Alles','Vandaag','Deze week','Deze maand'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>period=v??'Alles')),
       ]),
       const SizedBox(height:12),
       if(items.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden met deze filters.'))),
