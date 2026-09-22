@@ -213,6 +213,7 @@ class _ShellState extends State<Shell> {
         backgroundColor: Colors.white, foregroundColor: appConfig.primary,
         title: const Row(children: [Expanded(child: LogoMark())]),
         actions: [
+          PageFeedbackButton(page: labelMap[keys[index]] ?? keys[index]),
           if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage())),icon:const Icon(Icons.search)),
           if(appConfig.feature('push') && keys.contains('account')) IconButton(tooltip:'Mijn RVAZ',onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.person_outline)),
         ],
@@ -317,6 +318,21 @@ String cleanArticleHtml(String html) {
   return out;
 }
 
+Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
+  final subject = Uri.encodeComponent('App feedback – $page');
+  final extra = detail == null || detail.isEmpty ? '' : 'Onderdeel: $detail\n';
+  final body = Uri.encodeComponent('Pagina: $page\n$extra\nMijn feedback:\n\n');
+  final uri = Uri.parse('mailto:redactie@regiovoorneaanzee.nl?subject=$subject&body=$body');
+  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-mailapp kon niet worden geopend. Mail naar redactie@regiovoorneaanzee.nl.')));
+}
+
+class PageFeedbackButton extends StatelessWidget {
+  final String page; final String? detail;
+  const PageFeedbackButton({super.key, required this.page, this.detail});
+  @override Widget build(BuildContext context) => IconButton(tooltip:'Feedback over deze pagina',icon:const Icon(Icons.feedback_outlined),onPressed:()=>sendPageFeedback(context,page,detail:detail));
+}
+
 const defaultRVAZHero = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg/1280px-Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg';
 
 String formatPostDate(dynamic p) {
@@ -361,6 +377,7 @@ class ArticlePage extends StatelessWidget {
         foregroundColor: navy,
         title: const Text('Regio Voorne aan Zee',
             style: TextStyle(fontWeight: FontWeight.w800)),
+        actions: [PageFeedbackButton(page: 'Nieuwsartikel', detail: title)],
       ),
       body: ListView(
         children: [
@@ -459,7 +476,7 @@ class _HomeShortcut extends StatelessWidget{
 }
 
 class EmergencyTrafficPage extends StatefulWidget{const EmergencyTrafficPage({super.key});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
-class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{String place='';bool traffic=false;late Future<List<dynamic>> items;@override void initState(){super.initState();items=load();}Future<List<dynamic>>load()async{final endpoint=traffic?'traffic':'112';final q=place.isEmpty?'':'?place=${Uri.encodeQueryComponent(place.toLowerCase().replaceAll(' ', '-'))}';try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint$q'));if(r.statusCode==200){final d=jsonDecode(r.body);if(d is List)return List<dynamic>.from(d);}}catch(_){}return [];}void refresh(){setState(()=>items=load());}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:Column(children:[DropdownButtonFormField<String>(initialValue:place,decoration:const InputDecoration(labelText:'Plaats',border:OutlineInputBorder()),items:['',...appConfig.places.where((x)=>x!='Voorne aan Zee')].map((x)=>DropdownMenuItem(value:x,child:Text(x.isEmpty?'Heel Voorne aan Zee':x))).toList(),onChanged:(v){place=v??'';refresh();}),const SizedBox(height:12),SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){traffic=v.first;refresh();})])),Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=s.data??[];if(x.isEmpty)return Center(child:Text(traffic?'Geen actuele verkeersmeldingen voor deze plaats.':'Geen actuele 112-meldingen voor deze plaats.'));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red),title:Text('${e['title']??''}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${e['date']??''}'),trailing:const Icon(Icons.chevron_right),onTap:(){final u=e['link']?.toString()??'';if(u.isNotEmpty)launchUrl(Uri.parse(u),mode:LaunchMode.externalApplication);});}));}))]));}
+class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{String place='';bool traffic=false;late Future<List<dynamic>> items;@override void initState(){super.initState();items=load();}Future<List<dynamic>>load()async{final endpoint=traffic?'traffic':'112';final q=place.isEmpty?'':'?place=${Uri.encodeQueryComponent(place.toLowerCase().replaceAll(' ', '-'))}';try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint$q'));if(r.statusCode==200){final d=jsonDecode(r.body);if(d is List)return List<dynamic>.from(d);}}catch(_){}return [];}void refresh(){setState(()=>items=load());}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy,actions:const [PageFeedbackButton(page:'112 & Verkeer')]),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:Column(children:[DropdownButtonFormField<String>(initialValue:place,decoration:const InputDecoration(labelText:'Plaats',border:OutlineInputBorder()),items:['',...appConfig.places.where((x)=>x!='Voorne aan Zee')].map((x)=>DropdownMenuItem(value:x,child:Text(x.isEmpty?'Heel Voorne aan Zee':x))).toList(),onChanged:(v){place=v??'';refresh();}),const SizedBox(height:12),SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){traffic=v.first;refresh();})])),Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=s.data??[];if(x.isEmpty)return Center(child:Text(traffic?'Geen actuele verkeersmeldingen voor deze plaats.':'Geen actuele 112-meldingen voor deze plaats.'));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red),title:Text('${e['title']??''}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${e['date']??''}'),trailing:const Icon(Icons.chevron_right),onTap:(){final u=e['link']?.toString()??'';if(u.isNotEmpty)launchUrl(Uri.parse(u),mode:LaunchMode.externalApplication);});}));}))]));}
 
 class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
