@@ -162,48 +162,40 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int index = 0;
-  final pages = const [
-    NewsPage(),
-    NewsPage(),
-    WeekbladPage(),
-    AgendaPage(),
-    AccountPage(),
-  ];
+  static const pageMap = <String,Widget>{
+    'home': NewsPage(),
+    'news': NewsPage(),
+    'weekblad': WeekbladPage(),
+    'agenda': AgendaPage(),
+    'account': AccountPage(),
+  };
+  static const iconMap = <String,IconData>{
+    'home':Icons.home_outlined,'news':Icons.article_outlined,'weekblad':Icons.menu_book_outlined,'agenda':Icons.event_outlined,'account':Icons.person_outline,
+  };
+  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','weekblad':'Weekblad','agenda':'Agenda','account':'Account'};
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          foregroundColor: navy,
-          title: const Row(children: [
-            Expanded(child: LogoMark()),
-          ]),
-          actions: [
-            IconButton(
-                onPressed: () => setState(() => index = 4), icon: const Icon(Icons.notifications_none)),
-            if (appConfig.feature('search')) IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchPage())), icon: const Icon(Icons.search)),
-          ],
-        ),
-        body: pages[index],
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: index,
-          onDestinationSelected: (v) => setState(() => index = v),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home'),
-            NavigationDestination(
-                icon: Icon(Icons.article_outlined), label: 'Nieuws'),
-            NavigationDestination(
-                icon: Icon(Icons.menu_book_outlined), label: 'Weekblad'),
-            NavigationDestination(
-                icon: Icon(Icons.event_outlined), label: 'Agenda'),
-            NavigationDestination(
-                icon: Icon(Icons.person_outline), label: 'Account'),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final keys=appConfig.navOrder.where((k)=>pageMap.containsKey(k)&&appConfig.nav(k)).toList();
+    if(keys.isEmpty) keys.addAll(['home','news','weekblad','agenda','account']);
+    if(index>=keys.length) index=0;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white, foregroundColor: appConfig.primary,
+        title: const Row(children: [Expanded(child: LogoMark())]),
+        actions: [
+          if(appConfig.feature('push') && keys.contains('account')) IconButton(onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.notifications_none)),
+          if(appConfig.feature('search')) IconButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage())),icon:const Icon(Icons.search)),
+        ],
+      ),
+      body: pageMap[keys[index]],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex:index,
+        onDestinationSelected:(v)=>setState(()=>index=v),
+        destinations:keys.map((k)=>NavigationDestination(icon:Icon(iconMap[k]),label:labelMap[k]??k)).toList(),
+      ),
+    );
+  }
 }
 
 class LogoMark extends StatefulWidget {
