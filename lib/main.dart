@@ -595,34 +595,6 @@ class TipPage extends StatefulWidget{const TipPage({super.key});@override State<
 class InAppWebPage extends StatelessWidget{final String title,url;const InAppWebPage({super.key,required this.title,required this.url});@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(title)),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.ads_click,size:44,color:navy),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:10),const Text('Advertentielink. Je verlaat de app alleen wanneer je hieronder kiest om de bestemming te openen.'),const SizedBox(height:16),FilledButton(onPressed:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:const Text('Open bestemming'))]))));}
 
 
-class EventDetailPage extends StatelessWidget {
-  final dynamic event;
-  const EventDetailPage({super.key, required this.event});
-  String value(String key) => event[key]?.toString() ?? '';
-  @override
-  Widget build(BuildContext context) {
-    final title=value('title');
-    final image=value('image');
-    final date=value('display_date').isNotEmpty?value('display_date'):value('start_date');
-    final time=value('time').isNotEmpty?value('time'):value('start_time');
-    final location=value('location');
-    final html=value('content');
-    return Scaffold(
-      appBar:AppBar(backgroundColor:Colors.white,foregroundColor:navy,title:const LogoMark()),
-      body:ListView(children:[
-        if(image.isNotEmpty) Image.network(image,height:230,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),
-        Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('AGENDA',style:TextStyle(color:cyan,fontWeight:FontWeight.w900)),
-          const SizedBox(height:8),
-          Text(title,style:const TextStyle(fontSize:28,height:1.1,fontWeight:FontWeight.w900,color:navy)),
-          const SizedBox(height:16),
-          if(date.isNotEmpty) ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.calendar_month,color:navy),title:Text(date),subtitle:time.isNotEmpty?Text(time):null),
-          if(location.isNotEmpty) ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined,color:navy),title:Text(location)),
-          const Divider(height:28),
-          if(html.isNotEmpty) Html(data:html,style:{'body':Style(fontSize:FontSize(16),lineHeight:const LineHeight(1.5),margin:Margins.zero)}),
-          if(html.isEmpty && value('excerpt').isNotEmpty) Text(value('excerpt'),style:const TextStyle(fontSize:16,height:1.5)),
-        ]))
-      ])
-    );
-  }
-}
+class EventDetailPage extends StatelessWidget{final dynamic event;const EventDetailPage({super.key,required this.event});String v(List<String> keys){for(final k in keys){final x=event[k];if(x!=null&&'$x'.trim().isNotEmpty)return '$x';}return'';}String title(){final x=event['title'];return x is Map?'${x['rendered']??''}':'${x??''}';}String category(){final x=event['category']??event['categories']??event['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}String address(){final full=v(['full_address','address']);if(full.isNotEmpty)return full;final street=v(['street','straat','location']),nr=v(['house_number','number','huisnummer']),zip=v(['postcode','postal_code']),city=v(['place','city','town','plaats']);final first=[street,nr].where((x)=>x.isNotEmpty).join(' '),second=[zip,city].where((x)=>x.isNotEmpty).join(' ');return[first,second].where((x)=>x.isNotEmpty).join('\n');}
+@override Widget build(BuildContext context){final image=v(['image','featured_image']),html=v(['content','description']),venue=v(['venue','location_name']),addr=address(),cat=category();return Scaffold(appBar:AppBar(backgroundColor:Colors.white,foregroundColor:navy,title:const LogoMark()),body:ListView(children:[if(image.isNotEmpty)Image.network(image,height:230,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('AGENDA',style:TextStyle(color:cyan,fontWeight:FontWeight.w900)),const SizedBox(height:8),Text(title(),style:const TextStyle(fontSize:28,height:1.1,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:16),if(v(['display_date','start_date','date']).isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.calendar_month,color:navy),title:Text(v(['display_date','start_date','date'])),subtitle:v(['time','start_time']).isNotEmpty?Text(v(['time','start_time'])):null),if(cat.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.category_outlined,color:navy),title:Text(cat)),if(venue.isNotEmpty||addr.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined,color:navy),title:Text(venue.isNotEmpty?venue:addr),subtitle:venue.isNotEmpty&&addr.isNotEmpty?Text(addr):null),if(v(['organizer','organisation','organisatie']).isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.groups_outlined,color:navy),title:Text(v(['organizer','organisation','organisatie']))),if(v(['price','kosten']).isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.euro_outlined,color:navy),title:Text(v(['price','kosten']))),const Divider(height:28),if(html.isNotEmpty)Html(data:html,style:{'body':Style(fontSize:FontSize(16),lineHeight:const LineHeight(1.5),margin:Margins.zero)}),if(html.isEmpty&&v(['excerpt']).isNotEmpty)Text(v(['excerpt']),style:const TextStyle(fontSize:16,height:1.5))]))]));}}
+
