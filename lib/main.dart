@@ -81,7 +81,6 @@ Future<void> main() async {
   runApp(const RvazApp());
 }
 
-const site = 'https://regiovoorneaanzee.nl';
 const navy = Color(0xFF203253);
 const cyan = Color(0xFF11BDEB);
 const green = Color(0xFF00CE8B);
