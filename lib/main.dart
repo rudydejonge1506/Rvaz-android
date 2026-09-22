@@ -17,16 +17,16 @@ const site = 'https://regiovoorneaanzee.nl';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 class AppConfig {
-  final String logoUrl, homeIntro, breakingBanner, homeTitle, latestTitle, agendaTitle, weekbladTitle, accountTitle;
+  final String logoUrl, homeHeroUrl, homeIntro, breakingBanner, homeTitle, latestTitle, agendaTitle, weekbladTitle, accountTitle;
   final List<String> places, navOrder, homeBlocks, accountBlocks;
   final Map<String,bool> navigation, features;
   final Map<String,dynamic> limits;
   final Color primary, accent, success, background;
   const AppConfig({
-    this.logoUrl='', this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.', this.breakingBanner='',
+    this.logoUrl='', this.homeHeroUrl='', this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.', this.breakingBanner='',
     this.homeTitle='Regio Voorne aan Zee', this.latestTitle='Laatste nieuws', this.agendaTitle='Agenda',
     this.weekbladTitle='Weekblad', this.accountTitle='Mijn RVAZ',
-    this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne'],
+    this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne','Oudenhoorn'],
     this.navOrder=const ['home','news','weekblad','agenda','account'],
     this.homeBlocks=const ['news','agenda','weekblad','ads'],
     this.accountBlocks=const ['saved','notifications','tips','contributions','weekblad','profile'],
@@ -46,12 +46,12 @@ class AppConfig {
     Map<String,bool> boolMap(dynamic x)=>x is Map?x.map((k,v)=>MapEntry(k.toString(),v==true||v==1)):<String,bool>{};
     List<String> list(dynamic x,List<String> d)=>x is List?x.map((e)=>e.toString()).toList():d;
     return AppConfig(
-      logoUrl:(j['logo_url']??'').toString(), homeIntro:(j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.').toString(),
+      logoUrl:(j['logo_url']??'').toString(), homeHeroUrl:(j['home_hero_url']??'').toString(), homeIntro:(j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.').toString(),
       breakingBanner:(j['breaking_banner']??'').toString(),
       homeTitle:(texts['home_title']??'Regio Voorne aan Zee').toString(), latestTitle:(texts['latest_title']??'Laatste nieuws').toString(),
       agendaTitle:(texts['agenda_title']??'Agenda').toString(), weekbladTitle:(texts['weekblad_title']??'Weekblad').toString(),
       accountTitle:(texts['account_title']??'Mijn RVAZ').toString(),
-      places:list(j['places'],const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne']),
+      places:list(j['places'],const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne','Oudenhoorn']),
       navOrder:list(j['nav_order'],const ['home','news','weekblad','agenda','account']), homeBlocks:list(j['home_blocks'],const ['news','agenda','weekblad','ads']),
       accountBlocks:list(j['account_blocks'],const ['saved','notifications','tips','contributions','weekblad','profile']),
       navigation:boolMap(j['navigation']), features:boolMap(j['features']),
@@ -188,7 +188,7 @@ class _ShellState extends State<Shell> {
           if(appConfig.feature('search')) IconButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage())),icon:const Icon(Icons.search)),
         ],
       ),
-      body: pageMap[keys[index]],
+      body: ColoredBox(color: const Color(0xFFF7F9FB), child: pageMap[keys[index]]!),
       bottomNavigationBar: NavigationBar(
         selectedIndex:index,
         onDestinationSelected:(v)=>setState(()=>index=v),
@@ -384,7 +384,7 @@ class _HomePageState extends State<HomePage>{
     child:ListView(padding:const EdgeInsets.all(16),children:[
       FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){
         final x=s.data??[];
-        final image=x.isNotEmpty?postImage(x.first):'';
+        final image=appConfig.homeHeroUrl;
         return Container(
           constraints:const BoxConstraints(minHeight:210),
           padding:const EdgeInsets.all(20),
@@ -602,7 +602,7 @@ class _AgendaPageState extends State<AgendaPage>{
     final n=DateTime.now(),today=DateTime(n.year,n.month,n.day);
     final items=all.where((p){final d=date(p);return(d==null||!d.isBefore(today))&&(place=='Alle plaatsen'||placeOf(p)==place)&&(category=='Alle categorieën'||catOf(p).contains(category))&&periodOk(p);}).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));
     return ListView(padding:const EdgeInsets.all(18),children:[
-      Text(appConfig.agendaTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),const Text('Evenementen en activiteiten op Voorne.'),const SizedBox(height:12),
+      const Text('AGENDA',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:cyan,letterSpacing:1.1)),const SizedBox(height:4),Text(appConfig.agendaTitle,style:const TextStyle(fontSize:30,height:1.05,fontWeight:FontWeight.w900,color:navy)),const Text('Evenementen en activiteiten op Voorne aan Zee.',style:TextStyle(color:Color(0xFF536577))),const SizedBox(height:16),
       Wrap(spacing:10,runSpacing:6,children:[
         DropdownButton<String>(value:places.contains(place)?place:'Alle plaatsen',items:places.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>place=v??'Alle plaatsen')),
         DropdownButton<String>(value:cats.contains(category)?category:'Alle categorieën',items:cats.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>category=v??'Alle categorieën')),
@@ -643,9 +643,9 @@ class AccountPage extends StatefulWidget { const AccountPage({super.key}); @over
 class _AccountPageState extends State<AccountPage>{
  String? userName; bool busy=false; bool advertiser=false; Map<String,dynamic> userInfo={};
  @override void initState(){super.initState();restore();}
- Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('\$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});}}catch(_){}}
+ Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});}}catch(_){}}
  Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
- Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('\$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;userInfo={};});}
+ Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;userInfo={};});}
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(18),
@@ -675,7 +675,11 @@ class _AccountPageState extends State<AccountPage>{
         const Divider(height:1),
         ListTile(leading: const Icon(Icons.article_outlined), title: const Text('Mijn bijdragen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionsPage()))),
         const Divider(height:1),
-        ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Weekblad'), subtitle: const Text('Lees de nieuwste editie'), trailing: const Icon(Icons.chevron_right)),
+        ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Weekblad'), subtitle: const Text('Lees de nieuwste editie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WeekbladPage()))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.event_outlined), title: const Text('Agenda'), subtitle: const Text('Activiteiten in de regio'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage()))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.help_outline), title: const Text('Contact & hulp'), trailing: const Icon(Icons.open_in_new), onTap:()=>launchUrl(Uri.parse('$site/contact/'),mode:LaunchMode.externalApplication)),
         if (advertiser) ...[
           const Divider(height:1),
           ListTile(leading: const Icon(Icons.campaign), title: const Text('Mijn advertenties'), subtitle: const Text('Campagnes, bereik en klikken'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyAdsPage()))),
@@ -713,4 +717,4 @@ class _InvoicesPageState extends State<InvoicesPage>{late Future<List<dynamic>> 
 
 class ProfilePage extends StatelessWidget{final Map<String,dynamic> user;const ProfilePage({super.key,required this.user});@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Mijn profiel'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[Card(child:Column(children:[ListTile(leading:const Icon(Icons.person),title:Text(user['name']?.toString()??''),subtitle:const Text('Naam')),const Divider(height:1),ListTile(leading:const Icon(Icons.email_outlined),title:Text(user['email']?.toString()??''),subtitle:const Text('E-mailadres')),if((user['place']?.toString()??'').isNotEmpty)...[const Divider(height:1),ListTile(leading:const Icon(Icons.location_on_outlined),title:Text(user['place'].toString()),subtitle:const Text('Woonplaats'))]]))]));}
 class NotificationPreferencesPage extends StatefulWidget{const NotificationPreferencesPage({super.key});@override State<NotificationPreferencesPage> createState()=>_NotificationPreferencesPageState();}
-class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{Map<String,bool> p={'breaking':true,'news':true,'emergency112':true,'traffic':true,'agenda':true,'weekblad':true};bool busy=true;@override void initState(){super.initState();load();}Future<void>load()async{try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:await authHeaders());if(r.statusCode==200){final d=Map<String,dynamic>.from(jsonDecode(r.body));for(final k in p.keys){if(d.containsKey(k)){p[k]=d[k]==true;}}}}catch(_){}if(mounted)setState(()=>busy=false);}Future<void>save(String k,bool v)async{setState(()=>p[k]=v);try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:{...(await authHeaders()),'Content-Type':'application/json'},body:jsonEncode(p));final m=FirebaseMessaging.instance;final topic=k=='emergency112'?'112':k;if(v){await m.subscribeToTopic(topic);}else{await m.unsubscribeFromTopic(topic);}}catch(_){}}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Meldingen'),backgroundColor:Colors.white,foregroundColor:navy),body:busy?const Center(child:CircularProgressIndicator()):ListView(children:[for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','emergency112':'112 & veiligheid','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))]));}
+class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{Map<String,bool> p={'breaking':true,'news':true,'emergency112':true,'traffic':true,'agenda':true,'weekblad':true};bool busy=true;@override void initState(){super.initState();load();}Future<void>load()async{try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:await authHeaders());if(r.statusCode==200){final d=Map<String,dynamic>.from(jsonDecode(r.body));for(final k in p.keys){if(d.containsKey(k)){p[k]=d[k]==true;}}}}catch(_){}if(mounted)setState(()=>busy=false);}Future<void>save(String k,bool v)async{setState(()=>p[k]=v);try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:{...(await authHeaders()),'Content-Type':'application/json'},body:jsonEncode(p));final m=FirebaseMessaging.instance;final topic=k=='emergency112'?'112':(k=='traffic'?'verkeer':k);if(v){await m.subscribeToTopic(topic);}else{await m.unsubscribeFromTopic(topic);}}catch(_){}}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Meldingen'),backgroundColor:Colors.white,foregroundColor:navy),body:busy?const Center(child:CircularProgressIndicator()):ListView(children:[for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','emergency112':'112 & veiligheid','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))]));}
