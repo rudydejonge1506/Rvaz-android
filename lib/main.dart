@@ -56,6 +56,7 @@ Future<void> openPushMessage(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await loadConfig();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
   await messaging.requestPermission(alert: true, badge: true, sound: true);
@@ -127,8 +128,8 @@ class _ShellState extends State<Shell> {
           ]),
           actions: [
             IconButton(
-                onPressed: () {}, icon: const Icon(Icons.notifications_none)),
-            IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
+                onPressed: () => setState(() => index = 4), icon: const Icon(Icons.notifications_none)),
+            IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchPage())), icon: const Icon(Icons.search)),
           ],
         ),
         body: pages[index],
@@ -379,13 +380,7 @@ class _NewsPageState extends State<NewsPage> {
                 Wrap(
                   spacing: 7,
                   runSpacing: 7,
-                  children: [
-                    'Voorne aan Zee',
-                    'Hellevoetsluis',
-                    'Brielle',
-                    'Rockanje',
-                    'Oostvoorne'
-                  ].map((x) => ActionChip(
+                  children: appConfig.places.map((x) => ActionChip(
                       label: Text(x),
                       onPressed: () {
                         final filtered = x == 'Voorne aan Zee'
@@ -594,13 +589,15 @@ class _AccountPageState extends State<AccountPage> {
       sw('Nieuw Weekblad', 'Melding bij een nieuwe editie', weekblad, (v){setState(()=>weekblad=v);topic('weekblad',v);}),
     ])),
     const SizedBox(height: 14),
-    Card(child: Column(children: const [
-      ListTile(leading: Icon(Icons.bookmark_outline), title: Text('Opgeslagen artikelen'), trailing: Icon(Icons.chevron_right)),
-      Divider(height: 1),
-      ListTile(leading: Icon(Icons.campaign_outlined), title: Text('Tip de redactie'), trailing: Icon(Icons.chevron_right)),
-      Divider(height: 1),
-      ListTile(leading: Icon(Icons.article_outlined), title: Text('Mijn bijdragen'), trailing: Icon(Icons.chevron_right)),
+    Card(child: Column(children: [
+      ListTile(leading: const Icon(Icons.bookmark_outline), title: const Text('Opgeslagen artikelen'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NativeInfoPage(title:'Opgeslagen artikelen',icon:Icons.bookmark_outline,text:'Hier verschijnen artikelen die je in de RVAZ-app bewaart. Synchronisatie met je RVAZ-account wordt via de app-API uitgevoerd.')))),
+      const Divider(height: 1),
+      ListTile(leading: const Icon(Icons.campaign_outlined), title: const Text('Tip de redactie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NativeInfoPage(title:'Tip de redactie',icon:Icons.campaign_outlined,text:'Stuur rechtstreeks vanuit de app een nieuwstip naar de RVAZ-redactie.')))),
+      const Divider(height: 1),
+      ListTile(leading: const Icon(Icons.article_outlined), title: const Text('Mijn bijdragen'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NativeInfoPage(title:'Mijn bijdragen',icon:Icons.article_outlined,text:'Bekijk hier de status van bijdragen die met je RVAZ-account zijn ingestuurd.')))),
     ])),
   ]);
 }
 \n\nclass SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }\nclass _SearchPageState extends State<SearchPage>{final c=TextEditingController();List<dynamic> results=[];bool busy=false;Future<void> go()async{final q=c.text.trim();if(q.isEmpty)return;setState(()=>busy=true);try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(q)}&per_page=30&_embed=1'));if(r.statusCode==200)results=List<dynamic>.from(jsonDecode(r.body));}catch(_){}if(mounted)setState(()=>busy=false);}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const LogoMark(),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:c,textInputAction:TextInputAction.search,onSubmitted:(_)=>go(),decoration:InputDecoration(hintText:'Zoek nieuws op Voorne',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:go,icon:const Icon(Icons.arrow_forward))))),if(busy)const LinearProgressIndicator(),Expanded(child:ListView.builder(itemCount:results.length,itemBuilder:(context,i){final p=results[i];final title=(p['title']?['rendered']??'').toString().replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–').replaceAll('&amp;','&');return ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:72,height:54,fit:BoxFit.cover),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))));}))]));}\n
+
+class NativeInfoPage extends StatelessWidget { final String title,text; final IconData icon; const NativeInfoPage({super.key,required this.title,required this.icon,required this.text}); @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(title),backgroundColor:Colors.white,foregroundColor:navy),body:Padding(padding:const EdgeInsets.all(22),child:Card(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,size:42,color:cyan),const SizedBox(height:16),Text(title,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),Text(text,style:const TextStyle(fontSize:16,height:1.5))]))))); }
