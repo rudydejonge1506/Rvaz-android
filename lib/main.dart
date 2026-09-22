@@ -17,14 +17,16 @@ const site = 'https://regiovoorneaanzee.nl';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 class AppConfig {
-  final String logoUrl, accentColor, homeIntro, breakingBanner;
-  final List<String> places, features;
-  final Map<String,dynamic> navigation;
-  const AppConfig({this.logoUrl='',this.accentColor='#11BDEB',this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.',this.breakingBanner='',this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne'],this.features=const [],this.navigation=const {}});
-  factory AppConfig.fromJson(Map<String,dynamic> j)=>AppConfig(logoUrl:'${j['logo_url']??''}',accentColor:'${j['accent_color']??'#11BDEB'}',homeIntro:'${j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.'}',breakingBanner:'${j['breaking_banner']??''}',places:List<String>.from((j['places'] is List?j['places']:const []).map((e)=>'$e')),features:List<String>.from((j['features'] is List?j['features']:const []).map((e)=>'$e')),navigation:j['navigation'] is Map?Map<String,dynamic>.from(j['navigation']):const {});
+  final String logoUrl, homeIntro;
+  final List<String> places;
+  const AppConfig({this.logoUrl='',this.homeIntro='Actueel nieuws van Regio Voorne aan Zee.',this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne']});
+  factory AppConfig.fromJson(Map<String,dynamic> j)=>AppConfig(
+    logoUrl:(j['logo_url']??'').toString(),
+    homeIntro:(j['home_intro']??'Actueel nieuws van Regio Voorne aan Zee.').toString(),
+    places:j['places'] is List?List<String>.from((j['places'] as List).map((e)=>e.toString())):const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne']);
 }
 AppConfig appConfig=const AppConfig();
-Future<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));if(r.statusCode==200)appConfig=AppConfig.fromJson(Map<String,dynamic>.from(jsonDecode(r.body)));}catch(_){}}
+Future<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));if(r.statusCode==200){final d=jsonDecode(r.body);if(d is Map<String,dynamic>)appConfig=AppConfig.fromJson(d);}}catch(_){}}
 
 Future<void> registerDeviceToken() async {
   final m = FirebaseMessaging.instance;
