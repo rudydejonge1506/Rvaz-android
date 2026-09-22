@@ -504,10 +504,15 @@ class _AgendaPageState extends State<AgendaPage> {
       }
       String subOf(dynamic p) {
         final parts=<String>[];
-        for(final k in ['date','start_date','start_time','location']) { final v=p[k]?.toString()??''; if(v.isNotEmpty) parts.add(v); }
+        final display=p['display_date']?.toString()??'';
+        final raw=p['start_date']?.toString()??p['date']?.toString()??'';
+        if(display.isNotEmpty) parts.add(display); else if(raw.isNotEmpty) parts.add(raw);
+        final time=p['time']?.toString()??p['start_time']?.toString()??'';
+        if(time.isNotEmpty) parts.add(time);
+        final location=p['location']?.toString()??'';
+        if(location.isNotEmpty) parts.add(location);
         if(parts.isNotEmpty) return parts.join(' · ');
-        final e=p['excerpt'];
-        return clean(e is Map ? (e['rendered']?.toString() ?? '') : (e?.toString() ?? ''));
+        return 'Bekijk evenement';
       }
       return ListView(padding: const EdgeInsets.all(18), children: [
         const Text('Agenda', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
@@ -525,6 +530,8 @@ class _AgendaPageState extends State<AgendaPage> {
             leading: const CircleAvatar(backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.event, color: navy)),
             title: Text(titleOf(p), style: const TextStyle(fontWeight: FontWeight.w800, color: navy)),
             subtitle: Text(subOf(p), maxLines: 3, overflow: TextOverflow.ellipsis),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EventDetailPage(event: p))),
           ),
         )),
       ]);
@@ -619,3 +626,36 @@ class SavedPage extends StatefulWidget{const SavedPage({super.key});@override St
 class ContributionsPage extends StatefulWidget{const ContributionsPage({super.key});@override State<ContributionsPage> createState()=>_ContributionsPageState();}class _ContributionsPageState extends State<ContributionsPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/contributions'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Mijn bijdragen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Je hebt nog geen bijdragen.')):ListView(children:x.map((e)=>ListTile(title:Text('${e['title']}'),subtitle:Text('${e['status']} · ${e['type']}'))).toList());}));}
 class TipPage extends StatefulWidget{const TipPage({super.key});@override State<TipPage> createState()=>_TipPageState();}class _TipPageState extends State<TipPage>{final subject=TextEditingController(),place=TextEditingController(),body=TextEditingController();bool busy=false;Future<void>send()async{setState(()=>busy=true);final h=await authHeaders();h['Content-Type']='application/json';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/tip'),headers:h,body:jsonEncode({'subject':subject.text,'place':place.text,'text':body.text}));if(!mounted)return;setState(()=>busy=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(r.statusCode==200?'Tip is naar de redactie gestuurd.':'Kon tip niet versturen. Log in en probeer opnieuw.')));if(r.statusCode==200)Navigator.pop(context);}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Tip de redactie')),body:ListView(padding:const EdgeInsets.all(18),children:[TextField(controller:subject,decoration:const InputDecoration(labelText:'Onderwerp')),TextField(controller:place,decoration:const InputDecoration(labelText:'Plaats')),const SizedBox(height:12),TextField(controller:body,minLines:8,maxLines:14,decoration:const InputDecoration(labelText:'Vertel ons wat er speelt',border:OutlineInputBorder())),const SizedBox(height:16),FilledButton.icon(onPressed:busy?null:send,icon:const Icon(Icons.send),label:Text(busy?'Versturen…':'Verstuur naar redactie'))]));}
 class InAppWebPage extends StatelessWidget{final String title,url;const InAppWebPage({super.key,required this.title,required this.url});@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(title)),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.ads_click,size:44,color:navy),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:10),const Text('Advertentielink. Je verlaat de app alleen wanneer je hieronder kiest om de bestemming te openen.'),const SizedBox(height:16),FilledButton(onPressed:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:const Text('Open bestemming'))]))));}
+
+
+class EventDetailPage extends StatelessWidget {
+  final dynamic event;
+  const EventDetailPage({super.key, required this.event});
+  String value(String key) => event[key]?.toString() ?? '';
+  @override
+  Widget build(BuildContext context) {
+    final title=value('title');
+    final image=value('image');
+    final date=value('display_date').isNotEmpty?value('display_date'):value('start_date');
+    final time=value('time').isNotEmpty?value('time'):value('start_time');
+    final location=value('location');
+    final html=value('content');
+    return Scaffold(
+      appBar:AppBar(backgroundColor:Colors.white,foregroundColor:navy,title:const LogoMark()),
+      body:ListView(children:[
+        if(image.isNotEmpty) Image.network(image,height:230,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+        Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('AGENDA',style:TextStyle(color:cyan,fontWeight:FontWeight.w900)),
+          const SizedBox(height:8),
+          Text(title,style:const TextStyle(fontSize:28,height:1.1,fontWeight:FontWeight.w900,color:navy)),
+          const SizedBox(height:16),
+          if(date.isNotEmpty) ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.calendar_month,color:navy),title:Text(date),subtitle:time.isNotEmpty?Text(time):null),
+          if(location.isNotEmpty) ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined,color:navy),title:Text(location)),
+          const Divider(height:28),
+          if(html.isNotEmpty) Html(data:html,style:{'body':Style(fontSize:FontSize(16),lineHeight:const LineHeight(1.5),margin:Margins.zero)}),
+          if(html.isEmpty && value('excerpt').isNotEmpty) Text(value('excerpt'),style:const TextStyle(fontSize:16,height:1.5)),
+        ]))
+      ])
+    );
+  }
+}
