@@ -170,7 +170,7 @@ class _ShellState extends State<Shell> {
     'account': AccountPage(),
   };
   static const iconMap = <String,IconData>{
-    'home':Icons.home_outlined,'news':Icons.article_outlined,'emergency':Icons.siren_outlined,'agenda':Icons.event_outlined,'account':Icons.more_horiz,
+    'home':Icons.home_outlined,'news':Icons.article_outlined,'emergency':Icons.warning_amber_rounded,'agenda':Icons.event_outlined,'account':Icons.more_horiz,
   };
   static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112 & Verkeer','agenda':'Agenda','account':'Meer'};
 
@@ -280,9 +280,10 @@ class _AppAdCardState extends State<AppAdCard> {
 
 String cleanArticleHtml(String html) {
   var out = html;
-  final block = RegExp(r'<(div|section|aside|button)[^>]*(?:class|id)=["\\'][^"\\']*(?:voorlees|listen|speech|tts|responsivevoice)[^"\\']*["\\'][^>]*>.*?</\\1>', caseSensitive: false, dotAll: true);
-  out = out.replaceAll(block, '');
-  out = out.replaceAll(RegExp(r'<[^>]*(?:voorlees|listen|speech|tts|responsivevoice)[^>]*>', caseSensitive: false), '');
+  final markers = <String>['voorlees','responsivevoice','text-to-speech','tts-control'];
+  for (final marker in markers) {
+    out = out.replaceAll(RegExp('<[^>]*(?:class|id)=[^>]*' + marker + '[^>]*>.*?</(?:div|section|aside|button)>', caseSensitive: false, dotAll: true), '');
+  }
   return out;
 }
 
@@ -387,7 +388,7 @@ class _HomePageState extends State<HomePage>{
     ])),
     Container(transform:Matrix4.translationValues(0,-12,0),padding:const EdgeInsets.symmetric(horizontal:14),child:GridView.count(crossAxisCount:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.25,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
-      _HomeShortcut(icon:Icons.siren_outlined,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
+      _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
       _HomeShortcut(icon:Icons.calendar_month,color:Colors.teal,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage()))),
       _HomeShortcut(icon:Icons.location_on,color:Colors.green,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
       _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
