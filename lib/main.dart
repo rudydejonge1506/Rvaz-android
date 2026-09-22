@@ -559,59 +559,15 @@ class _WeekbladPageState extends State<WeekbladPage> {
   });
 }
 
-class AccountPage extends StatefulWidget {
-  const AccountPage({super.key});
-  @override
-  State<AccountPage> createState() => _AccountPageState();
+class AccountPage extends StatefulWidget { const AccountPage({super.key}); @override State<AccountPage> createState()=>_AccountPageState(); }
+class _AccountPageState extends State<AccountPage>{
+ String? userName; bool busy=false;
+ @override void initState(){super.initState();restore();}
+ Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('\$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer '+t});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState(()=>userName=d['user']?['name']?.toString());}}catch(_){}}
+ Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('\$site/wp-json/rvaz-app/v1/'+endpoint),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted)setState(()=>userName=d['user']?['name']?.toString()??n.text.trim());}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
+ Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('\$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer '+t});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState(()=>userName=null);}
+ @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(18),children:[const Text('Mijn RVAZ',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:14),Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('RVAZ-account',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:5),Text(userName==null?'Hetzelfde account werkt op website en app':'Ingelogd als '+userName!),const SizedBox(height:16),if(busy)const LinearProgressIndicator(),if(userName==null)Wrap(spacing:10,runSpacing:8,children:[FilledButton.icon(onPressed:busy?null:()=>auth(false),icon:const Icon(Icons.login),label:const Text('Inloggen')),OutlinedButton.icon(onPressed:busy?null:()=>auth(true),icon:const Icon(Icons.person_add),label:const Text('Account aanmaken'))])else OutlinedButton.icon(onPressed:logout,icon:const Icon(Icons.logout),label:const Text('Uitloggen'))]))),const SizedBox(height:14),Card(child:Column(children:[ListTile(leading:const Icon(Icons.bookmark_outline),title:const Text('Opgeslagen artikelen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()))),const Divider(height:1),ListTile(leading:const Icon(Icons.campaign_outlined),title:const Text('Tip de redactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),const Divider(height:1),ListTile(leading:const Icon(Icons.article_outlined),title:const Text('Mijn bijdragen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ContributionsPage())))]))]);
 }
-class _AccountPageState extends State<AccountPage> {
-  String? userName;
-  Future<void> _login(BuildContext context) async {
-    final login=TextEditingController(), pass=TextEditingController();
-    final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:const Text('Inloggen bij RVAZ'),content:Column(mainAxisSize:MainAxisSize.min,children:[
-      TextField(controller:login,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mail of gebruikersnaam')),
-      TextField(controller:pass,obscureText:true,decoration:const InputDecoration(labelText:'Wachtwoord')),
-    ]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Inloggen'))]));
-    if(ok!=true)return;
-    final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/login'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode({'login':login.text.trim(),'password_b64':base64Encode(utf8.encode(pass.text))}));
-    if(!context.mounted)return;
-    if(r.statusCode==200){final d=jsonDecode(r.body); final token=d['token']?.toString()??''; if(token.isNotEmpty) await const FlutterSecureStorage().write(key:'rvaz_token',value:token); if(!context.mounted)return; setState(()=>userName=d['user']?['name']?.toString());ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Ingelogd als ${userName??'RVAZ-gebruiker'}')));}
-    else { String msg='Inloggen mislukt. Controleer je gegevens.'; try { final e=jsonDecode(r.body); msg=e['message']?.toString()??msg; } catch(_){} ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(msg)));}
-  }
-  Future<void> topic(String name,bool on) async { final m=FirebaseMessaging.instance; if(on){await m.subscribeToTopic(name);}else{await m.unsubscribeFromTopic(name);} }
-  bool breaking = true, emergency = true, traffic = true, events = false, weekblad = true;
-  Widget sw(String title, String subtitle, bool value, ValueChanged<bool> change) => SwitchListTile(
-    value: value, onChanged: change, title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-    subtitle: Text(subtitle), activeThumbColor: cyan);
-  @override
-  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(18), children: [
-    const Text('Mijn RVAZ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
-    const SizedBox(height: 14),
-    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Row(children: [CircleAvatar(radius: 25, backgroundColor: Color(0xFFE2F7FC), child: Icon(Icons.person, color: navy)), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('RVAZ-account', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: navy)), Text('Hetzelfde account als op de website')]))]),
-      const SizedBox(height: 16),
-      FilledButton.icon(onPressed: () => _login(context), icon: const Icon(Icons.login), label: const Text('Inloggen / account koppelen')),
-    ]))),
-    const SizedBox(height: 14),
-    const Text('Pushmeldingen', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: navy)),
-    Card(child: Column(children: [
-      sw('Breaking nieuws', 'Belangrijk regionaal nieuws', breaking, (v){setState(()=>breaking=v);topic('breaking',v);}),
-      sw('112', 'Grote incidenten en hulpdiensten', emergency, (v){setState(()=>emergency=v);topic('112',v);}),
-      sw('Verkeer', 'Afsluitingen en belangrijke verkeersmeldingen', traffic, (v){setState(()=>traffic=v);topic('verkeer',v);}),
-      sw('Agenda', 'Uitgelichte activiteiten', events, (v){setState(()=>events=v);topic('agenda',v);}),
-      sw('Nieuw Weekblad', 'Melding bij een nieuwe editie', weekblad, (v){setState(()=>weekblad=v);topic('weekblad',v);}),
-    ])),
-    const SizedBox(height: 14),
-    Card(child: Column(children: [
-      ListTile(leading: const Icon(Icons.bookmark_outline), title: const Text('Opgeslagen artikelen'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()))),n:Icons.bookmark_outline,text:'Hier verschijnen artikelen die je in de RVAZ-app bewaart. Synchronisatie met je RVAZ-account wordt via de app-API uitgevoerd.')))),
-      const Divider(height: 1),
-      ListTile(leading: const Icon(Icons.campaign_outlined), title: const Text('Tip de redactie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),n:Icons.campaign_outlined,text:'Stuur rechtstreeks vanuit de app een nieuwstip naar de RVAZ-redactie.')))),
-      const Divider(height: 1),
-      ListTile(leading: const Icon(Icons.article_outlined), title: const Text('Mijn bijdragen'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ContributionsPage()))),n:Icons.article_outlined,text:'Bekijk hier de status van bijdragen die met je RVAZ-account zijn ingestuurd.')))),
-    ])),
-  ]);
-}
-
 
 class SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }
 class _SearchPageState extends State<SearchPage>{final c=TextEditingController();List<dynamic> results=[];bool busy=false;Future<void> go()async{final q=c.text.trim();if(q.isEmpty)return;setState(()=>busy=true);try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(q)}&per_page=30&_embed=1'));if(r.statusCode==200)results=List<dynamic>.from(jsonDecode(r.body));}catch(_){}if(mounted)setState(()=>busy=false);}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const LogoMark(),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:c,textInputAction:TextInputAction.search,onSubmitted:(_)=>go(),decoration:InputDecoration(hintText:'Zoek nieuws op Voorne',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:go,icon:const Icon(Icons.arrow_forward))))),if(busy)const LinearProgressIndicator(),Expanded(child:ListView.builder(itemCount:results.length,itemBuilder:(context,i){final p=results[i];final title=(p['title']?['rendered']??'').toString().replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–').replaceAll('&amp;','&');return ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:72,height:54,fit:BoxFit.cover),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))));}))]));}
