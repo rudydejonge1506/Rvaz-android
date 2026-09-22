@@ -35,6 +35,28 @@ jobs:
         run: rm -f test/widget_test.dart
       - name: Get packages
         run: flutter pub get
+      - name: Prepare API-managed Android app icon
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request
+          from pathlib import Path
+          try:
+              with urllib.request.urlopen('https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config', timeout=20) as r:
+                  cfg=json.load(r)
+              url=(cfg.get('app_icon_url') or '').strip()
+              if url:
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      Path('assets/rvaz-app-icon.png').write_bytes(r.read())
+                  p=Path('pubspec.yaml')
+                  t=p.read_text().replace('image_path: assets/rvaz-logo.png','image_path: assets/rvaz-app-icon.png').replace('adaptive_icon_foreground: assets/rvaz-logo.png','adaptive_icon_foreground: assets/rvaz-app-icon.png')
+                  p.write_text(t)
+                  print('Using app icon from RVAZ App API')
+              else:
+                  print('No API app icon configured; using exact RVAZ logo fallback')
+          except Exception as e:
+              print('API icon unavailable; using repository fallback:', e)
+          PY
+          dart run flutter_launcher_icons
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
