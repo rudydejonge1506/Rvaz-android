@@ -404,11 +404,6 @@ String cleanArticleHtml(String html) {
   out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
   return out;
 }
-Future<bool> _postFeedback(Map<String,dynamic> payload) async {
-  for (final endpoint in ['feedback','app-feedback','tip']) {
-    try { final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json',...(await authHeaders())},body:jsonEncode(payload)).timeout(const Duration(seconds:10)); if(r.statusCode>=200&&r.statusCode<300)return true; } catch (_) {}
-  } return false;
-}
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
   final controller=TextEditingController();
   final send=await showDialog<bool>(
