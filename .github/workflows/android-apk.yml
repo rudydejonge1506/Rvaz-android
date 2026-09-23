@@ -102,23 +102,12 @@ jobs:
           if 'java.util.Properties' not in s:
               s = 'import java.util.Properties\nimport java.io.FileInputStream\n\n' + s
           marker = 'android {'
-          setup = '''val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-
-'''
+          setup = 'val keystoreProperties = Properties()\\nval keystorePropertiesFile = rootProject.file("key.properties")\\nkeystoreProperties.load(FileInputStream(keystorePropertiesFile))\\n\\n'
           if setup not in s:
               s = s.replace(marker, setup + marker, 1)
           if 'signingConfigs {' not in s:
-              s = s.replace('    buildTypes {', '''    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-        }
-    }
-    buildTypes {''', 1)
+              signing = '    signingConfigs {\\n        create("release") {\\n            keyAlias = keystoreProperties["keyAlias"] as String\\n            keyPassword = keystoreProperties["keyPassword"] as String\\n            storeFile = file(keystoreProperties["storeFile"] as String)\\n            storePassword = keystoreProperties["storePassword"] as String\\n        }\\n    }\\n    buildTypes {'
+              s = s.replace('    buildTypes {', signing, 1)
           s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
           p.write_text(s)
           PY
