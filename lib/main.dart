@@ -69,10 +69,29 @@ Future<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-
 
 Future<void> registerDeviceToken() async {
   final m = FirebaseMessaging.instance;
-  final token = await m.getToken();
-  if (token == null || token.isEmpty) return;
   try {
-    await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/device'), headers: {'Content-Type':'application/json'}, body: jsonEncode({'token':token,'topics':['all','breaking','112','verkeer','agenda','weekblad']}));
+    final settings = await m.getNotificationSettings();
+    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+    final token = await m.getToken();
+    if (token == null || token.isEmpty) return;
+    final headers = <String,String>{'Content-Type':'application/json','Accept':'application/json'};
+    try {
+      final auth = await authHeaders();
+      if (auth['Authorization']?.isNotEmpty == true) headers['Authorization'] = auth['Authorization']!;
+    } catch (_) {}
+    final payload = jsonEncode({
+      'token':token,
+      'device_token':token,
+      'fcm_token':token,
+      'platform':'android',
+      'topics':['all','breaking','news','112','emergency112','traffic','verkeer','agenda','weekblad'],
+    });
+    for (final endpoint in ['device','device-token','push/register']) {
+      try {
+        final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
+        if (r.statusCode >= 200 && r.statusCode < 300) return;
+      } catch (_) {}
+    }
   } catch (_) {}
 }
 
@@ -112,16 +131,14 @@ Future<void> main() async {
   await loadConfig();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(alert: true, badge: true, sound: true);
-  await messaging.subscribeToTopic('all');
-  await messaging.subscribeToTopic('breaking');
-  await messaging.subscribeToTopic('112');
-  await messaging.unsubscribeFromTopic('traffic');
-  await messaging.subscribeToTopic('verkeer');
-  await messaging.subscribeToTopic('agenda');
-  await messaging.subscribeToTopic('weekblad');
-  await registerDeviceToken();
-  messaging.onTokenRefresh.listen((_) => registerDeviceToken());
+  final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
+  if (permission.authorizationStatus != AuthorizationStatus.denied) {
+    for (final topic in ['all','breaking','news','112','emergency112','traffic','verkeer','agenda','weekblad']) {
+      try { await messaging.subscribeToTopic(topic); } catch (_) {}
+    }
+    await registerDeviceToken();
+  }
+  messaging.onTokenRefresh.listen((_) async { await registerDeviceToken(); });
   FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   final initialMessage = await messaging.getInitialMessage();
   if (initialMessage != null) {
