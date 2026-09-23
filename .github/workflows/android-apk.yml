@@ -76,42 +76,28 @@ jobs:
               m = m[:close+1] + '\\n        ' + meta + m[close+1:]
           manifest.write_text(m)
           PY
-      - name: Configure release signing from GitHub secrets
-        env:
-          RVAZ_KEYSTORE_BASE64: ${{ secrets.RVAZ_KEYSTORE_BASE64 }}
-          RVAZ_KEYSTORE_PASSWORD: ${{ secrets.RVAZ_KEYSTORE_PASSWORD }}
-          RVAZ_KEY_ALIAS: ${{ secrets.RVAZ_KEY_ALIAS }}
-          RVAZ_KEY_PASSWORD: ${{ secrets.RVAZ_KEY_PASSWORD }}
+      - name: Configure stable release signing
         run: |
-          test -n "$RVAZ_KEYSTORE_BASE64" || { echo "RVAZ_KEYSTORE_BASE64 ontbreekt"; exit 1; }
-          test -n "$RVAZ_KEYSTORE_PASSWORD" || { echo "RVAZ_KEYSTORE_PASSWORD ontbreekt"; exit 1; }
-          test -n "$RVAZ_KEY_ALIAS" || { echo "RVAZ_KEY_ALIAS ontbreekt"; exit 1; }
-          test -n "$RVAZ_KEY_PASSWORD" || { echo "RVAZ_KEY_PASSWORD ontbreekt"; exit 1; }
-          printf '%s' "$RVAZ_KEYSTORE_BASE64" | base64 --decode > android/app/rvaz-upload.jks
-          # Validate the keystore itself first. Do not fail just because a manually entered alias is wrong.
-          keytool -list -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" >/dev/null
-          DETECTED_ALIAS=$(keytool -list -v -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" 2>/dev/null | sed -n 's/^Alias name: //p' | head -1)
-          test -n "$DETECTED_ALIAS" || { echo "Geen sleutelalias gevonden in upload-keystore"; exit 1; }
-          echo "Upload-keystore is geldig; sleutelalias automatisch gevonden."
-          cat > android/key.properties <<EOF
-          storePassword=$RVAZ_KEYSTORE_PASSWORD
-          keyPassword=$RVAZ_KEY_PASSWORD
-          keyAlias=$DETECTED_ALIAS
-          storeFile=rvaz-upload.jks
+          cp android-signing/rvaz-test.jks android/app/rvaz-release.jks
+          cat > android/key.properties <<'EOF'
+          storePassword=rvaz-test-2026
+          keyPassword=rvaz-test-2026
+          keyAlias=rvaztest
+          storeFile=rvaz-release.jks
           EOF
+          keytool -list -keystore android/app/rvaz-release.jks -storepass rvaz-test-2026 -alias rvaztest >/dev/null
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/build.gradle.kts')
           s = p.read_text()
           if 'java.util.Properties' not in s:
               s = 'import java.util.Properties\nimport java.io.FileInputStream\n\n' + s
-          marker = 'android {'
-          setup = 'val keystoreProperties = Properties()\\nval keystorePropertiesFile = rootProject.file("key.properties")\\nkeystoreProperties.load(FileInputStream(keystorePropertiesFile))\\n\\n'
-          if setup not in s:
-              s = s.replace(marker, setup + marker, 1)
-          if 'signingConfigs {' not in s:
-              signing = '    signingConfigs {\\n        create("release") {\\n            keyAlias = keystoreProperties["keyAlias"] as String\\n            keyPassword = keystoreProperties["keyPassword"] as String\\n            storeFile = file(keystoreProperties["storeFile"] as String)\\n            storePassword = keystoreProperties["storePassword"] as String\\n        }\\n    }\\n    buildTypes {'
-              s = s.replace('    buildTypes {', signing, 1)
+          setup = 'val keystoreProperties = Properties()\nval keystorePropertiesFile = rootProject.file("key.properties")\nkeystoreProperties.load(FileInputStream(keystorePropertiesFile))\n\n'
+          if 'val keystoreProperties = Properties()' not in s:
+              s = s.replace('android {', setup + 'android {', 1)
+          if 'create("release")' not in s:
+              signing = '    signingConfigs {\n        create("release") {\n            keyAlias = keystoreProperties["keyAlias"] as String\n            keyPassword = keystoreProperties["keyPassword"] as String\n            storeFile = file(keystoreProperties["storeFile"] as String)\n            storePassword = keystoreProperties["storePassword"] as String\n        }\n    }\n'
+              s = s.replace('    buildTypes {', signing + '    buildTypes {', 1)
           s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
           p.write_text(s)
           PY
@@ -125,7 +111,7 @@ jobs:
           for APK in build/app/outputs/flutter-apk/app-*-release.apk; do
             "$APKSIGNER" verify --verbose --print-certs "$APK"
           done
-          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab >/dev/null
+          jarsigner -verify -strict -verbose -certs build/app/outputs/bundle/release/app-release.aab >/dev/null
           echo "Release APKs en AAB zijn ondertekend."
       - name: Verify APK package
         run: |
