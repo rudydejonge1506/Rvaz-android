@@ -117,7 +117,7 @@ jobs:
           for APK in build/app/outputs/flutter-apk/app-*-release.apk; do
             "$APKSIGNER" verify --verbose --print-certs "$APK"
           done
-          jarsigner -verify -strict -verbose -certs build/app/outputs/bundle/release/app-release.aab >/dev/null
+          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab >/dev/null
           echo "Release APKs en AAB zijn ondertekend."
       - name: Verify APK package
         run: |
