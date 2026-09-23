@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -182,7 +181,6 @@ Future<void> openPushMessage(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await MobileAds.instance.initialize();
   await loadConfig();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
@@ -330,19 +328,6 @@ class _LogoMarkState extends State<LogoMark> {
           errorBuilder: (_, __, ___) => Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft))
       : Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft),
   );
-}
-
-class GoogleMobileBanner extends StatefulWidget {
-  const GoogleMobileBanner({super.key});
-  @override State<GoogleMobileBanner> createState()=>_GoogleMobileBannerState();
-}
-class _GoogleMobileBannerState extends State<GoogleMobileBanner> {
-  BannerAd? ad;
-  bool loaded=false;
-  static const unitId=String.fromEnvironment('ADMOB_BANNER_ID',defaultValue:'ca-app-pub-3940256099942544/6300978111');
-  @override void initState(){super.initState();ad=BannerAd(adUnitId:unitId,size:AdSize.banner,request:const AdRequest(),listener:BannerAdListener(onAdLoaded:(x){if(mounted)setState(()=>loaded=true);},onAdFailedToLoad:(x,e){x.dispose();}));ad!.load();}
-  @override void dispose(){ad?.dispose();super.dispose();}
-  @override Widget build(BuildContext context){if(!loaded||ad==null)return const SizedBox.shrink();return Semantics(label:'Google advertentie',child:Center(child:SizedBox(width:ad!.size.width.toDouble(),height:ad!.size.height.toDouble(),child:AdWidget(ad:ad!))));}
 }
 
 class AppAd {
@@ -723,7 +708,7 @@ class _HomePageState extends State<HomePage>{
           Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title']?['rendered']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
         const SizedBox(height:10),
         FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():Padding(padding:const EdgeInsets.only(bottom:8),child:AppAdCard(ad:a.first));}),
-        const GoogleMobileBanner(),
+        const SizedBox.shrink(),
         const SizedBox(height:10),
         ...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
       ]);}),
@@ -906,7 +891,7 @@ class _NewsPageState extends State<NewsPage> {
                       },
                     )).toList(),
                 ),
-                const GoogleMobileBanner(),
+                const SizedBox.shrink(),
                 const SizedBox(height: 12),
                 ...posts.asMap().entries.expand((entry) {
                   final p = entry.value;
