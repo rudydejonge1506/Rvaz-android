@@ -76,16 +76,20 @@ jobs:
               m = m[:close+1] + '\\n        ' + meta + m[close+1:]
           manifest.write_text(m)
           PY
-      - name: Configure stable release signing
+      - name: Configure Google Play release signing
+        env:
+          RVAZ_KEYSTORE_BASE64: ${{ secrets.RVAZ_KEYSTORE_BASE64 }}
+          RVAZ_KEYSTORE_PASSWORD: ${{ secrets.RVAZ_KEYSTORE_PASSWORD }}
+          RVAZ_KEY_PASSWORD: ${{ secrets.RVAZ_KEY_PASSWORD }}
         run: |
-          cp android-signing/rvaz-test.jks android/app/rvaz-release.jks
-          cat > android/key.properties <<'EOF'
-          storePassword=rvaz-test-2026
-          keyPassword=rvaz-test-2026
-          keyAlias=rvaztest
-          storeFile=rvaz-release.jks
-          EOF
-          keytool -list -keystore android/app/rvaz-release.jks -storepass rvaz-test-2026 -alias rvaztest >/dev/null
+          test -n "$RVAZ_KEYSTORE_BASE64" || { echo "RVAZ_KEYSTORE_BASE64 ontbreekt"; exit 1; }
+          test -n "$RVAZ_KEYSTORE_PASSWORD" || { echo "RVAZ_KEYSTORE_PASSWORD ontbreekt"; exit 1; }
+          test -n "$RVAZ_KEY_PASSWORD" || { echo "RVAZ_KEY_PASSWORD ontbreekt"; exit 1; }
+          printf '%s' "$RVAZ_KEYSTORE_BASE64" | base64 --decode > android/app/rvaz-upload.jks
+          keytool -list -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" >/dev/null
+          DETECTED_ALIAS=$(keytool -list -v -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" 2>/dev/null | sed -n 's/^Alias name: //p' | head -1)
+          test -n "$DETECTED_ALIAS" || { echo "Geen sleutelalias gevonden"; exit 1; }
+          printf '%s\n' "storePassword=$RVAZ_KEYSTORE_PASSWORD" "keyPassword=$RVAZ_KEY_PASSWORD" "keyAlias=$DETECTED_ALIAS" "storeFile=rvaz-upload.jks" > android/key.properties
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/build.gradle.kts')
