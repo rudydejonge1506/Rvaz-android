@@ -380,7 +380,7 @@ List<dynamic> _adList(dynamic decoded) {
 Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
   // The WordPress advertising plugin marks campaigns for the app. Ask the
   // canonical app endpoint first and accept the plugin's common wrappers.
-  final aliases=<String>{placement, if(placement=='article') 'news_article', if(placement=='news_feed') 'news', 'app'};
+  final aliases=<String>{placement, if(placement=='news_feed') 'news', 'app'};
   for(final p in aliases){
     try{
       final d=await RvazApi.get('ads',query:{'placement':p,'channel':'app'});
