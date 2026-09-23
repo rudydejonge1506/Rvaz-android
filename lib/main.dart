@@ -14,6 +14,46 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 const site = 'https://regiovoorneaanzee.nl';
 
+class RvazApi {
+  static const base = '$site/wp-json/rvaz-app/v1';
+  static Future<dynamic> get(String path, {Map<String,String>? query}) async {
+    final uri=Uri.parse('$base/$path').replace(queryParameters: query);
+    final r=await http.get(uri,headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:15));
+    if(r.statusCode<200||r.statusCode>=300) throw Exception('API $path: HTTP ${r.statusCode}');
+    if(r.body.trim().isEmpty) return null;
+    return jsonDecode(r.body);
+  }
+  static List<dynamic> list(dynamic d,[List<String> keys=const []]){
+    if(d is List)return List<dynamic>.from(d);
+    if(d is Map){
+      for(final k in [...keys,'items','data','results']){
+        final v=d[k];
+        if(v is List)return List<dynamic>.from(v);
+        if(v is Map){
+          for(final nk in ['items','data','results']){
+            if(v[nk] is List)return List<dynamic>.from(v[nk]);
+          }
+        }
+      }
+    }
+    return <dynamic>[];
+  }
+  static Future<List<dynamic>> firstList(List<String> paths,{List<String> keys=const []}) async {
+    Object? last;
+    for(final p in paths){
+      try{
+        final parts=p.split('?');
+        Map<String,String>? q;
+        if(parts.length>1){q=Uri.splitQueryString(parts.sublist(1).join('?'));}
+        final x=list(await get(parts.first,query:q),keys);
+        if(x.isNotEmpty)return x;
+      }catch(e){last=e;}
+    }
+    if(last!=null) debugPrint('RVAZ API: $last');
+    return <dynamic>[];
+  }
+}
+
 final navigatorKey = GlobalKey<NavigatorState>();
 
 class AppConfig {
@@ -847,7 +887,7 @@ class _AgendaPageState extends State<AgendaPage>{
  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
  Future<List<dynamic>> load() async {
    try {
-     final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250'));
+     final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250')).timeout(const Duration(seconds:15));
      if(r.statusCode!=200)return [];
      final d=jsonDecode(r.body);
      if(d is List)return List<dynamic>.from(d);
