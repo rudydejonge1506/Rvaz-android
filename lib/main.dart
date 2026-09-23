@@ -664,7 +664,7 @@ class PlaceNewsPage extends StatefulWidget {
 }
 class _PlaceNewsPageState extends State<PlaceNewsPage> {
   late Future<List<dynamic>> future;
-  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
+  @override void initState(){super.initState();future=load();}
   Future<List<dynamic>> load() async {
     final q=Uri.encodeQueryComponent(widget.place);
     final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/posts?place=$q&per_page=50'));
@@ -844,7 +844,7 @@ class _NewsPageState extends State<NewsPage> {
 class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override State<AgendaPage> createState()=>_AgendaPageState();}
 class _AgendaPageState extends State<AgendaPage>{
  late Future<List<dynamic>> future;late Future<List<AppAd>> ads;String place='Alle';
- @override void initState(){super.initState();future=load();}
+ @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
  Future<List<dynamic>> load() async {
    try {
      final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250'));
