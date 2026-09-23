@@ -885,19 +885,10 @@ class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override 
 class _AgendaPageState extends State<AgendaPage>{
  late Future<List<dynamic>> future;late Future<List<AppAd>> ads;String place='Alle';
  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
- Future<List<dynamic>> load() async {
-   try {
-     final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250')).timeout(const Duration(seconds:15));
-     if(r.statusCode!=200)return [];
-     final d=jsonDecode(r.body);
-     if(d is List)return List<dynamic>.from(d);
-     if(d is Map){
-       final raw=d['items'] ?? d['events'] ?? d['data'] ?? d['results'];
-       if(raw is List)return List<dynamic>.from(raw);
-     }
-   } catch (_) {}
-   return [];
- }
+ Future<List<dynamic>> load() => RvazApi.firstList(
+   ['agenda?per_page=250','events?per_page=250'],
+   keys: const ['events','agenda'],
+ );
  String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
  String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
@@ -917,25 +908,10 @@ class _WeekbladPageState extends State<WeekbladPage> {
   late Future<List<dynamic>> future;
   late Future<List<AppAd>> ads;
   @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'weekblad');}
-  Future<List<dynamic>> load() async {
-    final uris=[
-      Uri.parse('$site/wp-json/rvaz-app/v1/weekblad'),
-      Uri.parse('$site/wp-json/rvaz-app/v1/issues'),
-    ];
-    for(final uri in uris){
-      try{
-        final r=await http.get(uri).timeout(const Duration(seconds:8));
-        if(r.statusCode!=200)continue;
-        final d=jsonDecode(r.body);
-        if(d is List && d.isNotEmpty)return List<dynamic>.from(d);
-        if(d is Map){
-          final x=d['items']??d['issues']??d['data']??d['results'];
-          if(x is List && x.isNotEmpty)return List<dynamic>.from(x);
-        }
-      }catch(_){}
-    }
-    return [];
-  }
+  Future<List<dynamic>> load() => RvazApi.firstList(
+    ['weekblad','issues'],
+    keys: const ['issues','editions','weekblad'],
+  );
   @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
     if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
     final issues=s.data??[];
