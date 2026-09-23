@@ -96,6 +96,19 @@ Future<void> registerDeviceToken() async {
 }
 
 
+Future<void> testPushOnThisDevice(BuildContext context) async {
+  try {
+    final token=await FirebaseMessaging.instance.getToken();
+    if(token==null||token.isEmpty){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen Firebase-token op dit toestel.')));return;}
+    await registerDeviceToken();
+    final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/push-test'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode({'token':token})).timeout(const Duration(seconds:15));
+    if(!context.mounted)return;
+    String msg=r.statusCode>=200&&r.statusCode<300?'Testmelding is naar dit toestel verstuurd.':'Push-test mislukt (${r.statusCode}). Controleer Firebase in RVAZ App.';
+    try{final d=jsonDecode(r.body);if(d is Map&&d['message']!=null)msg=d['message'].toString();}catch(_){}
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(msg)));
+  }catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Push-test kon niet worden uitgevoerd.')));}
+}
+
 Future<void> openPushMessage(RemoteMessage message) async {
   final data = message.data;
   final rawId = data['post_id'] ?? data['postId'] ?? data['id'];
@@ -929,6 +942,8 @@ class _AccountPageState extends State<AccountPage>{
       const SizedBox(height: 14),
       Card(child:Column(children:[
         ListTile(leading:const Icon(Icons.feedback_outlined),title:const Text('Feedback over de app'),subtitle:const Text('Meld een fout of geef een suggestie'),trailing:const Icon(Icons.chevron_right),onTap:()=>sendPageFeedback(context,'Algemene app-feedback')),
+        const Divider(height:1),
+        ListTile(leading:const Icon(Icons.notifications_active_outlined),title:const Text('Test pushmelding'),subtitle:const Text('Controleer WordPress → Firebase → deze telefoon'),trailing:const Icon(Icons.chevron_right),onTap:()=>testPushOnThisDevice(context)),
         const Divider(height:1),
         ListTile(leading:const Icon(Icons.campaign_outlined),title:const Text('Tip de redactie'),subtitle:Text(userName==null?'Log in om een tip te versturen':'Stuur nieuws rechtstreeks naar de redactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>userName==null?auth(false):Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),
       ])),
