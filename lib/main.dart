@@ -524,10 +524,52 @@ bool postRequiresLogin(dynamic p){
   return false;
 }
 Future<bool> appLoggedIn() async => (await const FlutterSecureStorage().read(key:'rvaz_token'))?.isNotEmpty==true;
+
+Future<void> _showLoginRequired(BuildContext context) async {
+  if(!context.mounted)return;
+  await showDialog(context:context,builder:(d)=>AlertDialog(
+    title:const Text('Alleen voor ingelogde gebruikers'),
+    content:const Text('Log in bij Mijn RVAZ om dit artikel te lezen.'),
+    actions:[
+      TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Sluiten')),
+      FilledButton(onPressed:(){Navigator.pop(d);Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()));},child:const Text('Inloggen')),
+    ],
+  ));
+}
+
 Future<void> openArticle(BuildContext context,dynamic post) async {
-  if(postRequiresLogin(post) && !await appLoggedIn()){
-    if(!context.mounted)return;
-    await showDialog(context:context,builder:(d)=>AlertDialog(title:const Text('Alleen voor ingelogde gebruikers'),content:const Text('Log in bij Mijn RVAZ om dit artikel te lezen.'),actions:[TextButton(onPressed:()=>Navigator.pop(d),child:const Text('Sluiten')),FilledButton(onPressed:(){Navigator.pop(d);Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()));},child:const Text('Inloggen'))]));
+  final id=int.tryParse('${post is Map ? post['id'] ?? '' : ''}');
+  final headers=await authHeaders();
+
+  // The app API is authoritative for access control. Never trust the public
+  // WordPress post response to decide whether a members-only article may open.
+  if(id!=null){
+    try{
+      final r=await http.get(
+        Uri.parse('$site/wp-json/rvaz-app/v1/posts/$id'),
+        headers:headers,
+      ).timeout(const Duration(seconds:12));
+      if(r.statusCode==401||r.statusCode==403){
+        if(context.mounted)await _showLoginRequired(context);
+        return;
+      }
+      if(r.statusCode>=200&&r.statusCode<300&&r.body.trim().isNotEmpty){
+        final canonical=jsonDecode(r.body);
+        final resolved=canonical is Map && canonical['post'] is Map ? canonical['post'] : canonical;
+        if(postRequiresLogin(resolved) && !headers.containsKey('Authorization')){
+          if(context.mounted)await _showLoginRequired(context);
+          return;
+        }
+        if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:resolved)));
+        return;
+      }
+    }catch(_){}
+  }
+
+  // Local metadata remains a safety net when an older API does not expose
+  // the detail endpoint yet.
+  if(postRequiresLogin(post) && !headers.containsKey('Authorization')){
+    if(context.mounted)await _showLoginRequired(context);
     return;
   }
   if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:post)));
@@ -667,9 +709,23 @@ class _HomePageState extends State<HomePage>{
   late Future<List<dynamic>> posts;
   late Future<List<dynamic>> events;
   late Future<List<AppAd>> ads;
+  int visibleNews=8;
   @override void initState(){super.initState();_reload();}
-  void _reload(){posts=_posts();events=_events();ads=loadAppAds(placement:'home');}
-  Future<List<dynamic>> _posts() async {final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=15&_embed=1'));return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}
+  void _reload(){visibleNews=8;posts=_posts();events=_events();ads=loadAppAds(placement:'home');}
+  Future<List<dynamic>> _posts() async {
+    try{
+      final r=await http.get(
+        Uri.parse('$site/wp-json/rvaz-app/v1/posts?per_page=100'),
+        headers:await authHeaders(),
+      ).timeout(const Duration(seconds:15));
+      if(r.statusCode==200){
+        final d=jsonDecode(r.body);
+        final x=RvazApi.list(d,const ['posts']);
+        if(x.isNotEmpty)return x;
+      }
+    }catch(_){}
+    return <dynamic>[];
+  }
   Future<List<dynamic>> _events()=>RvazApi.firstList(['agenda?per_page=5','events?per_page=5'],keys:const ['events','agenda']);
   String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads]);},child:ListView(padding:EdgeInsets.zero,children:[
@@ -702,15 +758,23 @@ class _HomePageState extends State<HomePage>{
     ])),
     Padding(padding:const EdgeInsets.fromLTRB(16,0,16,22),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Laatste nieuws',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage())),child:const Text('Meer →'))]),
-      FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final x=s.data??[];if(x.isEmpty)return const SizedBox.shrink();final p=x.first;return Column(children:[
+      FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final all=s.data??[];if(all.isEmpty)return const SizedBox.shrink();final x=all.take(visibleNews).toList();final p=x.first;return Column(children:[
         Card(clipBehavior:Clip.antiAlias,margin:EdgeInsets.zero,child:InkWell(onTap:()=>openArticle(context,p),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           if(postImage(p).isNotEmpty)Image.network(postImage(p),height:175,width:double.infinity,fit:BoxFit.cover),
-          Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title']?['rendered']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
+          Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
         const SizedBox(height:10),
         FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():Padding(padding:const EdgeInsets.only(bottom:8),child:AppAdCard(ad:a.first));}),
         const SizedBox.shrink(),
         const SizedBox(height:10),
-        ...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
+        ...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
+        if(visibleNews<all.length)Padding(
+          padding:const EdgeInsets.only(top:8),
+          child:OutlinedButton.icon(
+            onPressed:()=>setState(()=>visibleNews=(visibleNews+8).clamp(1,all.length)),
+            icon:const Icon(Icons.expand_more),
+            label:const Text('Meer laden'),
+          ),
+        ),
       ]);}),
       
     ]))
@@ -830,11 +894,13 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<List<dynamic>> load() async {
     final count=appConfig.limit('news_per_page',20).clamp(1,100);
-    final r = await http.get(Uri.parse('$site/wp-json/wp/v2/posts?per_page=$count&_embed=1'));
-    if (r.statusCode != 200) {
-      throw Exception('Nieuws kon niet worden geladen');
-    }
-    return jsonDecode(r.body);
+    final r=await http.get(
+      Uri.parse('$site/wp-json/rvaz-app/v1/posts?per_page=$count'),
+      headers:await authHeaders(),
+    ).timeout(const Duration(seconds:15));
+    if(r.statusCode!=200)throw Exception('Nieuws kon niet worden geladen');
+    final d=jsonDecode(r.body);
+    return RvazApi.list(d,const ['posts']);
   }
 
   String clean(String s) => s
@@ -917,7 +983,7 @@ class _NewsPageState extends State<NewsPage> {
                                     fontSize: 12,
                                     fontWeight: FontWeight.w900)),
                             const SizedBox(height: 6),
-                            Text(clean(p['title']['rendered']),
+                            Text(clean((p['title'] is Map?p['title']['rendered']:p['title']??'').toString()),
                                 style: const TextStyle(
                                     fontSize: 20,
                                     height: 1.15,
@@ -932,7 +998,7 @@ class _NewsPageState extends State<NewsPage> {
                               ]),
                               const SizedBox(height: 8),
                             ],
-                            Text(clean(p['excerpt']['rendered']),
+                            Text(clean((p['excerpt'] is Map?p['excerpt']['rendered']:p['excerpt']??'').toString()),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(height: 1.4)),
@@ -958,10 +1024,26 @@ class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override 
 class _AgendaPageState extends State<AgendaPage>{
  late Future<List<dynamic>> future;late Future<List<AppAd>> ads;String place='Alle';
  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
- Future<List<dynamic>> load() => RvazApi.firstList(
-   ['agenda?per_page=250','events?per_page=250'],
-   keys: const ['events','agenda'],
- );
+ Future<List<dynamic>> load() async {
+   final collected=<dynamic>[];
+   final seen=<String>{};
+   for(final path in [
+     'agenda?per_page=250',
+     'agenda?limit=250',
+     'events?per_page=250',
+     'events?limit=250',
+   ]){
+     try{
+       final parts=path.split('?');
+       final d=await RvazApi.get(parts.first,query:Uri.splitQueryString(parts[1]));
+       for(final e in RvazApi.list(d,const ['events','agenda'])){
+         final key=e is Map?'${e['id']??''}|${e['start_date']??e['date']??''}|${e['title']??''}':'$e';
+         if(seen.add(key))collected.add(e);
+       }
+     }catch(_){}
+   }
+   return collected;
+ }
  String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
  String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
@@ -1040,8 +1122,6 @@ class _AccountPageState extends State<AccountPage>{
         ListTile(leading: const Icon(Icons.article_outlined), title: const Text('Mijn bijdragen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionsPage()))),
         const Divider(height:1),
         ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Weekblad'), subtitle: const Text('Lees de nieuwste editie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WeekbladPage()))),
-        const Divider(height:1),
-        ListTile(leading: const Icon(Icons.event_outlined), title: const Text('Agenda'), subtitle: const Text('Activiteiten in de regio'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage()))),
         const Divider(height:1),
         ListTile(leading: const Icon(Icons.help_outline), title: const Text('Contact & hulp'), trailing: const Icon(Icons.open_in_new), onTap:()=>launchUrl(Uri.parse('$site/contact/'),mode:LaunchMode.externalApplication)),
         if (advertiser) ...[
