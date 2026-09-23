@@ -119,7 +119,7 @@ Future<void> registerDeviceToken() async {
       final auth = await authHeaders();
       if (auth['Authorization']?.isNotEmpty == true) headers['Authorization'] = auth['Authorization']!;
     } catch (_) {}
-    final storage=const FlutterSecureStorage();
+    const storage=FlutterSecureStorage();
     final p2000OptIn=(await storage.read(key:'rvaz_push_112'))=='1';
     final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];if(p2000OptIn)topics.add('112');
     for(final place in ['hellevoetsluis','rockanje','brielle','oostvoorne','voorne-aan-zee']){if((await storage.read(key:'rvaz_p2000_$place'))=='1')topics.add('p2000-$place');}
