@@ -410,21 +410,35 @@ Future<bool> _postFeedback(Map<String,dynamic> payload) async {
   } return false;
 }
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
-  final message=TextEditingController(); var type='Probleem';
-  final send=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setLocal)=>AlertDialog(title:const Text('Feedback geven'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Text('Pagina: $page',style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:12),
-    DropdownButtonFormField<String>(initialValue:type,decoration:const InputDecoration(labelText:'Soort feedback'),items:const [DropdownMenuItem(value:'Probleem',child:Text('Er werkt iets niet')),DropdownMenuItem(value:'Verbetering',child:Text('Verbetering')),DropdownMenuItem(value:'Functie',child:Text('Ik mis een onderdeel'))],onChanged:(v)=>setLocal(()=>type=v??'Probleem')),
-    const SizedBox(height:12),TextField(controller:message,minLines:4,maxLines:8,decoration:const InputDecoration(labelText:'Wat wil je ons meegeven?',hintText:'Beschrijf kort wat er gebeurt of wat je graag toegevoegd ziet.')),
-  ])),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Versturen'))])));
-  if(send!=true||message.text.trim().isEmpty)return;
-  final payload=<String,dynamic>{'type':type,'page':page,'detail':detail??'','message':message.text.trim(),'subject':'App feedback – $page','text':message.text.trim(),'source':'android-app'};
-  final ok=await _postFeedback(payload); if(!context.mounted)return;
-  if(ok){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bedankt! Je feedback is verstuurd.')));return;}
-  final subject=Uri.encodeComponent('App feedback – $page'); final extra=detail==null||detail.isEmpty?'':'Onderdeel: $detail\\n';
-  final body=Uri.encodeComponent('Soort: $type\\nPagina: $page\\n$extra\\n${message.text.trim()}');
-  final opened=await launchUrl(Uri.parse('mailto:redactie@regiovoorneaanzee.nl?subject=$subject&body=$body'),mode:LaunchMode.externalApplication);
-  if(!opened&&context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Feedback kon niet worden verstuurd.')));
+  final controller=TextEditingController();
+  final send=await showDialog<bool>(
+    context: context,
+    builder:(d)=>AlertDialog(
+      title:const Text('Feedback voor de app'),
+      content:TextField(controller:controller,minLines:5,maxLines:10,autofocus:true,decoration:InputDecoration(hintText:'Wat werkt goed of wat kunnen we verbeteren op $page?')),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),
+        FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Versturen')),
+      ],
+    ),
+  );
+  if(send!=true||controller.text.trim().isEmpty)return;
+  try{
+    final h=await authHeaders();h['Content-Type']='application/json';
+    final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/feedback'),headers:h,body:jsonEncode({'page':page,'detail':detail??'','text':controller.text.trim()}));
+    if(!context.mounted)return;
+    if(r.statusCode>=200&&r.statusCode<300){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bedankt! Je feedback is naar de redactie gestuurd.')));
+    }else if(r.statusCode==401){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Log eerst in bij Mijn RVAZ om feedback te sturen.')));
+    }else{
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Feedback kon niet worden verstuurd. Probeer opnieuw.')));
+    }
+  }catch(_){
+    if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding. Feedback is niet verstuurd.')));
+  }
 }
+
 class PageFeedbackButton extends StatelessWidget { final String page; final String? detail; const PageFeedbackButton({super.key, required this.page, this.detail}); @override Widget build(BuildContext context)=>IconButton(tooltip:'Feedback over deze pagina',icon:const Icon(Icons.feedback_outlined),onPressed:()=>sendPageFeedback(context,page,detail:detail)); }
 const defaultRVAZHero = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg/1280px-Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg';
 
