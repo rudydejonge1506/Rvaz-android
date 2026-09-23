@@ -35,29 +35,31 @@ jobs:
         run: rm -f test/widget_test.dart
       - name: Get packages
         run: flutter pub get
-      - name: Prepare RVAZ Android app icon from App API
+      - name: Prepare RVAZ Android app icon
         run: |
-          API="https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config"
-          for n in 1 2 3 4 5; do
-            if curl -4 --fail --location --connect-timeout 15 --max-time 45 --retry 2 --retry-delay 3 "$API" -o /tmp/rvaz-config.json; then
-              break
+          ICON_SOURCE=""
+          if [ -f "assets/images/app_icon.png" ]; then ICON_SOURCE="assets/images/app_icon.png"; fi
+          if [ -z "$ICON_SOURCE" ] && [ -f "assets/app_icon.png" ]; then ICON_SOURCE="assets/app_icon.png"; fi
+          if [ -z "$ICON_SOURCE" ]; then
+            API="https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config"
+            if curl -4 --fail --location --connect-timeout 10 --max-time 25 "$API" -o /tmp/rvaz-config.json; then
+              ICON_URL=$(python3 -c "import json; d=json.load(open('/tmp/rvaz-config.json')); print(d.get('app_icon_url') or d.get('app_icon') or '')")
+              if [ -n "$ICON_URL" ] && curl -4 --fail --location --connect-timeout 10 --max-time 30 "$ICON_URL" -o /tmp/rvaz-icon-source; then
+                ICON_SOURCE="/tmp/rvaz-icon-source"
+              fi
             fi
-            echo "App API poging $n mislukt; opnieuw proberen..."
-            sleep 10
-          done
-          test -s /tmp/rvaz-config.json
-          ICON_URL=$(python3 -c "import json; d=json.load(open('/tmp/rvaz-config.json')); print(d.get('app_icon_url') or d.get('app_icon') or '')")
-          test -n "$ICON_URL" || { echo "RVAZ App API bevat geen app_icon_url/app_icon"; exit 1; }
-          echo "App icon URL ontvangen via RVAZ App API"
-          curl -4 --fail --location --connect-timeout 15 --max-time 60 --retry 4 --retry-delay 5 "$ICON_URL" -o /tmp/rvaz-icon-source
+          fi
+          if [ -z "$ICON_SOURCE" ]; then
+            echo "App API tijdelijk onbereikbaar; bestaande Flutter launcher iconen blijven behouden."
+            exit 0
+          fi
           sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
-          convert /tmp/rvaz-icon-source -strip /tmp/rvaz-icon.png
+          convert "$ICON_SOURCE" -strip /tmp/rvaz-icon.png
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
             dir="${spec%%:*}"; size="${spec##*:}"
             mkdir -p "android/app/src/main/res/$dir"
             convert /tmp/rvaz-icon.png -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
           done
-          identify android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
