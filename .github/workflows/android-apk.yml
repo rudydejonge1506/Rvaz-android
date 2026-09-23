@@ -88,11 +88,15 @@ jobs:
           test -n "$RVAZ_KEY_ALIAS" || { echo "RVAZ_KEY_ALIAS ontbreekt"; exit 1; }
           test -n "$RVAZ_KEY_PASSWORD" || { echo "RVAZ_KEY_PASSWORD ontbreekt"; exit 1; }
           printf '%s' "$RVAZ_KEYSTORE_BASE64" | base64 --decode > android/app/rvaz-upload.jks
-          keytool -list -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" -alias "$RVAZ_KEY_ALIAS" >/dev/null
+          # Validate the keystore itself first. Do not fail just because a manually entered alias is wrong.
+          keytool -list -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" >/dev/null
+          DETECTED_ALIAS=$(keytool -list -v -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" 2>/dev/null | sed -n 's/^Alias name: //p' | head -1)
+          test -n "$DETECTED_ALIAS" || { echo "Geen sleutelalias gevonden in upload-keystore"; exit 1; }
+          echo "Upload-keystore is geldig; sleutelalias automatisch gevonden."
           cat > android/key.properties <<EOF
           storePassword=$RVAZ_KEYSTORE_PASSWORD
           keyPassword=$RVAZ_KEY_PASSWORD
-          keyAlias=$RVAZ_KEY_ALIAS
+          keyAlias=$DETECTED_ALIAS
           storeFile=rvaz-upload.jks
           EOF
           python3 - <<'PY'
