@@ -51,6 +51,10 @@ jobs:
           permission = '<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
           if permission not in m:
               m = m.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">', '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\\n    ' + permission, 1)
+          meta = '<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>'
+          if 'com.google.android.gms.ads.APPLICATION_ID' not in m:
+              close = m.find('>', m.find('<application'))
+              m = m[:close+1] + '\\n        ' + meta + m[close+1:]
           manifest.write_text(m)
           PY
       - name: Build smaller release APKs per architecture
