@@ -35,8 +35,15 @@ jobs:
         run: rm -f test/widget_test.dart
       - name: Get packages
         run: flutter pub get
-      - name: Prepare Android app icon
-        run: echo "Using generated Android launcher icon until the RVAZ source PNG is replaced"
+      - name: Prepare RVAZ Android app icon
+        run: |
+          base64 -d assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon.png
+          for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
+            dir="${spec%%:*}"; size="${spec##*:}"
+            mkdir -p "android/app/src/main/res/$dir"
+            convert /tmp/rvaz-icon.png -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
+          done
+          identify android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
@@ -57,6 +64,8 @@ jobs:
           PY
       - name: Build smaller release APKs per architecture
         run: flutter build apk --release --split-per-abi
+      - name: Build Google Play app bundle
+        run: flutter build appbundle --release
       - name: Sign APKs with stable RVAZ test key
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
@@ -91,4 +100,10 @@ jobs:
         with:
           name: RVAZ-Android-small-release-APKs
           path: build/app/outputs/flutter-apk/app-*-release.apk
+          if-no-files-found: error
+      - name: Upload Google Play AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: RVAZ-Google-Play-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
