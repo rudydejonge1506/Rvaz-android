@@ -378,29 +378,31 @@ List<dynamic> _adList(dynamic decoded) {
 }
 
 Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
-  final placements = <String>{placement, 'app', 'mobile', 'all'};
-  final uris = <Uri>[
-    for (final p in placements) Uri.parse('$site/wp-json/rvaz-app/v1/ads?placement=${Uri.encodeQueryComponent(p)}'),
-    for (final p in placements) Uri.parse('$site/wp-json/rvaz-ads/v1/ads?placement=${Uri.encodeQueryComponent(p)}'),
-    for (final p in placements) Uri.parse('$site/wp-json/rvaz/v1/app-ads?placement=${Uri.encodeQueryComponent(p)}'),
-    Uri.parse('$site/wp-json/rvaz-app/v1/ads'),
-    Uri.parse('$site/wp-json/rvaz-ads/v1/ads'),
-    Uri.parse('$site/wp-json/rvaz/v1/app-ads'),
-  ];
-  for (final uri in uris) {
-    try {
-      final r = await http.get(uri, headers: const {'Accept':'application/json'}).timeout(const Duration(seconds: 8));
-      if (r.statusCode < 200 || r.statusCode >= 300 || r.body.trim().isEmpty) continue;
-      final list = _adList(jsonDecode(r.body));
-      final ads = list.map(AppAd.fromJson).where((a) =>
-        a.image.isNotEmpty || a.url.isNotEmpty || (a.title.isNotEmpty && a.title != 'Advertentie')
-      ).toList();
-      if (ads.isNotEmpty) return ads;
-    } catch (_) {}
+  // The WordPress advertising plugin marks campaigns for the app. Ask the
+  // canonical app endpoint first and accept the plugin's common wrappers.
+  final aliases=<String>{placement, if(placement=='article') 'news', if(placement=='news_feed') 'news', 'app'};
+  for(final p in aliases){
+    try{
+      final d=await RvazApi.get('ads',query:{'placement':p,'channel':'app'});
+      final ads=_adList(d).map(AppAd.fromJson).where((a)=>a.image.isNotEmpty||a.url.isNotEmpty).toList();
+      if(ads.isNotEmpty)return ads;
+    }catch(_){}
   }
-  return [];
+  // Compatibility with the installed advertising plugin while older API
+  // versions are still present.
+  for(final root in ['rvaz-ads/v1/ads','rvaz/v1/app-ads']){
+    for(final p in aliases){
+      try{
+        final r=await http.get(Uri.parse('$site/wp-json/$root?placement=${Uri.encodeQueryComponent(p)}&channel=app'),headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:10));
+        if(r.statusCode>=200&&r.statusCode<300){
+          final ads=_adList(jsonDecode(r.body)).map(AppAd.fromJson).where((a)=>a.image.isNotEmpty||a.url.isNotEmpty).toList();
+          if(ads.isNotEmpty)return ads;
+        }
+      }catch(_){}
+    }
+  }
+  return <AppAd>[];
 }
-
 Future<void> trackAd(int id, String type) async { if(id<=0)return; try { await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/ad-event'), headers: {'Content-Type':'application/json'}, body: jsonEncode({'id':id,'type':type})); } catch (_) {} }
 
 class AppAdCard extends StatefulWidget {
