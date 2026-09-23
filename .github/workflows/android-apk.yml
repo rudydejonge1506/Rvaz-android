@@ -38,6 +38,7 @@ jobs:
       - name: Prepare RVAZ Android app icon
         run: |
           base64 -d assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon.png
+          sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
             dir="${spec%%:*}"; size="${spec##*:}"
             mkdir -p "android/app/src/main/res/$dir"
