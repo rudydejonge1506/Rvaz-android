@@ -325,7 +325,7 @@ String cleanArticleHtml(String html) {
   // WordPress content can contain desktop-only inline layout rules. flutter_html
   // otherwise honours those rules and may render paragraphs in a tiny column.
   out = out.replaceAll(RegExp(r'\\s(?:width|min-width|max-width|float|position|left|right)\\s*:\\s*[-a-z0-9.%]+\\s*;?', caseSensitive: false), '');
-  out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
+  out = out.replaceAll(RegExp(r'''\\sstyle=(\"[^\"]*\"|'[^']*')''', caseSensitive: false), '');\n  out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
   return out;
 }
 
@@ -564,7 +564,7 @@ class _PlaceNewsPageState extends State<PlaceNewsPage> {
   @override void initState(){super.initState();future=load();}
   Future<List<dynamic>> load() async {
     final q=Uri.encodeQueryComponent(widget.place);
-    final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=$q&per_page=50&_embed=1'));
+    final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/posts?place=$q&per_page=50'));
     if(r.statusCode!=200)return [];
     return List<dynamic>.from(jsonDecode(r.body));
   }
@@ -580,7 +580,7 @@ class _PlaceNewsPageState extends State<PlaceNewsPage> {
           margin:const EdgeInsets.only(bottom:10),child:ListTile(
             contentPadding:const EdgeInsets.all(10),
             leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):ClipRRect(borderRadius:BorderRadius.circular(6),child:Image.network(postImage(p),width:76,height:60,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.article_outlined))),
-            title:Text(clean(p['title']?['rendered']??''),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),
+            title:Text(clean(p['title'] is Map ? (p['title']?['rendered']??'') : (p['title']??'')),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),
             subtitle:Text(formatPostDate(p)),trailing:const Icon(Icons.chevron_right,color:navy),
             onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))),
           ));
