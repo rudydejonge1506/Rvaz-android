@@ -37,17 +37,19 @@ jobs:
         run: flutter pub get
       - name: Prepare RVAZ Android app icon from App API
         run: |
-          python3 - <<'PY'
-          import json, urllib.request
-          api='https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config'
-          with urllib.request.urlopen(api, timeout=20) as r:
-              cfg=json.load(r)
-          url=(cfg.get('app_icon_url') or cfg.get('app_icon') or '').strip()
-          if not url:
-              raise SystemExit('RVAZ App API config bevat geen app_icon_url/app_icon')
-          print('App icon from RVAZ App API:', url)
-          urllib.request.urlretrieve(url, '/tmp/rvaz-icon-source')
-          PY
+          API="https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config"
+          for n in 1 2 3 4 5; do
+            if curl -4 --fail --location --connect-timeout 15 --max-time 45 --retry 2 --retry-delay 3 "$API" -o /tmp/rvaz-config.json; then
+              break
+            fi
+            echo "App API poging $n mislukt; opnieuw proberen..."
+            sleep 10
+          done
+          test -s /tmp/rvaz-config.json
+          ICON_URL=$(python3 -c "import json; d=json.load(open('/tmp/rvaz-config.json')); print(d.get('app_icon_url') or d.get('app_icon') or '')")
+          test -n "$ICON_URL" || { echo "RVAZ App API bevat geen app_icon_url/app_icon"; exit 1; }
+          echo "App icon URL ontvangen via RVAZ App API"
+          curl -4 --fail --location --connect-timeout 15 --max-time 60 --retry 4 --retry-delay 5 "$ICON_URL" -o /tmp/rvaz-icon-source
           sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
           convert /tmp/rvaz-icon-source -strip /tmp/rvaz-icon.png
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
