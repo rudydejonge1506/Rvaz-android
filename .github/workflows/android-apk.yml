@@ -66,6 +66,9 @@ jobs:
           manifest = Path('android/app/src/main/AndroidManifest.xml')
           m = manifest.read_text()
           m = m.replace('android:label="rvaz_android"', 'android:label="Regio Voorne aan Zee"')
+          permission = '<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
+          if permission not in m:
+              m = m.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">', '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\\n    ' + permission, 1)
           manifest.write_text(m)
           PY
       - name: Build smaller release APKs per architecture

@@ -69,10 +69,29 @@ Future<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-
 
 Future<void> registerDeviceToken() async {
   final m = FirebaseMessaging.instance;
-  final token = await m.getToken();
-  if (token == null || token.isEmpty) return;
   try {
-    await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/device'), headers: {'Content-Type':'application/json'}, body: jsonEncode({'token':token,'topics':['all','breaking','112','verkeer','agenda','weekblad']}));
+    final settings = await m.getNotificationSettings();
+    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+    final token = await m.getToken();
+    if (token == null || token.isEmpty) return;
+    final headers = <String,String>{'Content-Type':'application/json','Accept':'application/json'};
+    try {
+      final auth = await authHeaders();
+      if (auth['Authorization']?.isNotEmpty == true) headers['Authorization'] = auth['Authorization']!;
+    } catch (_) {}
+    final payload = jsonEncode({
+      'token':token,
+      'device_token':token,
+      'fcm_token':token,
+      'platform':'android',
+      'topics':['all','breaking','news','112','emergency112','traffic','verkeer','agenda','weekblad'],
+    });
+    for (final endpoint in ['device','device-token','push/register']) {
+      try {
+        final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
+        if (r.statusCode >= 200 && r.statusCode < 300) return;
+      } catch (_) {}
+    }
   } catch (_) {}
 }
 
@@ -112,16 +131,14 @@ Future<void> main() async {
   await loadConfig();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(alert: true, badge: true, sound: true);
-  await messaging.subscribeToTopic('all');
-  await messaging.subscribeToTopic('breaking');
-  await messaging.subscribeToTopic('112');
-  await messaging.unsubscribeFromTopic('traffic');
-  await messaging.subscribeToTopic('verkeer');
-  await messaging.subscribeToTopic('agenda');
-  await messaging.subscribeToTopic('weekblad');
-  await registerDeviceToken();
-  messaging.onTokenRefresh.listen((_) => registerDeviceToken());
+  final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
+  if (permission.authorizationStatus != AuthorizationStatus.denied) {
+    for (final topic in ['all','breaking','news','112','emergency112','traffic','verkeer','agenda','weekblad']) {
+      try { await messaging.subscribeToTopic(topic); } catch (_) {}
+    }
+    await registerDeviceToken();
+  }
+  messaging.onTokenRefresh.listen((_) async { await registerDeviceToken(); });
   FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   final initialMessage = await messaging.getInitialMessage();
   if (initialMessage != null) {
@@ -264,37 +281,68 @@ class AppAd {
   final int id;
   final String title, image, url, label;
   const AppAd(this.id, this.title, this.image, this.url, this.label);
-  factory AppAd.fromJson(dynamic j) => AppAd(
-    int.tryParse('${j['id'] ?? 0}') ?? 0,
-    '${j['title'] ?? j['name'] ?? 'Advertentie'}',
-    '${j['image'] ?? j['image_url'] ?? j['creative_url'] ?? j['banner'] ?? ''}',
-    '${j['url'] ?? j['link'] ?? j['target_url'] ?? j['click_url'] ?? ''}',
-    '${j['label'] ?? 'Advertentie'}',
-  );
+
+  static String _pick(Map j, List<String> keys) {
+    for (final key in keys) {
+      final value = j[key];
+      if (value == null) continue;
+      if (value is Map) {
+        final nested = value['url'] ?? value['src'] ?? value['rendered'];
+        if (nested != null && '$nested'.trim().isNotEmpty) return '$nested'.trim();
+      } else if ('$value'.trim().isNotEmpty) {
+        return '$value'.trim();
+      }
+    }
+    return '';
+  }
+
+  factory AppAd.fromJson(dynamic raw) {
+    final j = raw is Map ? Map<String,dynamic>.from(raw) : <String,dynamic>{};
+    return AppAd(
+      int.tryParse(_pick(j, ['id','ID','ad_id','campaign_id'])) ?? 0,
+      _pick(j, ['title','name','campaign','advertiser','company']).isEmpty ? 'Advertentie' : _pick(j, ['title','name','campaign','advertiser','company']),
+      _pick(j, ['image','image_url','creative_url','banner','banner_url','mobile_image','thumbnail','creative']),
+      _pick(j, ['url','link','target_url','click_url','website','destination']),
+      _pick(j, ['label','type']).isEmpty ? 'Advertentie' : _pick(j, ['label','type']),
+    );
+  }
+}
+
+List<dynamic> _adList(dynamic decoded) {
+  dynamic raw = decoded;
+  if (decoded is Map) {
+    for (final key in ['ads','items','data','results','advertisements','campaigns']) {
+      if (decoded[key] != null) { raw = decoded[key]; break; }
+    }
+    if (raw is Map) {
+      for (final key in ['ads','items','data','results']) {
+        if (raw[key] is List) { raw = raw[key]; break; }
+      }
+      if (raw is Map) raw = raw.values.toList();
+    }
+  }
+  return raw is List ? raw : <dynamic>[];
 }
 
 Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
-  final uris = [
-    Uri.parse('$site/wp-json/rvaz-app/v1/ads?placement=$placement'),
-    Uri.parse('$site/wp-json/rvaz-ads/v1/ads?placement=$placement'),
-    Uri.parse('$site/wp-json/rvaz/v1/app-ads?placement=$placement'),
+  final placements = <String>{placement, 'app', 'mobile', 'all'};
+  final uris = <Uri>[
+    for (final p in placements) Uri.parse('$site/wp-json/rvaz-app/v1/ads?placement=${Uri.encodeQueryComponent(p)}'),
+    for (final p in placements) Uri.parse('$site/wp-json/rvaz-ads/v1/ads?placement=${Uri.encodeQueryComponent(p)}'),
+    for (final p in placements) Uri.parse('$site/wp-json/rvaz/v1/app-ads?placement=${Uri.encodeQueryComponent(p)}'),
+    Uri.parse('$site/wp-json/rvaz-app/v1/ads'),
+    Uri.parse('$site/wp-json/rvaz-ads/v1/ads'),
+    Uri.parse('$site/wp-json/rvaz/v1/app-ads'),
   ];
   for (final uri in uris) {
     try {
-      final r = await http.get(uri);
-      if (r.statusCode == 200) {
-        final decoded = jsonDecode(r.body);
-        dynamic raw = decoded;
-        if (decoded is Map) {
-          raw = decoded['ads'] ?? decoded['items'] ?? decoded['data'] ?? decoded['results'] ?? [];
-          if (raw is Map) raw = raw['ads'] ?? raw['items'] ?? raw['data'] ?? raw.values.toList();
-        }
-        final list = raw is List ? raw : <dynamic>[];
-        final ads = list.whereType<Map>().map<AppAd>((x) => AppAd.fromJson(x)).where((a) =>
-          a.title.trim().isNotEmpty || a.image.trim().isNotEmpty || a.url.trim().isNotEmpty
-        ).toList();
-        if (ads.isNotEmpty) return ads;
-      }
+      final r = await http.get(uri, headers: const {'Accept':'application/json'}).timeout(const Duration(seconds: 8));
+      if (r.statusCode < 200 || r.statusCode >= 300 || r.body.trim().isEmpty) continue;
+      final list = _adList(jsonDecode(r.body));
+      final ads = list.map(AppAd.fromJson).where((a) =>
+        a.image.isNotEmpty || a.url.isNotEmpty || (a.title.isNotEmpty && a.title != 'Advertentie')
+      ).toList();
+      if (ads.isNotEmpty) return ads;
     } catch (_) {}
   }
   return [];
@@ -310,9 +358,38 @@ class AppAdCard extends StatefulWidget {
 class _AppAdCardState extends State<AppAdCard> {
   bool sent=false;
   @override void didChangeDependencies(){super.didChangeDependencies();if(!sent){sent=true;trackAd(widget.ad.id,'impression');}}
-  @override Widget build(BuildContext context){final ad=widget.ad; return Card(
-    margin: const EdgeInsets.only(bottom: 12), clipBehavior: Clip.antiAlias,
-    child: InkWell(onTap: ad.url.isEmpty?null:() async {await trackAd(ad.id,'click'); if(context.mounted) Navigator.of(context).push(MaterialPageRoute(builder:(_)=>InAppWebPage(title:ad.title,url:ad.url)));},child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[if(ad.image.isNotEmpty)Image.network(ad.image,height:150,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(ad.label.toUpperCase(),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Colors.black54)),const SizedBox(height:4),Text(ad.title,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800,color:navy))]))])));
+  @override
+  Widget build(BuildContext context) {
+    final ad=widget.ad;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: ad.url.isEmpty ? null : () async {
+          await trackAd(ad.id,'click');
+          if(context.mounted) Navigator.of(context).push(MaterialPageRoute(builder:(_)=>InAppWebPage(title:ad.title,url:ad.url)));
+        },
+        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          if(ad.image.isNotEmpty)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 110),
+              child: Image.network(ad.image,width:double.infinity,height:110,fit:BoxFit.contain,
+                errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,8,12,10),
+            child: Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(ad.label.toUpperCase(),style:const TextStyle(fontSize:9,fontWeight:FontWeight.w900,color:Colors.black54)),
+                const SizedBox(height:2),
+                Text(ad.title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,height:1.15,fontWeight:FontWeight.w800,color:navy)),
+              ])),
+              if(ad.url.isNotEmpty) const Padding(padding:EdgeInsets.only(left:8),child:Icon(Icons.open_in_new,size:17,color:navy)),
+            ]),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -327,21 +404,28 @@ String cleanArticleHtml(String html) {
   out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
   return out;
 }
+Future<bool> _postFeedback(Map<String,dynamic> payload) async {
+  for (final endpoint in ['feedback','app-feedback','tip']) {
+    try { final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json',...(await authHeaders())},body:jsonEncode(payload)).timeout(const Duration(seconds:10)); if(r.statusCode>=200&&r.statusCode<300)return true; } catch (_) {}
+  } return false;
+}
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
-  final subject = Uri.encodeComponent('App feedback – $page');
-  final extra = detail == null || detail.isEmpty ? '' : 'Onderdeel: $detail\n';
-  final body = Uri.encodeComponent('Pagina: $page\n$extra\nMijn feedback:\n\n');
-  final uri = Uri.parse('mailto:redactie@regiovoorneaanzee.nl?subject=$subject&body=$body');
-  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-mailapp kon niet worden geopend. Mail naar redactie@regiovoorneaanzee.nl.')));
+  final message=TextEditingController(); var type='Probleem';
+  final send=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setLocal)=>AlertDialog(title:const Text('Feedback geven'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text('Pagina: $page',style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:12),
+    DropdownButtonFormField<String>(initialValue:type,decoration:const InputDecoration(labelText:'Soort feedback'),items:const [DropdownMenuItem(value:'Probleem',child:Text('Er werkt iets niet')),DropdownMenuItem(value:'Verbetering',child:Text('Verbetering')),DropdownMenuItem(value:'Functie',child:Text('Ik mis een onderdeel'))],onChanged:(v)=>setLocal(()=>type=v??'Probleem')),
+    const SizedBox(height:12),TextField(controller:message,minLines:4,maxLines:8,decoration:const InputDecoration(labelText:'Wat wil je ons meegeven?',hintText:'Beschrijf kort wat er gebeurt of wat je graag toegevoegd ziet.')),
+  ])),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Versturen'))])));
+  if(send!=true||message.text.trim().isEmpty)return;
+  final payload=<String,dynamic>{'type':type,'page':page,'detail':detail??'','message':message.text.trim(),'subject':'App feedback – $page','text':message.text.trim(),'source':'android-app'};
+  final ok=await _postFeedback(payload); if(!context.mounted)return;
+  if(ok){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bedankt! Je feedback is verstuurd.')));return;}
+  final subject=Uri.encodeComponent('App feedback – $page'); final extra=detail==null||detail.isEmpty?'':'Onderdeel: $detail\\n';
+  final body=Uri.encodeComponent('Soort: $type\\nPagina: $page\\n$extra\\n${message.text.trim()}');
+  final opened=await launchUrl(Uri.parse('mailto:redactie@regiovoorneaanzee.nl?subject=$subject&body=$body'),mode:LaunchMode.externalApplication);
+  if(!opened&&context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Feedback kon niet worden verstuurd.')));
 }
-
-class PageFeedbackButton extends StatelessWidget {
-  final String page; final String? detail;
-  const PageFeedbackButton({super.key, required this.page, this.detail});
-  @override Widget build(BuildContext context) => IconButton(tooltip:'Feedback over deze pagina',icon:const Icon(Icons.feedback_outlined),onPressed:()=>sendPageFeedback(context,page,detail:detail));
-}
-
+class PageFeedbackButton extends StatelessWidget { final String page; final String? detail; const PageFeedbackButton({super.key, required this.page, this.detail}); @override Widget build(BuildContext context)=>IconButton(tooltip:'Feedback over deze pagina',icon:const Icon(Icons.feedback_outlined),onPressed:()=>sendPageFeedback(context,page,detail:detail)); }
 const defaultRVAZHero = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg/1280px-Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg';
 
 String formatPostDate(dynamic p) {
@@ -441,16 +525,19 @@ class ArticlePage extends StatelessWidget {
                         color: navy, fontSize: 29, height: 1.08,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
-                Html(data: bodyHtml, style: {
-                  'body': Style(width: Width(100, Unit.percent), fontSize: FontSize(17), lineHeight: const LineHeight(1.45), margin: Margins.zero),
-                  'div': Style(width: Width(100, Unit.percent)),
+                SizedBox(width:double.infinity,child:Html(data: bodyHtml, style: {
+                  'html': Style(width: Width(100, Unit.percent), margin: Margins.zero, padding: HtmlPaddings.zero),
+                  'body': Style(width: Width(100, Unit.percent), fontSize: FontSize(17), lineHeight: const LineHeight(1.5), margin: Margins.zero, padding: HtmlPaddings.zero),
+                  'article': Style(width: Width(100, Unit.percent), margin: Margins.zero),
+                  'section': Style(width: Width(100, Unit.percent), margin: Margins.zero),
+                  'div': Style(width: Width(100, Unit.percent), margin: Margins.zero),
                   'p': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
                   'h2': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
                   'h3': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
                   'img': Style(width: Width(100, Unit.percent), height: Height.auto()),
                   'figure': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
                   'table': Style(width: Width(100, Unit.percent)),
-                }),
+                })),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () { final link='${post['link'] ?? post['url'] ?? ''}'; if(link.isNotEmpty) launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication); },
@@ -773,14 +860,33 @@ class WeekbladPage extends StatefulWidget {
 class _WeekbladPageState extends State<WeekbladPage> {
   late Future<List<dynamic>> future;
   @override void initState(){super.initState();future=load();}
-  Future<List<dynamic>> load() async { final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/weekblad')); if(r.statusCode==200)return jsonDecode(r.body); return []; }
+  Future<List<dynamic>> load() async {
+    final uris=[
+      Uri.parse('$site/wp-json/rvaz-app/v1/weekblad'),
+      Uri.parse('$site/wp-json/rvaz-app/v1/issues'),
+      Uri.parse('$site/wp-json/wp/v2/search?search=weekblad&per_page=20'),
+    ];
+    for(final uri in uris){
+      try{
+        final r=await http.get(uri).timeout(const Duration(seconds:8));
+        if(r.statusCode!=200)continue;
+        final d=jsonDecode(r.body);
+        if(d is List && d.isNotEmpty)return List<dynamic>.from(d);
+        if(d is Map){
+          final x=d['items']??d['issues']??d['data']??d['results'];
+          if(x is List && x.isNotEmpty)return List<dynamic>.from(x);
+        }
+      }catch(_){}
+    }
+    return [];
+  }
   @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
     if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
     final issues=s.data??[];
     return ListView(padding:const EdgeInsets.all(18),children:[
       Text(appConfig.weekbladTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),
-      if(issues.isEmpty) const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Er zijn nog geen gepubliceerde edities via de app-API beschikbaar.'))),
+      if(issues.isEmpty) Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Er zijn momenteel geen weekbladedities gevonden.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('$site/weekblad/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new),label:const Text('Bekijk weekblad op de website'))]))),
       ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
     ]);
   });
@@ -849,7 +955,14 @@ class NativeInfoPage extends StatelessWidget { final String title,text; final Ic
 Future<Map<String,String>> authHeaders() async { final t=await const FlutterSecureStorage().read(key:'rvaz_token'); return {'Accept':'application/json',if(t!=null&&t.isNotEmpty)'Authorization':'Bearer $t'}; }
 class SavedPage extends StatefulWidget{const SavedPage({super.key});@override State<SavedPage> createState()=>_SavedPageState();}class _SavedPageState extends State<SavedPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/saved'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}Future<void>open(dynamic e)async{final id=int.tryParse('${e['post_id']??e['id']??''}');if(id==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts/$id?_embed=1'));if(r.statusCode==200&&mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:jsonDecode(r.body))));}catch(_){}}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Opgeslagen artikelen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Nog geen opgeslagen artikelen.')):ListView(children:x.map((e){final t=e['title'];final title=t is Map?t['rendered']:'${t??'Artikel'}';return ListTile(leading:const Icon(Icons.bookmark,color:navy),title:Text('$title'),trailing:const Icon(Icons.chevron_right),onTap:()=>open(e));}).toList());}));}
 class ContributionsPage extends StatefulWidget{const ContributionsPage({super.key});@override State<ContributionsPage> createState()=>_ContributionsPageState();}class _ContributionsPageState extends State<ContributionsPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/contributions'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Mijn bijdragen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Je hebt nog geen bijdragen.')):ListView(children:x.map((e)=>ListTile(title:Text('${e['title']}'),subtitle:Text('${e['status']} · ${e['type']}'))).toList());}));}
-class TipPage extends StatefulWidget{const TipPage({super.key});@override State<TipPage> createState()=>_TipPageState();}class _TipPageState extends State<TipPage>{final subject=TextEditingController(),place=TextEditingController(),body=TextEditingController();bool busy=false;Future<void>send()async{setState(()=>busy=true);final h=await authHeaders();h['Content-Type']='application/json';try{final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/tip'),headers:h,body:jsonEncode({'subject':subject.text.trim(),'place':place.text.trim(),'text':body.text.trim()}));if(!mounted)return;final ok=r.statusCode>=200&&r.statusCode<300;setState(()=>busy=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(ok?'Tip is naar de redactie gestuurd.':'Kon tip niet versturen. Probeer opnieuw.')));if(ok)Navigator.pop(context);}catch(_){if(!mounted)return;setState(()=>busy=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding. Tip is niet verstuurd.')));}}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Tip de redactie')),body:ListView(padding:const EdgeInsets.all(18),children:[TextField(controller:subject,decoration:const InputDecoration(labelText:'Onderwerp')),TextField(controller:place,decoration:const InputDecoration(labelText:'Plaats')),const SizedBox(height:12),TextField(controller:body,minLines:8,maxLines:14,decoration:const InputDecoration(labelText:'Vertel ons wat er speelt',border:OutlineInputBorder())),const SizedBox(height:16),FilledButton.icon(onPressed:busy?null:send,icon:const Icon(Icons.send),label:Text(busy?'Versturen…':'Verstuur naar redactie'))]));}
+class TipPage extends StatefulWidget{const TipPage({super.key});@override State<TipPage> createState()=>_TipPageState();}class _TipPageState extends State<TipPage>{final subject=TextEditingController(),place=TextEditingController(),body=TextEditingController();bool busy=false;Future<void>send()async{
+  final s=subject.text.trim(),p=place.text.trim(),b=body.text.trim(); if(s.isEmpty||b.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul een onderwerp en je tip in.')));return;}
+  setState(()=>busy=true); final h=await authHeaders(); h['Content-Type']='application/json'; h['Accept']='application/json'; var delivered=false;
+  for(final payload in [{'subject':s,'place':p,'text':b,'message':b,'source':'android-app'},{'title':s,'location':p,'body':b,'message':b,'source':'android-app'}]){try{final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/tip'),headers:h,body:jsonEncode(payload)).timeout(const Duration(seconds:10));if(r.statusCode>=200&&r.statusCode<300){delivered=true;break;}}catch(_){}}
+  if(!mounted)return; setState(()=>busy=false); if(delivered){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Tip is naar de redactie gestuurd.')));Navigator.pop(context);return;}
+  final mail=Uri.parse('mailto:redactie@regiovoorneaanzee.nl?subject=${Uri.encodeComponent('Tip uit RVAZ-app: $s')}&body=${Uri.encodeComponent('Plaats: $p\\n\\n$b')}'); final opened=await launchUrl(mail,mode:LaunchMode.externalApplication);
+  if(!mounted)return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(opened?'De API reageerde niet; je e-mailapp is geopend als veilige fallback.':'Tip kon niet worden verstuurd.')));
+}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Tip de redactie')),body:ListView(padding:const EdgeInsets.all(18),children:[TextField(controller:subject,decoration:const InputDecoration(labelText:'Onderwerp')),TextField(controller:place,decoration:const InputDecoration(labelText:'Plaats')),const SizedBox(height:12),TextField(controller:body,minLines:8,maxLines:14,decoration:const InputDecoration(labelText:'Vertel ons wat er speelt',border:OutlineInputBorder())),const SizedBox(height:16),FilledButton.icon(onPressed:busy?null:send,icon:const Icon(Icons.send),label:Text(busy?'Versturen…':'Verstuur naar redactie'))]));}
 class InAppWebPage extends StatelessWidget{final String title,url;const InAppWebPage({super.key,required this.title,required this.url});@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(title)),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.ads_click,size:44,color:navy),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:10),const Text('Advertentielink. Je verlaat de app alleen wanneer je hieronder kiest om de bestemming te openen.'),const SizedBox(height:16),FilledButton(onPressed:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:const Text('Open bestemming'))]))));}
 
 
