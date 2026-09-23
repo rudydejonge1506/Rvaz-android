@@ -42,7 +42,7 @@ jobs:
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
             dir="${spec%%:*}"; size="${spec##*:}"
             mkdir -p "android/app/src/main/res/$dir"
-            convert /tmp/rvaz-icon.png -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
+            convert /tmp/rvaz-icon.png -define png:ignore-crc=true -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
           done
           identify android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
       - name: Analyze
