@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -181,6 +182,7 @@ Future<void> openPushMessage(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await MobileAds.instance.initialize();
   await loadConfig();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
@@ -328,6 +330,19 @@ class _LogoMarkState extends State<LogoMark> {
           errorBuilder: (_, __, ___) => Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft))
       : Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft),
   );
+}
+
+class GoogleMobileBanner extends StatefulWidget {
+  const GoogleMobileBanner({super.key});
+  @override State<GoogleMobileBanner> createState()=>_GoogleMobileBannerState();
+}
+class _GoogleMobileBannerState extends State<GoogleMobileBanner> {
+  BannerAd? ad;
+  bool loaded=false;
+  static const unitId=String.fromEnvironment('ADMOB_BANNER_ID',defaultValue:'ca-app-pub-3940256099942544/6300978111');
+  @override void initState(){super.initState();ad=BannerAd(adUnitId:unitId,size:AdSize.banner,request:const AdRequest(),listener:BannerAdListener(onAdLoaded:(x){if(mounted)setState(()=>loaded=true);},onAdFailedToLoad:(x,e){x.dispose();}));ad!.load();}
+  @override void dispose(){ad?.dispose();super.dispose();}
+  @override Widget build(BuildContext context){if(!loaded||ad==null)return const SizedBox.shrink();return Semantics(label:'Google advertentie',child:Center(child:SizedBox(width:ad!.size.width.toDouble(),height:ad!.size.height.toDouble(),child:AdWidget(ad:ad!))));}
 }
 
 class AppAd {
