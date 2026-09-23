@@ -509,6 +509,7 @@ class ArticlePage extends StatelessWidget {
     final rawContent = post['content'];
     final title = clean(rawTitle is Map ? '${rawTitle['rendered'] ?? ''}' : '${rawTitle ?? ''}');
     final bodyHtml = cleanArticleHtml(rawContent is Map ? '${rawContent['rendered'] ?? ''}' : '${rawContent ?? post['excerpt'] ?? ''}');
+    final articleAds = loadAppAds(placement:'article');
     final bodyText = bodyHtml.replaceAll(RegExp(r'<br\\s*/?>',caseSensitive:false),'\n').replaceAll(RegExp(r'</(?:p|div|li|h[1-6]|blockquote)>',caseSensitive:false),'\n\n').replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&nbsp;',' ').replaceAll('&amp;','&').replaceAll('&#8217;',"'").replaceAll('&#8211;','–').replaceAll(RegExp(r'\n{3,}'),'\n\n').trim();
     return Scaffold(
       appBar: AppBar(
@@ -551,6 +552,8 @@ class ArticlePage extends StatelessWidget {
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
                 SizedBox(width:double.infinity,child:SelectableText(bodyText,style:const TextStyle(fontSize:17,height:1.55,color:Color(0xFF202A33)))),
+                const SizedBox(height: 18),
+                FutureBuilder<List<AppAd>>(future:articleAds,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():AppAdCard(ad:a.first);}),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () { final link='${post['link'] ?? post['url'] ?? ''}'; if(link.isNotEmpty) launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication); },
@@ -661,7 +664,7 @@ class PlaceNewsPage extends StatefulWidget {
 }
 class _PlaceNewsPageState extends State<PlaceNewsPage> {
   late Future<List<dynamic>> future;
-  @override void initState(){super.initState();future=load();}
+  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
   Future<List<dynamic>> load() async {
     final q=Uri.encodeQueryComponent(widget.place);
     final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/posts?place=$q&per_page=50'));
@@ -840,7 +843,7 @@ class _NewsPageState extends State<NewsPage> {
 
 class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override State<AgendaPage> createState()=>_AgendaPageState();}
 class _AgendaPageState extends State<AgendaPage>{
- late Future<List<dynamic>> future;String place='Alle';
+ late Future<List<dynamic>> future;late Future<List<AppAd>> ads;String place='Alle';
  @override void initState(){super.initState();future=load();}
  Future<List<dynamic>> load() async {
    try {
@@ -862,7 +865,7 @@ class _AgendaPageState extends State<AgendaPage>{
  DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','event_start_date','date']));
  @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final places=<String>['Alle',...appConfig.places.where((x)=>x!='Voorne aan Zee')];final items=all.where((p)=>place=='Alle'||placeOf(p).toLowerCase()==place.toLowerCase()).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));return Column(children:[
    SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(14,9,14,7),itemCount:places.length,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i){final x=places[i],on=x==place;return ChoiceChip(label:Text(x),selected:on,onSelected:(_)=>setState(()=>place=x),selectedColor:cyan,labelStyle:TextStyle(color:on?Colors.white:navy,fontSize:11,fontWeight:FontWeight.w700),side:BorderSide(color:on?cyan:const Color(0xFFDCE5ED)),showCheckmark:false); })),
-   Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
+   Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():AppAdCard(ad:a.first);}),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
  ]);});
 }
 
@@ -872,7 +875,8 @@ class WeekbladPage extends StatefulWidget {
 }
 class _WeekbladPageState extends State<WeekbladPage> {
   late Future<List<dynamic>> future;
-  @override void initState(){super.initState();future=load();}
+  late Future<List<AppAd>> ads;
+  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'weekblad');}
   Future<List<dynamic>> load() async {
     final uris=[
       Uri.parse('$site/wp-json/rvaz-app/v1/weekblad'),
@@ -897,7 +901,7 @@ class _WeekbladPageState extends State<WeekbladPage> {
     final issues=s.data??[];
     return ListView(padding:const EdgeInsets.all(18),children:[
       Text(appConfig.weekbladTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
-      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),
+      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():AppAdCard(ad:a.first);}),
       if(issues.isEmpty) Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Er zijn momenteel geen weekbladedities gevonden.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('$site/weekblad/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new),label:const Text('Bekijk weekblad op de website'))]))),
       ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
     ]);
