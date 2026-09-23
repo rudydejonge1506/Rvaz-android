@@ -284,8 +284,15 @@ Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
       final r = await http.get(uri);
       if (r.statusCode == 200) {
         final decoded = jsonDecode(r.body);
-        final list = decoded is List ? decoded : (decoded['ads'] is List ? decoded['ads'] : []);
-        final ads = list.map<AppAd>((x) => AppAd.fromJson(x)).where((a)=>a.id>0).toList();
+        dynamic raw = decoded;
+        if (decoded is Map) {
+          raw = decoded['ads'] ?? decoded['items'] ?? decoded['data'] ?? decoded['results'] ?? [];
+          if (raw is Map) raw = raw['ads'] ?? raw['items'] ?? raw['data'] ?? raw.values.toList();
+        }
+        final list = raw is List ? raw : <dynamic>[];
+        final ads = list.whereType<Map>().map<AppAd>((x) => AppAd.fromJson(x)).where((a) =>
+          a.title.trim().isNotEmpty || a.image.trim().isNotEmpty || a.url.trim().isNotEmpty
+        ).toList();
         if (ads.isNotEmpty) return ads;
       }
     } catch (_) {}
@@ -293,7 +300,7 @@ Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
   return [];
 }
 
-Future<void> trackAd(int id, String type) async { try { await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/ad-event'), headers: {'Content-Type':'application/json'}, body: jsonEncode({'id':id,'type':type})); } catch (_) {} }
+Future<void> trackAd(int id, String type) async { if(id<=0)return; try { await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/ad-event'), headers: {'Content-Type':'application/json'}, body: jsonEncode({'id':id,'type':type})); } catch (_) {} }
 
 class AppAdCard extends StatefulWidget {
   final AppAd ad;
@@ -496,7 +503,7 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
       _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
       _HomeShortcut(icon:Icons.calendar_month,color:Colors.teal,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AgendaPage()))),
-      _HomeShortcut(icon:Icons.location_on,color:Colors.green,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NewsPage()))),
+      _HomeShortcut(icon:Icons.location_on,color:Colors.green,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()))),
       _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const InAppWebPage(title:'Bedrijvengids',url:'$site/bedrijven/')))),
     ])),
@@ -507,7 +514,7 @@ class _HomePageState extends State<HomePage>{
           if(postImage(p).isNotEmpty)Image.network(postImage(p),height:175,width:double.infinity,fit:BoxFit.cover),
           Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title']?['rendered']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
         const SizedBox(height:10),
-        ...x.skip(1).take(3).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p)))))),
+        ...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title']?['rendered']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p)))))),
       ]);}),
       FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final x=s.data??[];return x.isEmpty?const SizedBox.shrink():Padding(padding:const EdgeInsets.only(top:8),child:AppAdCard(ad:x.first));}),
     ]))
@@ -517,6 +524,70 @@ class _HomeShortcut extends StatelessWidget{
   final IconData icon;final Color color;final String label;final VoidCallback? onTap;
   const _HomeShortcut({required this.icon,required this.color,required this.label,this.onTap});
   @override Widget build(BuildContext context)=>Material(color:Colors.white,elevation:1,borderRadius:BorderRadius.circular(11),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(11),child:Padding(padding:const EdgeInsets.symmetric(vertical:10,horizontal:3),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:color,size:26),const SizedBox(height:5),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy))]))));
+}
+
+class PlacesPage extends StatelessWidget {
+  const PlacesPage({super.key});
+  @override Widget build(BuildContext context) {
+    final places=appConfig.places.where((x)=>x!='Voorne aan Zee').toList();
+    return Scaffold(
+      appBar: AppBar(title: const Text('Plaatsen'), backgroundColor: Colors.white, foregroundColor: navy),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Nieuws per plaats',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:navy)),
+          const SizedBox(height:6),
+          const Text('Kies een plaats om de bijbehorende nieuwsberichten te bekijken.'),
+          const SizedBox(height:14),
+          ...places.map((p)=>Card(
+            margin:const EdgeInsets.only(bottom:10),
+            child:ListTile(
+              leading:const CircleAvatar(child:Icon(Icons.location_on_outlined)),
+              title:Text(p,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),
+              trailing:const Icon(Icons.chevron_right,color:navy),
+              onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>PlaceNewsPage(place:p))),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class PlaceNewsPage extends StatefulWidget {
+  final String place;
+  const PlaceNewsPage({super.key,required this.place});
+  @override State<PlaceNewsPage> createState()=>_PlaceNewsPageState();
+}
+class _PlaceNewsPageState extends State<PlaceNewsPage> {
+  late Future<List<dynamic>> future;
+  @override void initState(){super.initState();future=load();}
+  Future<List<dynamic>> load() async {
+    final q=Uri.encodeQueryComponent(widget.place);
+    final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=$q&per_page=50&_embed=1'));
+    if(r.statusCode!=200)return [];
+    return List<dynamic>.from(jsonDecode(r.body));
+  }
+  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+  @override Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:Text(widget.place),backgroundColor:Colors.white,foregroundColor:navy),
+    body:FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
+      if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
+      final x=s.data??[];
+      if(x.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Geen nieuwsberichten voor deze plaats gevonden.')));
+      return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView.builder(
+        padding:const EdgeInsets.all(16),itemCount:x.length,itemBuilder:(context,i){final p=x[i];return Card(
+          margin:const EdgeInsets.only(bottom:10),child:ListTile(
+            contentPadding:const EdgeInsets.all(10),
+            leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):ClipRRect(borderRadius:BorderRadius.circular(6),child:Image.network(postImage(p),width:76,height:60,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.article_outlined))),
+            title:Text(clean(p['title']?['rendered']??''),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),
+            subtitle:Text(formatPostDate(p)),trailing:const Icon(Icons.chevron_right,color:navy),
+            onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:p))),
+          ));
+        },
+      ));
+    }),
+  );
 }
 
 class EmergencyTrafficPage extends StatefulWidget{const EmergencyTrafficPage({super.key});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
@@ -673,19 +744,29 @@ class _AgendaPageState extends State<AgendaPage>{
      '$site/wp-json/rvaz-app/v1/agenda?per_page=250',
      '$site/wp-json/wp/v2/agenda?per_page=100&_embed=1',
      '$site/wp-json/wp/v2/events?per_page=100&_embed=1',
+     '$site/wp-json/wp/v2/event?per_page=100&_embed=1',
+     '$site/wp-json/wp/v2/evenementen?per_page=100&_embed=1',
+     '$site/wp-json/wp/v2/evenement?per_page=100&_embed=1',
    ];
-   List<dynamic> best = [];
+   final merged = <dynamic>[];
+   final seen = <String>{};
    for (final url in urls) {
      try {
        final r = await http.get(Uri.parse(url));
        if (r.statusCode != 200) continue;
        final d = jsonDecode(r.body);
-       final items = d is List ? List<dynamic>.from(d) : (d is Map && d['items'] is List ? List<dynamic>.from(d['items']) : <dynamic>[]);
-       if (items.length > best.length) best = items;
-       if (best.length > 1) break;
+       dynamic raw = d;
+       if (d is Map) raw = d['items'] ?? d['events'] ?? d['data'] ?? d['results'] ?? [];
+       final items = raw is List ? List<dynamic>.from(raw) : <dynamic>[];
+       for (final item in items) {
+         if (item is! Map) continue;
+         final t = item['title'] is Map ? item['title']['rendered'] : item['title'];
+         final key = '${item['id'] ?? ''}|${t ?? ''}|${item['start_date'] ?? item['date'] ?? ''}';
+         if (seen.add(key)) merged.add(item);
+       }
      } catch (_) {}
    }
-   return best;
+   return merged;
  }
  String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
