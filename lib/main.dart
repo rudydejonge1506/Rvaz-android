@@ -315,6 +315,10 @@ String cleanArticleHtml(String html) {
   for (final marker in markers) {
     out = out.replaceAll(RegExp('<[^>]*(?:class|id)=[^>]*$marker[^>]*>.*?</(?:div|section|aside|button)>', caseSensitive: false, dotAll: true), '');
   }
+  // WordPress content can contain desktop-only inline layout rules. flutter_html
+  // otherwise honours those rules and may render paragraphs in a tiny column.
+  out = out.replaceAll(RegExp(r'\\s(?:width|min-width|max-width|float|position|left|right)\\s*:\\s*[^;"\\']+;?', caseSensitive: false), '');
+  out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
   return out;
 }
 
@@ -355,6 +359,24 @@ String postImage(dynamic p) {
   return '';
 }
 
+Future<bool> saveArticle(dynamic post) async {
+  final id = int.tryParse('${post['id'] ?? ''}');
+  if (id == null) return false;
+  final headers = await authHeaders();
+  if (!headers.containsKey('Authorization')) return false;
+  headers['Content-Type'] = 'application/json';
+  for (final body in [
+    {'post_id': id},
+    {'id': id},
+  ]) {
+    try {
+      final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/saved'), headers: headers, body: jsonEncode(body));
+      if (r.statusCode >= 200 && r.statusCode < 300) return true;
+    } catch (_) {}
+  }
+  return false;
+}
+
 class ArticlePage extends StatelessWidget {
   final dynamic post;
   const ArticlePage({super.key, required this.post});
@@ -377,7 +399,20 @@ class ArticlePage extends StatelessWidget {
         foregroundColor: navy,
         title: const Text('Regio Voorne aan Zee',
             style: TextStyle(fontWeight: FontWeight.w800)),
-        actions: [PageFeedbackButton(page: 'Nieuwsartikel', detail: title)],
+        actions: [
+          IconButton(
+            tooltip: 'Artikel bewaren',
+            icon: const Icon(Icons.bookmark_add_outlined),
+            onPressed: () async {
+              final ok = await saveArticle(post);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+                ok ? 'Artikel opgeslagen bij Mijn RVAZ.' : 'Opslaan lukt alleen wanneer je bent ingelogd.'
+              )));
+            },
+          ),
+          PageFeedbackButton(page: 'Nieuwsartikel', detail: title),
+        ],
       ),
       body: ListView(
         children: [
@@ -398,7 +433,16 @@ class ArticlePage extends StatelessWidget {
                         color: navy, fontSize: 29, height: 1.08,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
-                Html(data: bodyHtml, style: {'body': Style(fontSize: FontSize(17), lineHeight: const LineHeight(1.45), margin: Margins.zero), 'p': Style(margin: Margins.only(bottom: 14)), 'h2': Style(color: navy, fontWeight: FontWeight.w800), 'h3': Style(color: navy, fontWeight: FontWeight.w800), 'img': Style(width: Width(100, Unit.percent), height: Height.auto()), 'figure': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)), 'table': Style(width: Width(100, Unit.percent))}),
+                Html(data: bodyHtml, style: {
+                  'body': Style(width: Width(100, Unit.percent), fontSize: FontSize(17), lineHeight: const LineHeight(1.45), margin: Margins.zero),
+                  'div': Style(width: Width(100, Unit.percent)),
+                  'p': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
+                  'h2': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
+                  'h3': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
+                  'img': Style(width: Width(100, Unit.percent), height: Height.auto()),
+                  'figure': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
+                  'table': Style(width: Width(100, Unit.percent)),
+                }),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () => launchUrl(Uri.parse(post['link']),
@@ -624,7 +668,25 @@ class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override 
 class _AgendaPageState extends State<AgendaPage>{
  late Future<List<dynamic>> future;String place='Alle';
  @override void initState(){super.initState();future=load();}
- Future<List<dynamic>> load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/agenda?per_page=250'));if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}
+ Future<List<dynamic>> load() async {
+   final urls = [
+     '$site/wp-json/rvaz-app/v1/agenda?per_page=250',
+     '$site/wp-json/wp/v2/agenda?per_page=100&_embed=1',
+     '$site/wp-json/wp/v2/events?per_page=100&_embed=1',
+   ];
+   List<dynamic> best = [];
+   for (final url in urls) {
+     try {
+       final r = await http.get(Uri.parse(url));
+       if (r.statusCode != 200) continue;
+       final d = jsonDecode(r.body);
+       final items = d is List ? List<dynamic>.from(d) : (d is Map && d['items'] is List ? List<dynamic>.from(d['items']) : <dynamic>[]);
+       if (items.length > best.length) best = items;
+       if (best.length > 1) break;
+     } catch (_) {}
+   }
+   return best;
+ }
  String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
  String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
@@ -717,7 +779,7 @@ class NativeInfoPage extends StatelessWidget { final String title,text; final Ic
 
 
 Future<Map<String,String>> authHeaders() async { final t=await const FlutterSecureStorage().read(key:'rvaz_token'); return {'Accept':'application/json',if(t!=null&&t.isNotEmpty)'Authorization':'Bearer $t'}; }
-class SavedPage extends StatefulWidget{const SavedPage({super.key});@override State<SavedPage> createState()=>_SavedPageState();}class _SavedPageState extends State<SavedPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/saved'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Opgeslagen artikelen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Nog geen opgeslagen artikelen.')):ListView(children:x.map((e)=>ListTile(title:Text('${e['title']}'))).toList());}));}
+class SavedPage extends StatefulWidget{const SavedPage({super.key});@override State<SavedPage> createState()=>_SavedPageState();}class _SavedPageState extends State<SavedPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/saved'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}Future<void>open(dynamic e)async{final id=int.tryParse('${e['post_id']??e['id']??''}');if(id==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts/$id?_embed=1'));if(r.statusCode==200&&mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:jsonDecode(r.body))));}catch(_){}}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Opgeslagen artikelen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Nog geen opgeslagen artikelen.')):ListView(children:x.map((e){final t=e['title'];final title=t is Map?t['rendered']:'${t??'Artikel'}';return ListTile(leading:const Icon(Icons.bookmark,color:navy),title:Text('$title'),trailing:const Icon(Icons.chevron_right),onTap:()=>open(e));}).toList());}));}
 class ContributionsPage extends StatefulWidget{const ContributionsPage({super.key});@override State<ContributionsPage> createState()=>_ContributionsPageState();}class _ContributionsPageState extends State<ContributionsPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/contributions'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Mijn bijdragen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Je hebt nog geen bijdragen.')):ListView(children:x.map((e)=>ListTile(title:Text('${e['title']}'),subtitle:Text('${e['status']} · ${e['type']}'))).toList());}));}
 class TipPage extends StatefulWidget{const TipPage({super.key});@override State<TipPage> createState()=>_TipPageState();}class _TipPageState extends State<TipPage>{final subject=TextEditingController(),place=TextEditingController(),body=TextEditingController();bool busy=false;Future<void>send()async{setState(()=>busy=true);final h=await authHeaders();h['Content-Type']='application/json';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/tip'),headers:h,body:jsonEncode({'subject':subject.text,'place':place.text,'text':body.text}));if(!mounted)return;setState(()=>busy=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(r.statusCode==200?'Tip is naar de redactie gestuurd.':'Kon tip niet versturen. Log in en probeer opnieuw.')));if(r.statusCode==200)Navigator.pop(context);}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Tip de redactie')),body:ListView(padding:const EdgeInsets.all(18),children:[TextField(controller:subject,decoration:const InputDecoration(labelText:'Onderwerp')),TextField(controller:place,decoration:const InputDecoration(labelText:'Plaats')),const SizedBox(height:12),TextField(controller:body,minLines:8,maxLines:14,decoration:const InputDecoration(labelText:'Vertel ons wat er speelt',border:OutlineInputBorder())),const SizedBox(height:16),FilledButton.icon(onPressed:busy?null:send,icon:const Icon(Icons.send),label:Text(busy?'Versturen…':'Verstuur naar redactie'))]));}
 class InAppWebPage extends StatelessWidget{final String title,url;const InAppWebPage({super.key,required this.title,required this.url});@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(title)),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.ads_click,size:44,color:navy),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:10),const Text('Advertentielink. Je verlaat de app alleen wanneer je hieronder kiest om de bestemming te openen.'),const SizedBox(height:16),FilledButton(onPressed:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:const Text('Open bestemming'))]))));}
