@@ -264,37 +264,68 @@ class AppAd {
   final int id;
   final String title, image, url, label;
   const AppAd(this.id, this.title, this.image, this.url, this.label);
-  factory AppAd.fromJson(dynamic j) => AppAd(
-    int.tryParse('${j['id'] ?? 0}') ?? 0,
-    '${j['title'] ?? j['name'] ?? 'Advertentie'}',
-    '${j['image'] ?? j['image_url'] ?? j['creative_url'] ?? j['banner'] ?? ''}',
-    '${j['url'] ?? j['link'] ?? j['target_url'] ?? j['click_url'] ?? ''}',
-    '${j['label'] ?? 'Advertentie'}',
-  );
+
+  static String _pick(Map j, List<String> keys) {
+    for (final key in keys) {
+      final value = j[key];
+      if (value == null) continue;
+      if (value is Map) {
+        final nested = value['url'] ?? value['src'] ?? value['rendered'];
+        if (nested != null && '$nested'.trim().isNotEmpty) return '$nested'.trim();
+      } else if ('$value'.trim().isNotEmpty) {
+        return '$value'.trim();
+      }
+    }
+    return '';
+  }
+
+  factory AppAd.fromJson(dynamic raw) {
+    final j = raw is Map ? Map<String,dynamic>.from(raw) : <String,dynamic>{};
+    return AppAd(
+      int.tryParse(_pick(j, ['id','ID','ad_id','campaign_id'])) ?? 0,
+      _pick(j, ['title','name','campaign','advertiser','company']).isEmpty ? 'Advertentie' : _pick(j, ['title','name','campaign','advertiser','company']),
+      _pick(j, ['image','image_url','creative_url','banner','banner_url','mobile_image','thumbnail','creative']),
+      _pick(j, ['url','link','target_url','click_url','website','destination']),
+      _pick(j, ['label','type']).isEmpty ? 'Advertentie' : _pick(j, ['label','type']),
+    );
+  }
+}
+
+List<dynamic> _adList(dynamic decoded) {
+  dynamic raw = decoded;
+  if (decoded is Map) {
+    for (final key in ['ads','items','data','results','advertisements','campaigns']) {
+      if (decoded[key] != null) { raw = decoded[key]; break; }
+    }
+    if (raw is Map) {
+      for (final key in ['ads','items','data','results']) {
+        if (raw[key] is List) { raw = raw[key]; break; }
+      }
+      if (raw is Map) raw = raw.values.toList();
+    }
+  }
+  return raw is List ? raw : <dynamic>[];
 }
 
 Future<List<AppAd>> loadAppAds({String placement = 'news_feed'}) async {
-  final uris = [
-    Uri.parse('$site/wp-json/rvaz-app/v1/ads?placement=$placement'),
-    Uri.parse('$site/wp-json/rvaz-ads/v1/ads?placement=$placement'),
-    Uri.parse('$site/wp-json/rvaz/v1/app-ads?placement=$placement'),
+  final placements = <String>{placement, 'app', 'mobile', 'all'};
+  final uris = <Uri>[
+    for (final p in placements) Uri.parse('$site/wp-json/rvaz-app/v1/ads?placement=${Uri.encodeQueryComponent(p)}'),
+    for (final p in placements) Uri.parse('$site/wp-json/rvaz-ads/v1/ads?placement=${Uri.encodeQueryComponent(p)}'),
+    for (final p in placements) Uri.parse('$site/wp-json/rvaz/v1/app-ads?placement=${Uri.encodeQueryComponent(p)}'),
+    Uri.parse('$site/wp-json/rvaz-app/v1/ads'),
+    Uri.parse('$site/wp-json/rvaz-ads/v1/ads'),
+    Uri.parse('$site/wp-json/rvaz/v1/app-ads'),
   ];
   for (final uri in uris) {
     try {
-      final r = await http.get(uri);
-      if (r.statusCode == 200) {
-        final decoded = jsonDecode(r.body);
-        dynamic raw = decoded;
-        if (decoded is Map) {
-          raw = decoded['ads'] ?? decoded['items'] ?? decoded['data'] ?? decoded['results'] ?? [];
-          if (raw is Map) raw = raw['ads'] ?? raw['items'] ?? raw['data'] ?? raw.values.toList();
-        }
-        final list = raw is List ? raw : <dynamic>[];
-        final ads = list.whereType<Map>().map<AppAd>((x) => AppAd.fromJson(x)).where((a) =>
-          a.title.trim().isNotEmpty || a.image.trim().isNotEmpty || a.url.trim().isNotEmpty
-        ).toList();
-        if (ads.isNotEmpty) return ads;
-      }
+      final r = await http.get(uri, headers: const {'Accept':'application/json'}).timeout(const Duration(seconds: 8));
+      if (r.statusCode < 200 || r.statusCode >= 300 || r.body.trim().isEmpty) continue;
+      final list = _adList(jsonDecode(r.body));
+      final ads = list.map(AppAd.fromJson).where((a) =>
+        a.image.isNotEmpty || a.url.isNotEmpty || (a.title.isNotEmpty && a.title != 'Advertentie')
+      ).toList();
+      if (ads.isNotEmpty) return ads;
     } catch (_) {}
   }
   return [];
@@ -310,9 +341,38 @@ class AppAdCard extends StatefulWidget {
 class _AppAdCardState extends State<AppAdCard> {
   bool sent=false;
   @override void didChangeDependencies(){super.didChangeDependencies();if(!sent){sent=true;trackAd(widget.ad.id,'impression');}}
-  @override Widget build(BuildContext context){final ad=widget.ad; return Card(
-    margin: const EdgeInsets.only(bottom: 12), clipBehavior: Clip.antiAlias,
-    child: InkWell(onTap: ad.url.isEmpty?null:() async {await trackAd(ad.id,'click'); if(context.mounted) Navigator.of(context).push(MaterialPageRoute(builder:(_)=>InAppWebPage(title:ad.title,url:ad.url)));},child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[if(ad.image.isNotEmpty)Image.network(ad.image,height:150,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(ad.label.toUpperCase(),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Colors.black54)),const SizedBox(height:4),Text(ad.title,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800,color:navy))]))])));
+  @override
+  Widget build(BuildContext context) {
+    final ad=widget.ad;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: ad.url.isEmpty ? null : () async {
+          await trackAd(ad.id,'click');
+          if(context.mounted) Navigator.of(context).push(MaterialPageRoute(builder:(_)=>InAppWebPage(title:ad.title,url:ad.url)));
+        },
+        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          if(ad.image.isNotEmpty)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 110),
+              child: Image.network(ad.image,width:double.infinity,height:110,fit:BoxFit.contain,
+                errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12,8,12,10),
+            child: Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text(ad.label.toUpperCase(),style:const TextStyle(fontSize:9,fontWeight:FontWeight.w900,color:Colors.black54)),
+                const SizedBox(height:2),
+                Text(ad.title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,height:1.15,fontWeight:FontWeight.w800,color:navy)),
+              ])),
+              if(ad.url.isNotEmpty) const Padding(padding:EdgeInsets.only(left:8),child:Icon(Icons.open_in_new,size:17,color:navy)),
+            ]),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -441,16 +501,19 @@ class ArticlePage extends StatelessWidget {
                         color: navy, fontSize: 29, height: 1.08,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
-                Html(data: bodyHtml, style: {
-                  'body': Style(width: Width(100, Unit.percent), fontSize: FontSize(17), lineHeight: const LineHeight(1.45), margin: Margins.zero),
-                  'div': Style(width: Width(100, Unit.percent)),
+                SizedBox(width:double.infinity,child:Html(data: bodyHtml, style: {
+                  'html': Style(width: Width(100, Unit.percent), margin: Margins.zero, padding: HtmlPaddings.zero),
+                  'body': Style(width: Width(100, Unit.percent), fontSize: FontSize(17), lineHeight: const LineHeight(1.5), margin: Margins.zero, padding: HtmlPaddings.zero),
+                  'article': Style(width: Width(100, Unit.percent), margin: Margins.zero),
+                  'section': Style(width: Width(100, Unit.percent), margin: Margins.zero),
+                  'div': Style(width: Width(100, Unit.percent), margin: Margins.zero),
                   'p': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
                   'h2': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
                   'h3': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
                   'img': Style(width: Width(100, Unit.percent), height: Height.auto()),
                   'figure': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
                   'table': Style(width: Width(100, Unit.percent)),
-                }),
+                })),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () { final link='${post['link'] ?? post['url'] ?? ''}'; if(link.isNotEmpty) launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication); },
@@ -773,14 +836,33 @@ class WeekbladPage extends StatefulWidget {
 class _WeekbladPageState extends State<WeekbladPage> {
   late Future<List<dynamic>> future;
   @override void initState(){super.initState();future=load();}
-  Future<List<dynamic>> load() async { final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/weekblad')); if(r.statusCode==200)return jsonDecode(r.body); return []; }
+  Future<List<dynamic>> load() async {
+    final uris=[
+      Uri.parse('$site/wp-json/rvaz-app/v1/weekblad'),
+      Uri.parse('$site/wp-json/rvaz-app/v1/issues'),
+      Uri.parse('$site/wp-json/wp/v2/search?search=weekblad&per_page=20'),
+    ];
+    for(final uri in uris){
+      try{
+        final r=await http.get(uri).timeout(const Duration(seconds:8));
+        if(r.statusCode!=200)continue;
+        final d=jsonDecode(r.body);
+        if(d is List && d.isNotEmpty)return List<dynamic>.from(d);
+        if(d is Map){
+          final x=d['items']??d['issues']??d['data']??d['results'];
+          if(x is List && x.isNotEmpty)return List<dynamic>.from(x);
+        }
+      }catch(_){}
+    }
+    return [];
+  }
   @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
     if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
     final issues=s.data??[];
     return ListView(padding:const EdgeInsets.all(18),children:[
       Text(appConfig.weekbladTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),
-      if(issues.isEmpty) const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Er zijn nog geen gepubliceerde edities via de app-API beschikbaar.'))),
+      if(issues.isEmpty) Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Er zijn momenteel geen weekbladedities gevonden.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('$site/weekblad/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new),label:const Text('Bekijk weekblad op de website'))]))),
       ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
     ]);
   });
