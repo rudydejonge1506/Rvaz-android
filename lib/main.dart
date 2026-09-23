@@ -317,7 +317,7 @@ String cleanArticleHtml(String html) {
   }
   // WordPress content can contain desktop-only inline layout rules. flutter_html
   // otherwise honours those rules and may render paragraphs in a tiny column.
-  out = out.replaceAll(RegExp(r"\\s(?:width|min-width|max-width|float|position|left|right)\\s*:\\s*[^;\\"']+;?", caseSensitive: false), '');
+  out = out.replaceAll(RegExp(r'\\s(?:width|min-width|max-width|float|position|left|right)\\s*:\\s*[-a-z0-9.%]+\\s*;?', caseSensitive: false), '');
   out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
   return out;
 }
