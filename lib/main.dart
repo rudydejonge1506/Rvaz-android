@@ -119,8 +119,10 @@ Future<void> registerDeviceToken() async {
       final auth = await authHeaders();
       if (auth['Authorization']?.isNotEmpty == true) headers['Authorization'] = auth['Authorization']!;
     } catch (_) {}
-    final p2000OptIn=(await const FlutterSecureStorage().read(key:'rvaz_push_112'))=='1';
-    final topics=<String>['all','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];if(p2000OptIn)topics.add('112');
+    final storage=const FlutterSecureStorage();
+    final p2000OptIn=(await storage.read(key:'rvaz_push_112'))=='1';
+    final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];if(p2000OptIn)topics.add('112');
+    for(final place in ['hellevoetsluis','rockanje','brielle','oostvoorne','voorne-aan-zee']){if((await storage.read(key:'rvaz_p2000_$place'))=='1')topics.add('p2000-$place');}
     final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics});
     for (final endpoint in ['device']) {
       try {
@@ -182,7 +184,7 @@ Future<void> main() async {
   final messaging = FirebaseMessaging.instance;
   final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
   if (permission.authorizationStatus != AuthorizationStatus.denied) {
-    for (final topic in ['all','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
+    for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
       try { await messaging.subscribeToTopic(topic); } catch (_) {}
     }
     await registerDeviceToken();
@@ -1180,12 +1182,16 @@ class _InvoicesPageState extends State<InvoicesPage>{late Future<List<dynamic>> 
 class ProfilePage extends StatelessWidget{final Map<String,dynamic> user;const ProfilePage({super.key,required this.user});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn profiel'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[Card(child:Column(children:[ListTile(leading:const Icon(Icons.person),title:Text(user['name']?.toString()??''),subtitle:const Text('Naam')),const Divider(height:1),ListTile(leading:const Icon(Icons.email_outlined),title:Text(user['email']?.toString()??''),subtitle:const Text('E-mailadres')),if((user['place']?.toString()??'').isNotEmpty)...[const Divider(height:1),ListTile(leading:const Icon(Icons.location_on_outlined),title:Text(user['place'].toString()),subtitle:const Text('Woonplaats'))]]))]));}
 class NotificationPreferencesPage extends StatefulWidget{const NotificationPreferencesPage({super.key});@override State<NotificationPreferencesPage> createState()=>_NotificationPreferencesPageState();}
 class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{
- Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true,'weekblad':true};bool busy=true;
+ Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true,'weekblad':true};Map<String,bool> p2000={'hellevoetsluis':false,'rockanje':false,'brielle':false,'oostvoorne':false,'voorne-aan-zee':false};bool busy=true;
+ static const labels={'hellevoetsluis':'Hellevoetsluis','rockanje':'Rockanje','brielle':'Brielle','oostvoorne':'Oostvoorne','voorne-aan-zee':'Voorne aan Zee'};
  @override void initState(){super.initState();load();}
- Future<void>load()async{final local=await const FlutterSecureStorage().read(key:'rvaz_push_112');if(local!=null)p['emergency112']=local=='1';try{final h=await authHeaders();if(h.containsKey('Authorization')){final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:h);if(r.statusCode==200){final d=Map<String,dynamic>.from(jsonDecode(r.body));for(final k in p.keys){if(d.containsKey(k))p[k]=d[k]==true;}}}}catch(_){}if(mounted)setState(()=>busy=false);}
- Future<void>save(String k,bool v)async{setState(()=>p[k]=v);try{if(k=='emergency112')await const FlutterSecureStorage().write(key:'rvaz_push_112',value:v?'1':'0');final h=await authHeaders();if(h.containsKey('Authorization'))await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:{...h,'Content-Type':'application/json'},body:jsonEncode(p));final m=FirebaseMessaging.instance;final topic=k=='emergency112'?'112':(k=='traffic'?'verkeer':k);if(v){await m.subscribeToTopic(topic);}else{await m.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
+ Future<void>load()async{const st=FlutterSecureStorage();final local=await st.read(key:'rvaz_push_112');if(local!=null)p['emergency112']=local=='1';for(final k in p2000.keys){p2000[k]=(await st.read(key:'rvaz_p2000_$k'))=='1';}try{final h=await authHeaders();if(h.containsKey('Authorization')){final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:h);if(r.statusCode==200){final d=Map<String,dynamic>.from(jsonDecode(r.body));for(final k in p.keys){if(d.containsKey(k))p[k]=d[k]==true;}}}}catch(_){}if(mounted)setState(()=>busy=false);}
+ Future<void>save(String k,bool v)async{setState(()=>p[k]=v);try{if(k=='emergency112')await const FlutterSecureStorage().write(key:'rvaz_push_112',value:v?'1':'0');final h=await authHeaders();if(h.containsKey('Authorization'))await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:{...h,'Content-Type':'application/json'},body:jsonEncode(p));final topic=k=='emergency112'?'112':(k=='traffic'?'verkeer':k);if(v){await FirebaseMessaging.instance.subscribeToTopic(topic);}else{await FirebaseMessaging.instance.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
+ Future<void>saveP2000(String place,bool v)async{setState(()=>p2000[place]=v);try{await const FlutterSecureStorage().write(key:'rvaz_p2000_$place',value:v?'1':'0');final topic='p2000-$place';if(v){await FirebaseMessaging.instance.subscribeToTopic(topic);}else{await FirebaseMessaging.instance.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Meldingen'),backgroundColor:Colors.white,foregroundColor:navy),body:busy?const Center(child:CircularProgressIndicator()):ListView(children:[
-   SwitchListTile(value:p['emergency112']??false,onChanged:(v)=>save('emergency112',v),title:const Text('Elke nieuwe P2000-melding'),subtitle:const Text('Pushmelding bij nieuwe P2000-meldingen uit Rotterdam-Rijnmond')),
-   const Divider(height:1),
-   for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))
+ SwitchListTile(value:p['emergency112']??false,onChanged:(v)=>save('emergency112',v),title:const Text('Heel Rotterdam-Rijnmond'),subtitle:const Text('Alle nieuwe P2000-meldingen uit de regio')),
+ const Padding(padding:EdgeInsets.fromLTRB(16,12,16,4),child:Text('P2000 per plaats',style:TextStyle(fontWeight:FontWeight.w800,color:navy))),
+ for(final e in labels.entries)SwitchListTile(value:p2000[e.key]??false,onChanged:(v)=>saveP2000(e.key,v),title:Text(e.value),subtitle:const Text('Alleen P2000-meldingen voor deze plaats')),
+ const Divider(height:1),
+ for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))
  ]));}
