@@ -36,7 +36,9 @@ jobs:
       - name: Get packages
         run: flutter pub get
       - name: Prepare Android app icon
-        run: dart run flutter_launcher_icons
+        run: |
+          base64 -d assets/rvaz-logo.b64 > assets/rvaz-logo.png
+          dart run flutter_launcher_icons
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
