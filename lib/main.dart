@@ -322,13 +322,11 @@ String cleanArticleHtml(String html) {
   for (final marker in markers) {
     out = out.replaceAll(RegExp('<[^>]*(?:class|id)=[^>]*$marker[^>]*>.*?</(?:div|section|aside|button)>', caseSensitive: false, dotAll: true), '');
   }
-  // WordPress content can contain desktop-only inline layout rules. flutter_html
-  // otherwise honours those rules and may render paragraphs in a tiny column.
-  out = out.replaceAll(RegExp(r'\\s(?:width|min-width|max-width|float|position|left|right)\\s*:\\s*[-a-z0-9.%]+\\s*;?', caseSensitive: false), '');
-  out = out.replaceAll(RegExp(r'''\\sstyle=(\"[^\"]*\"|'[^']*')''', caseSensitive: false), '');\n  out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
+  // Strip inline desktop layout styles so WordPress content always fits mobile width.
+  out = out.replaceAll(RegExp(r'''\sstyle=("[^"]*"|'[^']*')''', caseSensitive: false), '');
+  out = out.replaceAll(RegExp(r'<(?:script|style)[^>]*>.*?</(?:script|style)>', caseSensitive: false, dotAll: true), '');
   return out;
 }
-
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
   final subject = Uri.encodeComponent('App feedback – $page');
   final extra = detail == null || detail.isEmpty ? '' : 'Onderdeel: $detail\n';
@@ -357,6 +355,8 @@ String formatPostDate(dynamic p) {
 }
 
 String postImage(dynamic p) {
+  final direct = p['image']?.toString() ?? '';
+  if (direct.isNotEmpty) return direct;
   try {
     final media = p['_embedded']?['wp:featuredmedia'];
     if (media is List && media.isNotEmpty) {
@@ -365,7 +365,6 @@ String postImage(dynamic p) {
   } catch (_) {}
   return '';
 }
-
 Future<bool> saveArticle(dynamic post) async {
   final id = int.tryParse('${post['id'] ?? ''}');
   if (id == null) return false;
