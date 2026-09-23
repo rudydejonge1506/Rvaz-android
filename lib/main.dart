@@ -509,6 +509,7 @@ class ArticlePage extends StatelessWidget {
     final rawContent = post['content'];
     final title = clean(rawTitle is Map ? '${rawTitle['rendered'] ?? ''}' : '${rawTitle ?? ''}');
     final bodyHtml = cleanArticleHtml(rawContent is Map ? '${rawContent['rendered'] ?? ''}' : '${rawContent ?? post['excerpt'] ?? ''}');
+    final bodyText = bodyHtml.replaceAll(RegExp(r'<br\\s*/?>',caseSensitive:false),'\n').replaceAll(RegExp(r'</(?:p|div|li|h[1-6]|blockquote)>',caseSensitive:false),'\n\n').replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&nbsp;',' ').replaceAll('&amp;','&').replaceAll('&#8217;',"'").replaceAll('&#8211;','–').replaceAll(RegExp(r'\n{3,}'),'\n\n').trim();
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -549,19 +550,7 @@ class ArticlePage extends StatelessWidget {
                         color: navy, fontSize: 29, height: 1.08,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
-                SizedBox(width:double.infinity,child:Html(data: bodyHtml, style: {
-                  'html': Style(width: Width(100, Unit.percent), margin: Margins.zero, padding: HtmlPaddings.zero),
-                  'body': Style(width: Width(100, Unit.percent), fontSize: FontSize(17), lineHeight: const LineHeight(1.5), margin: Margins.zero, padding: HtmlPaddings.zero),
-                  'article': Style(width: Width(100, Unit.percent), margin: Margins.zero),
-                  'section': Style(width: Width(100, Unit.percent), margin: Margins.zero),
-                  'div': Style(width: Width(100, Unit.percent), margin: Margins.zero),
-                  'p': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
-                  'h2': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
-                  'h3': Style(width: Width(100, Unit.percent), color: navy, fontWeight: FontWeight.w800),
-                  'img': Style(width: Width(100, Unit.percent), height: Height.auto()),
-                  'figure': Style(width: Width(100, Unit.percent), margin: Margins.only(bottom: 14)),
-                  'table': Style(width: Width(100, Unit.percent)),
-                })),
+                SizedBox(width:double.infinity,child:SelectableText(bodyText,style:const TextStyle(fontSize:17,height:1.55,color:Color(0xFF202A33)))),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () { final link='${post['link'] ?? post['url'] ?? ''}'; if(link.isNotEmpty) launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication); },
