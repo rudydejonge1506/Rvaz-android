@@ -35,14 +35,25 @@ jobs:
         run: rm -f test/widget_test.dart
       - name: Get packages
         run: flutter pub get
-      - name: Prepare RVAZ Android app icon
+      - name: Prepare RVAZ Android app icon from App API
         run: |
-          base64 -d assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon.png
+          python3 - <<'PY'
+          import json, urllib.request
+          api='https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config'
+          with urllib.request.urlopen(api, timeout=20) as r:
+              cfg=json.load(r)
+          url=(cfg.get('app_icon_url') or cfg.get('app_icon') or '').strip()
+          if not url:
+              raise SystemExit('RVAZ App API config bevat geen app_icon_url/app_icon')
+          print('App icon from RVAZ App API:', url)
+          urllib.request.urlretrieve(url, '/tmp/rvaz-icon-source')
+          PY
           sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
+          convert /tmp/rvaz-icon-source -strip /tmp/rvaz-icon.png
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
             dir="${spec%%:*}"; size="${spec##*:}"
             mkdir -p "android/app/src/main/res/$dir"
-            convert /tmp/rvaz-icon.png -define png:ignore-crc=true -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
+            convert /tmp/rvaz-icon.png -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
           done
           identify android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
       - name: Analyze
