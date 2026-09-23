@@ -84,9 +84,9 @@ Future<void> registerDeviceToken() async {
       'device_token':token,
       'fcm_token':token,
       'platform':'android',
-      'topics':['all','breaking','news','112','emergency112','traffic','verkeer','agenda','weekblad'],
+      'topics':['all','breaking','112','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'],
     });
-    for (final endpoint in ['device','device-token','push/register']) {
+    for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
         if (r.statusCode >= 200 && r.statusCode < 300) return;
@@ -133,7 +133,7 @@ Future<void> main() async {
   final messaging = FirebaseMessaging.instance;
   final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
   if (permission.authorizationStatus != AuthorizationStatus.denied) {
-    for (final topic in ['all','breaking','news','112','emergency112','traffic','verkeer','agenda','weekblad']) {
+    for (final topic in ['all','breaking','112','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
       try { await messaging.subscribeToTopic(topic); } catch (_) {}
     }
     await registerDeviceToken();
