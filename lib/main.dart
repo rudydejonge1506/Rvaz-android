@@ -260,6 +260,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int index = 0;
+  @override void initState(){super.initState();WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));}
   static const pageMap = <String,Widget>{
     'home': HomePage(),
     'news': NewsPage(),
@@ -487,6 +488,27 @@ Future<void> sendPageFeedback(BuildContext context, String page, {String? detail
   }catch(_){
     if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding. Feedback is niet verstuurd.')));
   }
+}
+
+Future<void> maybeAskTesterFeedback(BuildContext context) async {
+  const st=FlutterSecureStorage();
+  final disabled=(await st.read(key:'rvaz_feedback_prompt_disabled'))=='1';
+  if(disabled)return;
+  final n=(int.tryParse(await st.read(key:'rvaz_app_opens')??'0')??0)+1;
+  await st.write(key:'rvaz_app_opens',value:'$n');
+  if(n<4 || (n-4)%7!=0)return;
+  if(!context.mounted)return;
+  final action=await showDialog<String>(context:context,builder:(d)=>AlertDialog(
+    title:const Text('Help je mee de RVAZ-app beter te maken?'),
+    content:const Text('Je test de app. Wil je kort delen wat goed werkt of wat we nog kunnen verbeteren?'),
+    actions:[
+      TextButton(onPressed:()=>Navigator.pop(d,'stop'),child:const Text('Niet meer vragen')),
+      TextButton(onPressed:()=>Navigator.pop(d,'later'),child:const Text('Later')),
+      FilledButton(onPressed:()=>Navigator.pop(d,'feedback'),child:const Text('Feedback geven')),
+    ],
+  ));
+  if(action=='stop')await st.write(key:'rvaz_feedback_prompt_disabled',value:'1');
+  if(action=='feedback'&&context.mounted)await sendPageFeedback(context,'Testfeedback');
 }
 
 class PageFeedbackButton extends StatelessWidget { final String page; final String? detail; const PageFeedbackButton({super.key, required this.page, this.detail}); @override Widget build(BuildContext context)=>IconButton(tooltip:'Feedback over deze pagina',icon:const Icon(Icons.feedback_outlined),onPressed:()=>sendPageFeedback(context,page,detail:detail)); }
@@ -1125,7 +1147,7 @@ class _AccountPageState extends State<AccountPage>{
         const Divider(height:1),
         ListTile(leading: const Icon(Icons.article_outlined), title: const Text('Mijn bijdragen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionsPage()))),
         const Divider(height:1),
-        ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Weekblad'), subtitle: const Text('Lees de nieuwste editie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WeekbladPage()))),
+        ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Weekblad'), subtitle: const Text('Lees de nieuwste editie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Weekblad'),backgroundColor:Colors.white,foregroundColor:navy),body:const WeekbladPage())))),
         const Divider(height:1),
         ListTile(leading: const Icon(Icons.help_outline), title: const Text('Contact & hulp'), trailing: const Icon(Icons.open_in_new), onTap:()=>launchUrl(Uri.parse('$site/contact/'),mode:LaunchMode.externalApplication)),
         if (advertiser) ...[
