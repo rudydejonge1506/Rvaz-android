@@ -1,7 +1,7 @@
 name: rvaz_android
 description: Regio Voorne aan Zee Android app
 publish_to: "none"
-version: 0.4.8+12
+version: 0.4.9+13
 environment:
   sdk: ">=3.3.0 <4.0.0"
 dependencies:
@@ -11,6 +11,7 @@ dependencies:
   url_launcher: ^6.3.0
   flutter_html: 3.0.0-beta.2
   flutter_secure_storage: ^9.2.4
+  image_picker: ^1.1.2
   firebase_core: ^4.1.0
   firebase_messaging: ^16.0.1
 dev_dependencies:
