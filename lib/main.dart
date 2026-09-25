@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -969,7 +970,7 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
-      ])),
+      ]))),
       const SizedBox(height:14),
       RotatingAppAd(future:detailAds),
     ]));
