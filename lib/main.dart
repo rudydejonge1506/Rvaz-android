@@ -122,6 +122,9 @@ Future<void> registerDeviceToken() async {
     } catch (_) {}
     const storage=FlutterSecureStorage();
     final p2000OptIn=(await storage.read(key:'rvaz_push_112'))=='1';
+    final p2000StreetEnabled=(await storage.read(key:'rvaz_p2000_street_enabled'))=='1';
+    final p2000StreetPlace=(await storage.read(key:'rvaz_p2000_street_place')??'').trim();
+    final p2000StreetName=(await storage.read(key:'rvaz_p2000_street_name')??'').trim();
     final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];
     if(p2000OptIn){
       topics.add('112');
@@ -129,7 +132,7 @@ Future<void> registerDeviceToken() async {
     }else{
       for(final place in ['hellevoetsluis','rockanje','brielle','oostvoorne','voorne-aan-zee']){if((await storage.read(key:'rvaz_p2000_$place'))=='1')topics.add('p2000-$place');}
     }
-    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics});
+    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName}});
     for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
@@ -1295,6 +1298,37 @@ class _InvoicesPageState extends State<InvoicesPage>{late Future<List<dynamic>> 
 
 class ProfilePage extends StatelessWidget{final Map<String,dynamic> user;const ProfilePage({super.key,required this.user});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn profiel'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[Card(child:Column(children:[ListTile(leading:const Icon(Icons.person),title:Text(user['name']?.toString()??''),subtitle:const Text('Naam')),const Divider(height:1),ListTile(leading:const Icon(Icons.email_outlined),title:Text(user['email']?.toString()??''),subtitle:const Text('E-mailadres')),if((user['place']?.toString()??'').isNotEmpty)...[const Divider(height:1),ListTile(leading:const Icon(Icons.location_on_outlined),title:Text(user['place'].toString()),subtitle:const Text('Woonplaats'))]]))]));}
 class NotificationPreferencesPage extends StatefulWidget{const NotificationPreferencesPage({super.key});@override State<NotificationPreferencesPage> createState()=>_NotificationPreferencesPageState();}
+class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{
+ Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true,'weekblad':true};Map<String,bool> p2000={'hellevoetsluis':false,'rockanje':false,'brielle':false,'oostvoorne':false,'voorne-aan-zee':false};bool busy=true,streetEnabled=false;
+ final streetPlace=TextEditingController(),streetName=TextEditingController();
+ static const labels={'hellevoetsluis':'Hellevoetsluis','rockanje':'Rockanje','brielle':'Brielle','oostvoorne':'Oostvoorne','voorne-aan-zee':'Voorne aan Zee'};
+ @override void initState(){super.initState();load();}
+ @override void dispose(){streetPlace.dispose();streetName.dispose();super.dispose();}
+ Future<void>load()async{const st=FlutterSecureStorage();final local=await st.read(key:'rvaz_push_112');if(local!=null)p['emergency112']=local=='1';for(final k in p2000.keys){p2000[k]=(await st.read(key:'rvaz_p2000_$k'))=='1';}streetEnabled=(await st.read(key:'rvaz_p2000_street_enabled'))=='1';streetPlace.text=await st.read(key:'rvaz_p2000_street_place')??'';streetName.text=await st.read(key:'rvaz_p2000_street_name')??'';try{final h=await authHeaders();if(h.containsKey('Authorization')){final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:h);if(r.statusCode==200){final d=Map<String,dynamic>.from(jsonDecode(r.body));for(final k in p.keys){if(d.containsKey(k))p[k]=d[k]==true;}}}}catch(_){}if(mounted)setState(()=>busy=false);}
+ Future<void>save(String k,bool v)async{setState(()=>p[k]=v);try{if(k=='emergency112'){await const FlutterSecureStorage().write(key:'rvaz_push_112',value:v?'1':'0');if(v){await disableStreet();for(final place in p2000.keys){await FirebaseMessaging.instance.unsubscribeFromTopic('p2000-$place');}}}final h=await authHeaders();if(h.containsKey('Authorization'))await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:{...h,'Content-Type':'application/json'},body:jsonEncode(p));final topic=k=='emergency112'?'112':(k=='traffic'?'verkeer':k);if(v){await FirebaseMessaging.instance.subscribeToTopic(topic);}else{await FirebaseMessaging.instance.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
+ Future<void>saveP2000(String place,bool v)async{setState(()=>p2000[place]=v);try{if(v)await disableStreet();await const FlutterSecureStorage().write(key:'rvaz_p2000_$place',value:v?'1':'0');final topic='p2000-$place';if(v){await FirebaseMessaging.instance.subscribeToTopic(topic);}else{await FirebaseMessaging.instance.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
+ Future<void>disableStreet()async{streetEnabled=false;await const FlutterSecureStorage().write(key:'rvaz_p2000_street_enabled',value:'0');if(mounted)setState((){});}
+ Future<void>saveStreet()async{final place=streetPlace.text.trim(),street=streetName.text.trim();if(place.isEmpty||street.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul zowel een plaats als straatnaam in.')));return;}const st=FlutterSecureStorage();setState(()=>streetEnabled=true);await st.write(key:'rvaz_p2000_street_enabled',value:'1');await st.write(key:'rvaz_p2000_street_place',value:place);await st.write(key:'rvaz_p2000_street_name',value:street);p['emergency112']=false;await st.write(key:'rvaz_push_112',value:'0');try{await FirebaseMessaging.instance.unsubscribeFromTopic('112');}catch(_){}for(final k in p2000.keys){p2000[k]=false;await st.write(key:'rvaz_p2000_$k',value:'0');try{await FirebaseMessaging.instance.unsubscribeFromTopic('p2000-$k');}catch(_){}}await registerDeviceToken();if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Straatfilter opgeslagen: $street, $place')));}}
+ Future<void>removeStreet()async{await disableStreet();await registerDeviceToken();}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Meldingen'),backgroundColor:Colors.white,foregroundColor:navy),body:busy?const Center(child:CircularProgressIndicator()):ListView(children:[
+ SwitchListTile(value:p['emergency112']??false,onChanged:(v)=>save('emergency112',v),title:const Text('Heel Rotterdam-Rijnmond'),subtitle:const Text('Alle nieuwe P2000-meldingen uit de regio')),
+ const Padding(padding:EdgeInsets.fromLTRB(16,12,16,4),child:Text('P2000 per plaats',style:TextStyle(fontWeight:FontWeight.w800,color:navy))),
+ for(final e in labels.entries)SwitchListTile(value:p2000[e.key]??false,onChanged:(v)=>saveP2000(e.key,v),title:Text(e.value),subtitle:const Text('Alleen P2000-meldingen voor deze plaats')),
+ const Divider(height:1),
+ SwitchListTile(value:streetEnabled,onChanged:(v)=>v?saveStreet():removeStreet(),title:const Text('Alleen een bepaalde straat'),subtitle:Text(streetEnabled?'Straatfilter is actief':'Ontvang alleen P2000 als plaats én straatnaam in de melding staan')),
+ Padding(padding:const EdgeInsets.fromLTRB(16,0,16,16),child:Column(children:[
+  TextField(controller:streetPlace,decoration:const InputDecoration(labelText:'Plaats',hintText:'Bijv. Hellevoetsluis')),
+  const SizedBox(height:8),
+  TextField(controller:streetName,decoration:const InputDecoration(labelText:'Straatnaam',hintText:'Bijv. Rijksstraatweg')),
+  const SizedBox(height:10),
+  SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:saveStreet,icon:const Icon(Icons.notifications_active_outlined),label:const Text('Straatfilter opslaan'))),
+  const SizedBox(height:4),
+  const Text('Werkt alleen wanneer de plaats en straatnaam in het oorspronkelijke P2000-bericht staan.',style:TextStyle(fontSize:12,color:Colors.black54))
+ ])),
+ const Divider(height:1),
+ for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))
+ ]));}
+
 class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{
  Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true,'weekblad':true};Map<String,bool> p2000={'hellevoetsluis':false,'rockanje':false,'brielle':false,'oostvoorne':false,'voorne-aan-zee':false};bool busy=true;
  static const labels={'hellevoetsluis':'Hellevoetsluis','rockanje':'Rockanje','brielle':'Brielle','oostvoorne':'Oostvoorne','voorne-aan-zee':'Voorne aan Zee'};
