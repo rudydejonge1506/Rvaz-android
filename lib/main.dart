@@ -420,36 +420,53 @@ class _AppAdCardState extends State<AppAdCard> {
   @override
   Widget build(BuildContext context) {
     final ad=widget.ad;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
+    if(ad.image.isEmpty)return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom:10),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: ad.url.isEmpty ? null : () async {
           await trackAd(ad.id,'click');
           if(context.mounted) Navigator.of(context).push(MaterialPageRoute(builder:(_)=>InAppWebPage(title:ad.title,url:ad.url)));
         },
-        child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          if(ad.image.isNotEmpty)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 110),
-              child: Image.network(ad.image,width:double.infinity,height:110,fit:BoxFit.contain,
-                errorBuilder:(_,__,___)=>const SizedBox.shrink()),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12,8,12,10),
-            child: Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Text(ad.label.toUpperCase(),style:const TextStyle(fontSize:9,fontWeight:FontWeight.w900,color:Colors.black54)),
-                const SizedBox(height:2),
-                Text(ad.title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,height:1.15,fontWeight:FontWeight.w800,color:navy)),
-              ])),
-              if(ad.url.isNotEmpty) const Padding(padding:EdgeInsets.only(left:8),child:Icon(Icons.open_in_new,size:17,color:navy)),
-            ]),
-          ),
-        ]),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.network(ad.image,width:double.infinity,fit:BoxFit.fitWidth,
+            errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+        ),
       ),
     );
   }
+}
+
+class RotatingAppAd extends StatefulWidget {
+  final Future<List<AppAd>> future;
+  const RotatingAppAd({super.key,required this.future});
+  @override State<RotatingAppAd> createState()=>_RotatingAppAdState();
+}
+class _RotatingAppAdState extends State<RotatingAppAd> {
+  int index=0;
+  Timer? timer;
+  List<AppAd> current=const [];
+  @override void dispose(){timer?.cancel();super.dispose();}
+  void sync(List<AppAd> ads){
+    if(ads.length<=1){timer?.cancel();timer=null;return;}
+    if(current.length==ads.length&&current.asMap().entries.every((e)=>e.value.id==ads[e.key].id))return;
+    current=ads;
+    timer?.cancel();
+    timer=Timer.periodic(const Duration(seconds:10),(_){
+      if(mounted)setState(()=>index=(index+1)%current.length);
+    });
+  }
+  @override Widget build(BuildContext context)=>FutureBuilder<List<AppAd>>(
+    future:widget.future,
+    builder:(context,s){
+      final ads=s.data??[];
+      if(ads.isEmpty)return const SizedBox.shrink();
+      WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)sync(ads);});
+      return AppAdCard(key:ValueKey(ads[index%ads.length].id),ad:ads[index%ads.length]);
+    },
+  );
 }
 
 String cleanArticleHtml(String html) {
@@ -798,7 +815,7 @@ class _HomePageState extends State<HomePage>{
           if(postImage(p).isNotEmpty)Image.network(postImage(p),height:175,width:double.infinity,fit:BoxFit.cover),
           Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
         const SizedBox(height:10),
-        FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():Padding(padding:const EdgeInsets.only(bottom:8),child:AppAdCard(ad:a.first));}),
+        RotatingAppAd(future:ads),
         const SizedBox.shrink(),
         const SizedBox(height:10),
         ...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
@@ -954,7 +971,7 @@ class P2000DetailPage extends StatelessWidget {
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
       ])),
       const SizedBox(height:14),
-      FutureBuilder<List<AppAd>>(future:detailAds,builder:(context,s){final ads=s.data??[];return ads.isEmpty?const SizedBox.shrink():AppAdCard(ad:ads.first);}),
+      RotatingAppAd(future:detailAds),
     ]));
   }
 }
@@ -1134,7 +1151,7 @@ class _AgendaPageState extends State<AgendaPage>{
  DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','event_start_date','event_date','start','date','datum','datetime']));
  @override Widget build(BuildContext context)=>ColoredBox(color:const Color(0xFFF7F9FB),child:FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final places=<String>['Alle',...appConfig.places.where((x)=>x!='Voorne aan Zee')];final items=all.where((p)=>place=='Alle'||placeOf(p).toLowerCase()==place.toLowerCase()).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));return Column(children:[
    SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(14,9,14,7),itemCount:places.length,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i){final x=places[i],on=x==place;return ChoiceChip(label:Text(x),selected:on,onSelected:(_)=>setState(()=>place=x),selectedColor:cyan,labelStyle:TextStyle(color:on?Colors.white:navy,fontSize:11,fontWeight:FontWeight.w700),side:BorderSide(color:on?cyan:const Color(0xFFDCE5ED)),showCheckmark:false); })),
-   Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():AppAdCard(ad:a.first);}),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
+   Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),RotatingAppAd(future:ads),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
  ]);}));
 }
 
@@ -1155,7 +1172,7 @@ class _WeekbladPageState extends State<WeekbladPage> {
     final issues=s.data??[];
     return ListView(padding:const EdgeInsets.all(18),children:[
       Text(appConfig.weekbladTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
-      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),FutureBuilder<List<AppAd>>(future:ads,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():AppAdCard(ad:a.first);}),
+      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),RotatingAppAd(future:ads),
       if(issues.isEmpty) Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Er zijn momenteel geen weekbladedities gevonden.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('$site/weekblad/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new),label:const Text('Bekijk weekblad op de website'))]))),
       ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
     ]);
