@@ -932,6 +932,7 @@ class P2000DetailPage extends StatelessWidget {
     final service=value(['service','discipline','dienst','agency']);
     final priority=value(['priority','prio']);
     final body=value(['body','description','details','content']);
+    final detailAds=loadAppAds(placement:'p2000');
     return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(traffic?'Verkeersmelding':'P2000-melding'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red,size:34),const SizedBox(height:12),
@@ -941,7 +942,9 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
-      ]))
+      ])),
+      const SizedBox(height:14),
+      FutureBuilder<List<AppAd>>(future:detailAds,builder:(context,s){final ads=s.data??[];return ads.isEmpty?const SizedBox.shrink():AppAdCard(ad:ads.first);}),
     ]));
   }
 }
