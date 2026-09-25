@@ -1276,6 +1276,7 @@ class BusinessDetailPage extends StatelessWidget{
  Map<dynamic,dynamic> hoursMap(){final raw=rawValue(['hours','opening_hours','openingHours']);if(raw is Map)return raw;if(raw is String&&raw.trim().isNotEmpty){try{final d=jsonDecode(raw);if(d is Map)return d;}catch(_){}}return <dynamic,dynamic>{};}
  @override Widget build(BuildContext context){
   final img=v('image'),web=v('website'),phone=v('phone'),content=v('content');
+  final email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
   final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
   final isPro=v('pro')=='true'||v('plan').toLowerCase()=='pro';
   final hours=hoursMap();
@@ -1296,11 +1297,17 @@ class BusinessDetailPage extends StatelessWidget{
    Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Row(crossAxisAlignment:CrossAxisAlignment.center,children:[Expanded(child:Text(v('title'),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy))),if(isPro)const Padding(padding:EdgeInsets.only(left:8),child:Text('PRO',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))) ]),
     if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),
-    if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri.parse('tel:$phone'))),
+    if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
+    if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
+    if(isPro&&web.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.language),title:Text(web),onTap:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication)),
+    if(isPro&&facebook.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.facebook),title:const Text('Facebook'),onTap:()=>launchUrl(Uri.parse(facebook),mode:LaunchMode.externalApplication)),
+    if(isPro&&instagram.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.link),title:const Text('Instagram'),onTap:()=>launchUrl(Uri.parse(instagram),mode:LaunchMode.externalApplication)),
+    if(isPro&&linkedin.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.link),title:const Text('LinkedIn'),onTap:()=>launchUrl(Uri.parse(linkedin),mode:LaunchMode.externalApplication)),
+    if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4,bottom:8),child:Text(socials)),
     const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows,
     if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],
     if(isPro&&additional.isNotEmpty)...[const SizedBox(height:18),const Text('Aanvullende informatie',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),Html(data:cleanArticleHtml(additional))],
-    if(web.isNotEmpty)...[const SizedBox(height:14),FilledButton.icon(onPressed:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication),icon:const Icon(Icons.language),label:const Text('Website bedrijf'))]
+    
    ]))
   ]));
  }
