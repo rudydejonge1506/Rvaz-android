@@ -659,9 +659,6 @@ class _ArticlePageState extends State<ArticlePage>{
     final bodyHtml = cleanArticleHtml(rawContent is Map ? '${rawContent['rendered'] ?? ''}' : '${rawContent ?? post['excerpt'] ?? ''}');
     final articleAds = loadAppAds(placement:'article');
     final blocks=bodyHtml.split(RegExp(r'(?<=</p>)',caseSensitive:false)).where((x)=>x.trim().isNotEmpty).toList();
-    final cut=blocks.length>2?(blocks.length/2).ceil():blocks.length;
-    final firstHtml=blocks.take(cut).join();
-    final secondHtml=blocks.skip(cut).join();
     return Scaffold(backgroundColor:const Color(0xFFF7F9FB),
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -683,44 +680,57 @@ class _ArticlePageState extends State<ArticlePage>{
           PageFeedbackButton(page: 'Nieuwsartikel', detail: title),
         ],
       ),
-      body: ListView(
-        children: [
-          if (image.isNotEmpty)
-            Image.network(image, height: 240, width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('NIEUWS',
-                    style: TextStyle(color: cyan, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 8),
-                Text(title,
-                    style: const TextStyle(
-                        color: navy, fontSize: 29, height: 1.08,
-                        fontWeight: FontWeight.w900)),
-                const SizedBox(height: 18),
-                SizedBox(width:double.infinity,child:Html(data:firstHtml,style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})),
-                const SizedBox(height: 12),
-                FutureBuilder<List<AppAd>>(future:articleAds,builder:(context,s){final a=s.data??[];return a.isEmpty?const SizedBox.shrink():AppAdCard(ad:a.first);}),
-                if(secondHtml.trim().isNotEmpty) ...[
-                  const SizedBox(height:12),
-                  SizedBox(width:double.infinity,child:Html(data:secondHtml,style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})),
+      body: FutureBuilder<List<AppAd>>(
+        future: articleAds,
+        builder: (context, adSnapshot) {
+          final ads=adSnapshot.data??[];
+          final content=<Widget>[];
+          if(blocks.isEmpty){
+            content.add(SizedBox(width:double.infinity,child:Html(data:bodyHtml,style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
+          }else{
+            // Korte artikelen: maximaal één advertentie. Langere artikelen krijgen
+            // advertenties verspreid door de tekst, met minimaal drie tekstblokken ertussen.
+            final adEvery=blocks.length>=10?4:(blocks.length>=6?3:blocks.length);
+            var adIndex=0;
+            for(var i=0;i<blocks.length;i++){
+              content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
+              final after=i+1;
+              final canInsert=ads.isNotEmpty&&after<blocks.length&&after%adEvery==0;
+              if(canInsert){
+                content.add(const SizedBox(height:14));
+                content.add(AppAdCard(ad:ads[adIndex%ads.length]));
+                content.add(const SizedBox(height:14));
+                adIndex++;
+              }
+            }
+          }
+          return ListView(children:[
+            if (image.isNotEmpty)
+              Image.network(image, height: 240, width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('NIEUWS',style:TextStyle(color:cyan,fontWeight:FontWeight.w900)),
+                const SizedBox(height:8),
+                Text(title,style:const TextStyle(color:navy,fontSize:29,height:1.08,fontWeight:FontWeight.w900)),
+                const SizedBox(height:18),
+                ...content,
+                if(blocks.length<6&&ads.isNotEmpty)...[
+                  const SizedBox(height:14),
+                  AppAdCard(ad:ads.first),
                 ],
-                const SizedBox(height: 18),
-                FutureBuilder<List<AppAd>>(future:articleAds,builder:(context,s){final a=s.data??[];return a.length<2?const SizedBox.shrink():AppAdCard(ad:a[1]);}),
-                const SizedBox(height: 24),
+                const SizedBox(height:24),
                 OutlinedButton.icon(
                   onPressed: () { final link='${post['link'] ?? post['url'] ?? ''}'; if(link.isNotEmpty) launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication); },
                   icon: const Icon(Icons.open_in_new),
                   label: const Text('Bekijk origineel op de website'),
                 ),
-              ],
+              ]),
             ),
-          ),
-        ],
+          ]);
+        },
       ),
     );
   }
