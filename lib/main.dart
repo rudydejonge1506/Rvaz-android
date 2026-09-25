@@ -1250,7 +1250,7 @@ class _BusinessesPageState extends State<BusinessesPage>{
  late Future<List<dynamic>> future; String query='',place='',category='';
  @override void initState(){super.initState();future=load();}
  Future<List<dynamic>> load()async{
-   for(final endpoint in ['$site/wp-json/rvaz-app/v1/businesses?per_page=100','$site/wp-json/wp/v2/rvaz_bedrijf?per_page=100&_embed=1']){
+   for(final endpoint in ['$site/wp-json/rvaz-business/v1/businesses?per_page=100','$site/wp-json/rvaz-app/v1/businesses?per_page=100','$site/wp-json/wp/v2/rvaz_bedrijf?per_page=100&_embed=1']){
      try{final r=await http.get(Uri.parse(endpoint)).timeout(const Duration(seconds:10));if(r.statusCode==200){final d=jsonDecode(r.body);final raw=d is List?d:(d is Map?(d['items']??d['businesses']??d['data']):null);if(raw is List&&raw.isNotEmpty)return List<dynamic>.from(raw).map((e){if(e is! Map)return e;final m=Map<String,dynamic>.from(e);if(m['title'] is Map)m['title']=m['title']['rendered']??'';if(m['content'] is Map)m['content']=m['content']['rendered']??'';if((m['image']??'').toString().isEmpty){final emb=m['_embedded'];if(emb is Map&&emb['wp:featuredmedia'] is List&&(emb['wp:featuredmedia'] as List).isNotEmpty)m['image']=emb['wp:featuredmedia'][0]['source_url']??'';}return m;}).toList();}}catch(_){}
    } return [];
  }
