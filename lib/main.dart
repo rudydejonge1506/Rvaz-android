@@ -1275,7 +1275,7 @@ class BusinessDetailPage extends StatelessWidget{
  dynamic rawValue(List<String> keys){if(item is! Map)return null;for(final k in keys){final x=item[k];if(x!=null&&x.toString().trim().isNotEmpty)return x;}return null;}
  Map<dynamic,dynamic> hoursMap(){final raw=rawValue(['hours','opening_hours','openingHours']);if(raw is Map)return raw;if(raw is String&&raw.trim().isNotEmpty){try{final d=jsonDecode(raw);if(d is Map)return d;}catch(_){}}return <dynamic,dynamic>{};}
  @override Widget build(BuildContext context){
-  final img=v('image'),web=v('website'),phone=v('phone'),content=v('content');
+  final img=v('image'),web=v('website'),phone=v('phone'),content=v('content'),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
   final email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
   final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
   final isPro=v('pro')=='true'||v('plan').toLowerCase()=='pro';
