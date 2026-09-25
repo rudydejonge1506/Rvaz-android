@@ -765,9 +765,10 @@ class _HomePageState extends State<HomePage>{
   late Future<List<dynamic>> posts;
   late Future<List<dynamic>> events;
   late Future<List<AppAd>> ads;
+  late Future<List<dynamic>> businesses;
   int visibleNews=8;
   @override void initState(){super.initState();_reload();}
-  void _reload(){visibleNews=8;posts=_posts();events=_events();ads=loadAppAds(placement:'home');}
+  void _reload(){visibleNews=8;posts=_posts();events=_events();ads=loadAppAds(placement:'home');businesses=loadBusinesses();}
   Future<List<dynamic>> _posts() async {
     try{
       final r=await http.get(
@@ -784,7 +785,7 @@ class _HomePageState extends State<HomePage>{
   }
   Future<List<dynamic>> _events()=>RvazApi.firstList(['agenda?per_page=5','events?per_page=5'],keys:const ['events','agenda']);
   String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
-  @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads]);},child:ListView(padding:EdgeInsets.zero,children:[
+  @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses]);},child:ListView(padding:EdgeInsets.zero,children:[
     Padding(
       padding: const EdgeInsets.fromLTRB(16,16,16,8),
       child: Container(
@@ -812,6 +813,24 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
     ])),
+    FutureBuilder<List<dynamic>>(future:businesses,builder:(context,s){
+      final pros=(s.data??[]).where(_businessIsPro).toList();
+      if(pros.isEmpty)return const SizedBox.shrink();
+      final e=pros[DateTime.now().day%pros.length];
+      String bv(String k)=>e is Map?(e[k]?.toString()??''):'';
+      final img=bv('image');
+      return Padding(padding:const EdgeInsets.fromLTRB(16,16,16,4),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('PRO bedrijf',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage())),child:const Text('Bedrijven →'))]),
+        Card(child:InkWell(borderRadius:BorderRadius.circular(14),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>BusinessDetailPage(item:e))),child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[
+          img.isEmpty?const CircleAvatar(radius:34,child:Icon(Icons.storefront)):ClipRRect(borderRadius:BorderRadius.circular(9),child:Image.network(img,width:68,height:68,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:68,height:68,child:Icon(Icons.storefront)))),
+          const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(4)),child:const Text('PRO',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),
+            const SizedBox(height:6),Text(bv('title'),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy)),
+            if(bv('place').isNotEmpty||bv('address').isNotEmpty)Text([bv('place'),bv('address')].where((x)=>x.isNotEmpty).join(' · '),maxLines:2,style:const TextStyle(fontSize:11,color:Colors.black54)),
+          ])),const Icon(Icons.chevron_right,color:navy)
+        ]))))
+      ]));
+    }),
     Padding(padding:const EdgeInsets.fromLTRB(16,0,16,22),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Laatste nieuws',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Text('Meer →'))]),
       FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final all=s.data??[];if(all.isEmpty)return const SizedBox.shrink();final x=all.take(visibleNews).toList();final p=x.first;return Column(children:[
@@ -1256,15 +1275,39 @@ bool _businessIsPro(dynamic e){
  if(ps=='true'||ps=='1'||ps=='yes'||ps=='pro')return true;
  return (e['plan']??'').toString().trim().toLowerCase()=='pro';
 }
+Map<String,dynamic> _normalizeBusiness(dynamic e){
+ if(e is! Map)return <String,dynamic>{};
+ final m=Map<String,dynamic>.from(e);
+ if(m['title'] is Map)m['title']=m['title']['rendered']??'';
+ if(m['content'] is Map)m['content']=m['content']['rendered']??'';
+ if((m['image']??'').toString().isEmpty){
+  final emb=m['_embedded'];
+  if(emb is Map&&emb['wp:featuredmedia'] is List&&(emb['wp:featuredmedia'] as List).isNotEmpty)m['image']=emb['wp:featuredmedia'][0]['source_url']??'';
+ }
+ return m;
+}
+Future<List<dynamic>> loadBusinesses()async{
+ for(final endpoint in [
+  '$site/wp-json/rvaz-app/v1/businesses?per_page=100',
+  '$site/wp-json/rvaz-business/v1/businesses?per_page=100',
+  '$site/wp-json/wp/v2/rvaz_bedrijf?per_page=100&_embed=1'
+ ]){
+  try{
+   final r=await http.get(Uri.parse(endpoint)).timeout(const Duration(seconds:10));
+   if(r.statusCode==200){
+    final d=jsonDecode(r.body);
+    final raw=d is List?d:(d is Map?(d['items']??d['businesses']??d['data']):null);
+    if(raw is List&&raw.isNotEmpty)return raw.map(_normalizeBusiness).toList();
+   }
+  }catch(_){}
+ }
+ return <dynamic>[];
+}
 class BusinessesPage extends StatefulWidget{const BusinessesPage({super.key});@override State<BusinessesPage> createState()=>_BusinessesPageState();}
 class _BusinessesPageState extends State<BusinessesPage>{
  late Future<List<dynamic>> future; String query='',place='',category='';
  @override void initState(){super.initState();future=load();}
- Future<List<dynamic>> load()async{
-   for(final endpoint in ['$site/wp-json/rvaz-business/v1/businesses?per_page=100','$site/wp-json/rvaz-app/v1/businesses?per_page=100','$site/wp-json/wp/v2/rvaz_bedrijf?per_page=100&_embed=1']){
-     try{final r=await http.get(Uri.parse(endpoint)).timeout(const Duration(seconds:10));if(r.statusCode==200){final d=jsonDecode(r.body);final raw=d is List?d:(d is Map?(d['items']??d['businesses']??d['data']):null);if(raw is List&&raw.isNotEmpty)return List<dynamic>.from(raw).map((e){if(e is! Map)return e;final m=Map<String,dynamic>.from(e);if(m['title'] is Map)m['title']=m['title']['rendered']??'';if(m['content'] is Map)m['content']=m['content']['rendered']??'';if((m['image']??'').toString().isEmpty){final emb=m['_embedded'];if(emb is Map&&emb['wp:featuredmedia'] is List&&(emb['wp:featuredmedia'] as List).isNotEmpty)m['image']=emb['wp:featuredmedia'][0]['source_url']??'';}return m;}).toList();}}catch(_){}
-   } return [];
- }
+ Future<List<dynamic>> load()=>loadBusinesses();
  String v(dynamic e,String k)=>e is Map?e[k]?.toString()??'':'';
  List<String> vals(dynamic e,String plural,String single){final x=e is Map?e[plural]:null;if(x is List)return x.map((z)=>z.toString()).where((z)=>z.isNotEmpty).toList();final one=v(e,single);return one.isEmpty?[]:[one];}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Bedrijvengids'),backgroundColor:Colors.white,foregroundColor:navy,actions:const [PageFeedbackButton(page:'Bedrijvengids')]),body:FutureBuilder<List<dynamic>>(future:future,builder:(c,s){
@@ -1277,11 +1320,29 @@ class _BusinessesPageState extends State<BusinessesPage>{
    );
  }));
 }
+class _BusinessLinkIcon extends StatelessWidget{
+ final IconData? icon;final String? text;final Color color;final String tooltip,url;
+ const _BusinessLinkIcon({this.icon,this.text,required this.color,required this.tooltip,required this.url});
+ @override Widget build(BuildContext context)=>Tooltip(message:tooltip,child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:Container(width:44,height:44,decoration:BoxDecoration(color:Colors.white,border:Border.all(color:color),shape:BoxShape.circle),alignment:Alignment.center,child:icon!=null?Icon(icon,color:color,size:28):Text(text??'',style:TextStyle(color:color,fontSize:20,fontWeight:FontWeight.w900)))));
+}
 class BusinessDetailPage extends StatelessWidget{
  final dynamic item;const BusinessDetailPage({super.key,required this.item});
  String v(String k)=>item is Map?item[k]?.toString()??'':'';
  dynamic rawValue(List<String> keys){if(item is! Map)return null;for(final k in keys){final x=item[k];if(x!=null&&x.toString().trim().isNotEmpty)return x;}return null;}
- Map<dynamic,dynamic> hoursMap(){final raw=rawValue(['hours','opening_hours','openingHours']);if(raw is Map)return raw;if(raw is String&&raw.trim().isNotEmpty){try{final d=jsonDecode(raw);if(d is Map)return d;}catch(_){}}return <dynamic,dynamic>{};}
+ Map<dynamic,dynamic> hoursMap(){
+  dynamic raw=rawValue(['hours','opening_hours','openingHours','openingstijden']);
+  if(raw is String&&raw.trim().isNotEmpty){try{raw=jsonDecode(raw);}catch(_){}}
+  if(raw is Map){
+   for(final k in ['hours','opening_hours','openingHours','days','week']){if(raw[k] is Map)raw=raw[k];}
+   return raw;
+  }
+  if(raw is List){
+   final out=<dynamic,dynamic>{};
+   for(final row in raw){if(row is Map){final day=(row['day']??row['name']??row['weekday']??'').toString().toLowerCase();if(day.isNotEmpty)out[day]=row;}}
+   return out;
+  }
+  return <dynamic,dynamic>{};
+ }
  @override Widget build(BuildContext context){
   final img=v('image'),web=v('website'),phone=v('phone'),content=v('content'),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
   final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
@@ -1290,11 +1351,13 @@ class BusinessDetailPage extends StatelessWidget{
   const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};
   final hourRows=<Widget>[];
   days.forEach((key,label){
-   final d=hours[key]??hours[label.toLowerCase()]??hours[label];
+   final aliases=<String,List<String>>{'monday':['maandag','mon'],'tuesday':['dinsdag','tue'],'wednesday':['woensdag','wed'],'thursday':['donderdag','thu'],'friday':['vrijdag','fri'],'saturday':['zaterdag','sat'],'sunday':['zondag','sun']};
+   dynamic d=hours[key]??hours[label.toLowerCase()]??hours[label];
+   for(final a in aliases[key]??const <String>[]){d??=hours[a];}
    var text='Niet opgegeven';
    if(d is Map){
     final closed=d['closed']==1||d['closed']==true||d['closed']=='1';
-    final open=(d['open']??d['from']??'').toString().trim(),close=(d['close']??d['to']??'').toString().trim();
+    final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();
     if(closed)text='Gesloten';else if(open.isNotEmpty||close.isNotEmpty)text=[open,close].where((z)=>z.isNotEmpty).join(' – ');
    }else if(d!=null&&d.toString().trim().isNotEmpty)text=d.toString().trim();
    hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));
@@ -1306,10 +1369,12 @@ class BusinessDetailPage extends StatelessWidget{
     if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),
     if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
     if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
-    if(isPro&&web.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.language),title:Text(web),onTap:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication)),
-    if(isPro&&facebook.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.facebook),title:const Text('Facebook'),onTap:()=>launchUrl(Uri.parse(facebook),mode:LaunchMode.externalApplication)),
-    if(isPro&&instagram.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.link),title:const Text('Instagram'),onTap:()=>launchUrl(Uri.parse(instagram),mode:LaunchMode.externalApplication)),
-    if(isPro&&linkedin.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.link),title:const Text('LinkedIn'),onTap:()=>launchUrl(Uri.parse(linkedin),mode:LaunchMode.externalApplication)),
+    if(isPro&&(web.isNotEmpty||facebook.isNotEmpty||instagram.isNotEmpty||linkedin.isNotEmpty))Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Wrap(spacing:14,runSpacing:10,children:[
+      if(web.isNotEmpty)_BusinessLinkIcon(icon:Icons.language,color:const Color(0xFF0A66C2),tooltip:'Website',url:web),
+      if(facebook.isNotEmpty)_BusinessLinkIcon(icon:Icons.facebook,color:const Color(0xFF1877F2),tooltip:'Facebook',url:facebook),
+      if(instagram.isNotEmpty)_BusinessLinkIcon(icon:Icons.camera_alt_outlined,color:const Color(0xFFE4405F),tooltip:'Instagram',url:instagram),
+      if(linkedin.isNotEmpty)_BusinessLinkIcon(text:'in',color:const Color(0xFF0A66C2),tooltip:'LinkedIn',url:linkedin),
+    ])),
     if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4,bottom:8),child:Text(socials)),
     const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows,
     if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],
