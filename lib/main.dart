@@ -1296,7 +1296,7 @@ Future<List<dynamic>> loadBusinesses()async{
    final r=await http.get(Uri.parse(endpoint)).timeout(const Duration(seconds:10));
    if(r.statusCode==200){
     final d=jsonDecode(r.body);
-    final raw=d is List?d:(d is Map?(d['items']??d['businesses']??d['data']):null);
+    final dynamic raw=d is List?d:(d is Map?(d['items']??d['businesses']??d['data']):null);
     if(raw is List&&raw.isNotEmpty)return raw.map(_normalizeBusiness).toList();
    }
   }catch(_){}
@@ -1333,7 +1333,7 @@ class BusinessDetailPage extends StatelessWidget{
   dynamic raw=rawValue(['hours','opening_hours','openingHours','openingstijden']);
   if(raw is String&&raw.trim().isNotEmpty){try{raw=jsonDecode(raw);}catch(_){}}
   if(raw is Map){
-   for(final k in ['hours','opening_hours','openingHours','days','week']){if(raw[k] is Map)raw=raw[k];}
+   for(final k in ['hours','opening_hours','openingHours','days','week']){final nested=raw[k];if(nested is Map)raw=nested;}
    return raw;
   }
   if(raw is List){
