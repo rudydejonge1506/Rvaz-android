@@ -1358,8 +1358,8 @@ class BusinessDetailPage extends StatelessWidget{
    if(d is Map){
     final closed=d['closed']==1||d['closed']==true||d['closed']=='1';
     final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();
-    if(closed)text='Gesloten';else if(open.isNotEmpty||close.isNotEmpty)text=[open,close].where((z)=>z.isNotEmpty).join(' – ');
-   }else if(d!=null&&d.toString().trim().isNotEmpty)text=d.toString().trim();
+    if(closed){text='Gesloten';}else if(open.isNotEmpty||close.isNotEmpty){text=[open,close].where((z)=>z.isNotEmpty).join(' – ');}
+   }else if(d!=null&&d.toString().trim().isNotEmpty){text=d.toString().trim();}
    hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));
   });
   return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(v('title')),actions:[PageFeedbackButton(page:'Bedrijvengids',detail:v('title'))]),body:ListView(children:[
