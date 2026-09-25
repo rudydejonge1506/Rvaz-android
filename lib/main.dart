@@ -1270,10 +1270,39 @@ class _BusinessesPageState extends State<BusinessesPage>{
  }));
 }
 class BusinessDetailPage extends StatelessWidget{
- final dynamic item;const BusinessDetailPage({super.key,required this.item});String v(String k)=>item is Map?item[k]?.toString()??'':'';
- @override Widget build(BuildContext context){final img=v('image'),web=v('website'),phone=v('phone'),content=v('content'),additional=v('additional_info');final raw=item is Map?(item['hours']??item['opening_hours']):null;final hours=raw is Map?raw:<dynamic,dynamic>{};const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};final hourRows=<Widget>[];
- days.forEach((key,label){final d=hours[key];if(d is Map){final closed=d['closed']==1||d['closed']==true||d['closed']=='1';final open=(d['open']??'').toString(),close=(d['close']??'').toString();if(closed||open.isNotEmpty||close.isNotEmpty)hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Text(closed?'Gesloten':'$open – $close')])));}});
- return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(v('title')),actions:[PageFeedbackButton(page:'Bedrijvengids',detail:v('title'))]),body:ListView(children:[if(img.isNotEmpty)Image.network(img,height:220,width:double.infinity,fit:BoxFit.cover),Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(v('title'),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy)),if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri.parse('tel:$phone'))),if(hourRows.isNotEmpty)...[const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows],if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],if(additional.isNotEmpty)...[const SizedBox(height:18),const Text('Aanvullende informatie',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),Html(data:cleanArticleHtml(additional))],if(web.isNotEmpty)...[const SizedBox(height:14),FilledButton.icon(onPressed:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication),icon:const Icon(Icons.language),label:const Text('Website bedrijf'))]]))]));
+ final dynamic item;const BusinessDetailPage({super.key,required this.item});
+ String v(String k)=>item is Map?item[k]?.toString()??'':'';
+ dynamic rawValue(List<String> keys){if(item is! Map)return null;for(final k in keys){final x=item[k];if(x!=null&&x.toString().trim().isNotEmpty)return x;}return null;}
+ Map<dynamic,dynamic> hoursMap(){final raw=rawValue(['hours','opening_hours','openingHours']);if(raw is Map)return raw;if(raw is String&&raw.trim().isNotEmpty){try{final d=jsonDecode(raw);if(d is Map)return d;}catch(_){}}return <dynamic,dynamic>{};}
+ @override Widget build(BuildContext context){
+  final img=v('image'),web=v('website'),phone=v('phone'),content=v('content');
+  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
+  final isPro=v('pro')=='true'||v('plan').toLowerCase()=='pro';
+  final hours=hoursMap();
+  const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};
+  final hourRows=<Widget>[];
+  days.forEach((key,label){
+   final d=hours[key]??hours[label.toLowerCase()]??hours[label];
+   var text='Niet opgegeven';
+   if(d is Map){
+    final closed=d['closed']==1||d['closed']==true||d['closed']=='1';
+    final open=(d['open']??d['from']??'').toString().trim(),close=(d['close']??d['to']??'').toString().trim();
+    if(closed)text='Gesloten';else if(open.isNotEmpty||close.isNotEmpty)text=[open,close].where((z)=>z.isNotEmpty).join(' – ');
+   }else if(d!=null&&d.toString().trim().isNotEmpty)text=d.toString().trim();
+   hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));
+  });
+  return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(v('title')),actions:[PageFeedbackButton(page:'Bedrijvengids',detail:v('title'))]),body:ListView(children:[
+   if(img.isNotEmpty)Image.network(img,height:220,width:double.infinity,fit:BoxFit.cover),
+   Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[Expanded(child:Text(v('title'),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy))),if(isPro)const Padding(padding:EdgeInsets.only(left:8),child:Text('PRO',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))) ]),
+    if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),
+    if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri.parse('tel:$phone'))),
+    const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows,
+    if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],
+    if(isPro&&additional.isNotEmpty)...[const SizedBox(height:18),const Text('Aanvullende informatie',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),Html(data:cleanArticleHtml(additional))],
+    if(web.isNotEmpty)...[const SizedBox(height:14),FilledButton.icon(onPressed:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication),icon:const Icon(Icons.language),label:const Text('Website bedrijf'))]
+   ]))
+  ]));
  }
 }
 class TipPage extends StatefulWidget{const TipPage({super.key});@override State<TipPage> createState()=>_TipPageState();}class _TipPageState extends State<TipPage>{final subject=TextEditingController(),place=TextEditingController(),body=TextEditingController();bool busy=false;Future<void>send()async{
