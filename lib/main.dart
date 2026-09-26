@@ -130,9 +130,19 @@ Future<void> registerDeviceToken() async {
     final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];
     if(p2000OptIn){
       topics.add('112');
+      try{await m.subscribeToTopic('112');}catch(_){}
       for(final place in ['hellevoetsluis','rockanje','brielle','oostvoorne','voorne-aan-zee']){try{await m.unsubscribeFromTopic('p2000-$place');}catch(_){}}
     }else{
-      for(final place in ['hellevoetsluis','rockanje','brielle','oostvoorne','voorne-aan-zee']){if((await storage.read(key:'rvaz_p2000_$place'))=='1')topics.add('p2000-$place');}
+      try{await m.unsubscribeFromTopic('112');}catch(_){}
+      for(final place in ['hellevoetsluis','rockanje','brielle','oostvoorne','voorne-aan-zee']){
+        final topic='p2000-$place';
+        if((await storage.read(key:'rvaz_p2000_$place'))=='1'){
+          topics.add(topic);
+          try{await m.subscribeToTopic(topic);}catch(_){}
+        }else{
+          try{await m.unsubscribeFromTopic(topic);}catch(_){}
+        }
+      }
     }
     final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName}});
     for (final endpoint in ['device']) {
