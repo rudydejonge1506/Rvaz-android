@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
@@ -836,6 +838,8 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
     ])),
     Padding(padding:const EdgeInsets.fromLTRB(16,14,16,0),child:Card(child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:10),leading:const CircleAvatar(child:Icon(Icons.photo_camera_outlined)),title:const Text('Tip de redactie',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Iets gezien? Stuur direct je tip en maximaal 5 eigen foto’s.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))))),
+    Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.wb_sunny_outlined)),title:const Text('Dit speelt er vandaag',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Nieuws, 112, verkeer en agenda uit de regio.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage()))))),
+    Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.map_outlined)),title:const Text('Live regiokaart',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Actuele meldingen en gebeurtenissen op de kaart.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const LiveMapPage()))))),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
     FutureBuilder<List<dynamic>>(future:businesses,builder:(context,s){
       final pros=(s.data??[]).where(_businessIsPro).toList();
@@ -1166,6 +1170,26 @@ class _NewsPageState extends State<NewsPage> {
       );
 }
 
+
+class TodayPage extends StatefulWidget{const TodayPage({super.key});@override State<TodayPage> createState()=>_TodayPageState();}
+class _TodayPageState extends State<TodayPage>{
+ late Future<Map<String,dynamic>> future; @override void initState(){super.initState();future=load();}
+ Future<Map<String,dynamic>> load()async{try{final d=await RvazApi.get('today',query:{'place':'Hellevoetsluis'});if(d is Map)return Map<String,dynamic>.from(d);}catch(_){}return{};}
+ List<dynamic> section(Map<String,dynamic>d,String key)=>RvazApi.list(d[key]);
+ String text(dynamic e,String key){if(e is! Map)return'';final v=e[key];if(v is Map)return '${v['rendered']??''}'.replaceAll(RegExp(r'<[^>]*>'),'');return '${v??''}'.replaceAll(RegExp(r'<[^>]*>'),'');}
+ String greeting(){final h=DateTime.now().hour;if(h<12)return'Goedemorgen 👋';if(h<18)return'Goedemiddag 👋';return'Goedenavond 👋';}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Dit speelt er vandaag')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final d=s.data??{};final groups=<String,List<dynamic>>{'Nieuws':section(d,'news'),'112 / P2000':section(d,'p2000'),'Verkeer':section(d,'traffic'),'Agenda':section(d,'agenda')};return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView(padding:const EdgeInsets.all(16),children:[Text(greeting(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:4),const Text('Dit speelt er vandaag in Hellevoetsluis.',style:TextStyle(color:Colors.black54)),const SizedBox(height:14),if(d.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Het dagoverzicht is momenteel niet beschikbaar.'))),...groups.entries.where((g)=>g.value.isNotEmpty).expand((g)=>[Padding(padding:const EdgeInsets.fromLTRB(2,10,2,7),child:Text(g.key,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy))),...g.value.take(5).map((e)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place')))))]) ]));}));
+}
+
+class LiveMapPage extends StatefulWidget{const LiveMapPage({super.key});@override State<LiveMapPage> createState()=>_LiveMapPageState();}
+class _LiveMapPageState extends State<LiveMapPage>{
+ late Future<List<dynamic>> future;String filter='Alles'; @override void initState(){super.initState();future=load();}
+ Future<List<dynamic>> load()=>RvazApi.firstList(['map?place=Voorne%20aan%20Zee'],keys:const ['markers','items']);
+ double? number(dynamic e,List<String>keys){if(e is! Map)return null;for(final k in keys){final v=e[k];if(v is num)return v.toDouble();final n=double.tryParse('$v');if(n!=null)return n;}return null;}
+ String value(dynamic e,String k)=>e is Map?'${e[k]??''}':'';
+ IconData typeIcon(String t){if(t=='p2000'||t=='112')return Icons.warning_amber_rounded;if(t=='traffic')return Icons.traffic;if(t=='agenda')return Icons.event;return Icons.article_outlined;}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Live regiokaart')),body:FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final points=all.where((e)=>number(e,['lat','latitude'])!=null&&number(e,['lng','lon','longitude'])!=null).where((e)=>filter=='Alles'||value(e,'type').toLowerCase()==filter).toList();return Column(children:[SizedBox(height:54,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(14,9,14,7),children:['Alles','112','traffic','news','agenda'].map((x){final label={'traffic':'Verkeer','news':'Nieuws','agenda':'Agenda'}[x]??x;final on=filter==x;return Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(label),selected:on,onSelected:(_)=>setState(()=>filter=x),selectedColor:cyan,labelStyle:TextStyle(color:on?Colors.white:navy,fontSize:11,fontWeight:FontWeight.w700),showCheckmark:false));}).toList())),Expanded(child:FlutterMap(options:const MapOptions(initialCenter:LatLng(51.84,4.13),initialZoom:11),children:[TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),MarkerLayer(markers:points.map((e){final type=value(e,'type').toLowerCase();return Marker(point:LatLng(number(e,['lat','latitude'])!,number(e,['lng','lon','longitude'])!),width:44,height:44,child:IconButton.filled(tooltip:value(e,'title'),onPressed:()=>showModalBottomSheet(context:context,builder:(_)=>SafeArea(child:ListTile(leading:Icon(typeIcon(type)),title:Text(value(e,'title').isEmpty?'RVAZ-melding':value(e,'title'),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text([value(e,'place'),value(e,'date')].where((x)=>x.isNotEmpty).join(' · '))))),icon:Icon(typeIcon(type),size:20)));}).toList()),RichAttributionWidget(attributions:[TextSourceAttribution('OpenStreetMap contributors',onTap:()=>launchUrl(Uri.parse('https://www.openstreetmap.org/copyright'),mode:LaunchMode.externalApplication))])])),if(points.isEmpty)const Padding(padding:EdgeInsets.all(10),child:Text('Geen kaartpunten voor deze selectie.',style:TextStyle(color:Colors.black54))) ]);}));
+}
 
 class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override State<AgendaPage> createState()=>_AgendaPageState();}
 class _AgendaPageState extends State<AgendaPage>{
