@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -688,6 +689,16 @@ class _ArticlePageState extends State<ArticlePage>{
         title: const Text('Regio Voorne aan Zee',
             style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
+          IconButton(
+            tooltip: 'Artikel delen',
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () async {
+              final link = '${post['link'] ?? post['url'] ?? '$site/?p=${post['id'] ?? ''}'}';
+              await SharePlus.instance.share(
+                ShareParams(text: '$title\n\n$link'),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Artikel bewaren',
             icon: const Icon(Icons.bookmark_add_outlined),
