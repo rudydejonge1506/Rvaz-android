@@ -10,6 +10,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -1012,6 +1014,9 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
    Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title='${e['title']??e['message']??e['description']??'Melding'}';final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(date),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
  ]));}
 
+class P2000MapCard extends StatefulWidget{final String query;const P2000MapCard({super.key,required this.query});@override State<P2000MapCard> createState()=>_P2000MapCardState();}
+class _P2000MapCardState extends State<P2000MapCard>{late Future<LatLng?> point;@override void initState(){super.initState();point=locate();}Future<LatLng?>locate()async{try{final u=Uri.https('nominatim.openstreetmap.org','/search',{'q':widget.query,'format':'jsonv2','limit':'1','countrycodes':'nl'});final r=await http.get(u,headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:8));if(r.statusCode!=200)return null;final d=jsonDecode(r.body);if(d is List&&d.isNotEmpty){final a=double.tryParse(d.first['lat'].toString()),b=double.tryParse(d.first['lon'].toString());if(a!=null&&b!=null)return LatLng(a,b);}}catch(_){}return null;}@override Widget build(BuildContext context)=>FutureBuilder<LatLng?>(future:point,builder:(context,s){final p=s.data;if(s.connectionState!=ConnectionState.done)return const SizedBox(height:70,child:Center(child:CircularProgressIndicator()));if(p==null)return const SizedBox.shrink();return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Locatie op de kaart',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(height:220,child:FlutterMap(options:MapOptions(initialCenter:p,initialZoom:16),children:[TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),MarkerLayer(markers:[Marker(point:p,width:46,height:46,child:const Icon(Icons.location_pin,size:44,color:Colors.red))])])))]);});}
+
 class P2000DetailPage extends StatelessWidget {
   final dynamic item; final bool traffic;
   const P2000DetailPage({super.key,required this.item,required this.traffic});
@@ -1033,7 +1038,7 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
-        if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('https://www.openstreetmap.org/search?query='+Uri.encodeQueryComponent(place)),mode:LaunchMode.externalApplication),icon:const Icon(Icons.map_outlined),label:const Text('Bekijk locatie op kaart')))],
+        if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),P2000MapCard(query:[title,place].where((x)=>x.isNotEmpty).join(' '))],
       ]))),
       const SizedBox(height:14),
       RotatingAppAd(future:detailAds),
