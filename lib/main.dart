@@ -882,6 +882,7 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
     ])),
+    Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Card(child:InkWell(borderRadius:BorderRadius.circular(14),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())),child:const Padding(padding:EdgeInsets.all(14),child:Row(children:[CircleAvatar(radius:23,backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.delete_outline,color:Color(0xFF16834B))),SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Mijn afval',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy)),SizedBox(height:2),Text('Persoonlijke afvalkalender voor jouw adres',style:TextStyle(fontSize:12,color:Colors.black54))])),Icon(Icons.chevron_right,color:navy)]))))),
     Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Row(children:[
       Expanded(child:Card(child:InkWell(borderRadius:BorderRadius.circular(12),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage())),child:const Padding(padding:EdgeInsets.symmetric(horizontal:10,vertical:10),child:Row(children:[Icon(Icons.photo_camera_outlined,size:20,color:navy),SizedBox(width:8),Expanded(child:Text('Tip de redactie',maxLines:2,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:navy)))]))))),
       const SizedBox(width:8),
@@ -1441,6 +1442,7 @@ class _AccountPageState extends State<AccountPage>{
         ]) else OutlinedButton.icon(onPressed: logout, icon: const Icon(Icons.logout), label: const Text('Uitloggen')),
       ]))),
       const SizedBox(height: 14),
+      Card(child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.recycling,color:Color(0xFF16834B))),title:const Text('Mijn afval',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Jouw persoonlijke Reinis-afvalkalender'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())))),
       Card(child:Column(children:[
         ListTile(leading:const Icon(Icons.feedback_outlined),title:const Text('Feedback over de app'),subtitle:const Text('Meld een fout of geef een suggestie'),trailing:const Icon(Icons.chevron_right),onTap:()=>sendPageFeedback(context,'Algemene app-feedback')),
         const Divider(height:1),
@@ -1467,6 +1469,84 @@ class _AccountPageState extends State<AccountPage>{
         ],
       ])),    ],
   );
+}
+
+class WasteCalendarPage extends StatefulWidget {
+  const WasteCalendarPage({super.key});
+  @override State<WasteCalendarPage> createState()=>_WasteCalendarPageState();
+}
+class _WasteCalendarPageState extends State<WasteCalendarPage> {
+  final postcode=TextEditingController(), house=TextEditingController(), addition=TextEditingController();
+  bool busy=false; String error='', address=''; List<Map<String,dynamic>> dates=[];
+  static const names=<int,String>{2:'GFT+e',3:'PMD',4:'Oud papier en karton',25:'Restafval'};
+  static const icons=<int,IconData>{2:Icons.eco_outlined,3:Icons.recycling,4:Icons.description_outlined,25:Icons.delete_outline};
+  @override void initState(){super.initState();_restore();}
+  @override void dispose(){postcode.dispose();house.dispose();addition.dispose();super.dispose();}
+  Future<void> _restore() async {
+    const st=FlutterSecureStorage();
+    postcode.text=await st.read(key:'rvaz_waste_postcode')??'';
+    house.text=await st.read(key:'rvaz_waste_house')??'';
+    addition.text=await st.read(key:'rvaz_waste_addition')??'';
+    if(postcode.text.isNotEmpty&&house.text.isNotEmpty)await load();
+  }
+  Future<void> load() async {
+    final pc=postcode.text.replaceAll(' ','').toUpperCase(), nr=house.text.trim(), add=addition.text.trim();
+    if(pc.isEmpty||nr.isEmpty){setState(()=>error='Vul je postcode en huisnummer in.');return;}
+    setState((){busy=true;error='';});
+    try{
+      final suffix='$nr$add';
+      final ar=await http.get(Uri.parse('https://reinis.nl/adressen/${Uri.encodeComponent('$pc:$suffix')}'),headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:12));
+      if(ar.statusCode!=200)throw Exception('Adres niet gevonden');
+      dynamic ad=jsonDecode(ar.body); if(ad is List&&ad.isNotEmpty)ad=ad.first;
+      if(ad is! Map)throw Exception('Adres niet gevonden');
+      final bag=(ad['bagid']??ad['bagId']??'').toString();
+      if(bag.isEmpty)throw Exception('Geen afvalkalender voor dit adres');
+      final now=DateTime.now();
+      final dr=await http.get(Uri.parse('https://reinis.nl/rest/waste-calendar/dates?bagId=${Uri.encodeQueryComponent(bag)}&month=${now.month}&year=${now.year}'),headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:12));
+      if(dr.statusCode!=200)throw Exception('Afvalkalender niet beschikbaar');
+      final raw=jsonDecode(dr.body);
+      final list=raw is List?raw:<dynamic>[];
+      final today=DateTime(now.year,now.month,now.day);
+      final upcoming=<Map<String,dynamic>>[];
+      for(final x in list){
+        if(x is! Map)continue;
+        final d=DateTime.tryParse((x['ophaaldatum']??'').toString());
+        if(d==null||d.isBefore(today))continue;
+        upcoming.add(Map<String,dynamic>.from(x));
+      }
+      upcoming.sort((a,b)=>(a['ophaaldatum']??'').toString().compareTo((b['ophaaldatum']??'').toString()));
+      const st=FlutterSecureStorage();
+      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);
+      if(mounted)setState((){address=(ad['description']??[ad['straat'],ad['huisnummer'],ad['woonplaats']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' ')).toString();dates=upcoming;});
+    }catch(_){if(mounted)setState(()=>error='Dit adres of de afvalkalender kon niet worden geladen. Controleer je gegevens en probeer opnieuw.');}
+    if(mounted)setState(()=>busy=false);
+  }
+  String dateLabel(String raw){
+    final d=DateTime.tryParse(raw);if(d==null)return raw;
+    const days=['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
+    const months=['','januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+    final now=DateTime.now(),today=DateTime(now.year,now.month,now.day),target=DateTime(d.year,d.month,d.day);
+    final diff=target.difference(today).inDays;
+    if(diff==0)return'Vandaag';if(diff==1)return'Morgen';
+    return '${days[d.weekday-1]} ${d.day} ${months[d.month]}';
+  }
+  @override Widget build(BuildContext context){
+    final shown=dates.take(12).toList();
+    return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn afval')),body:ListView(padding:const EdgeInsets.all(16),children:[
+      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF0C6B4E),Color(0xFF15A66F)]),borderRadius:BorderRadius.circular(18)),child:const Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Wanneer zet jij de bak buiten?',style:TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),SizedBox(height:6),Text('Vul één keer je adres in. RVAZ toont daarna jouw eerstvolgende ophaalmomenten.',style:TextStyle(color:Colors.white,height:1.35))])),SizedBox(width:12),Icon(Icons.recycling,color:Colors.white,size:46)])),
+      const SizedBox(height:14),
+      Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
+        Row(children:[Expanded(flex:2,child:TextField(controller:postcode,textCapitalization:TextCapitalization.characters,decoration:const InputDecoration(labelText:'Postcode',hintText:'3235SJ'))),const SizedBox(width:8),Expanded(child:TextField(controller:house,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Nr.'))),const SizedBox(width:8),Expanded(child:TextField(controller:addition,decoration:const InputDecoration(labelText:'Toev.')))]),
+        const SizedBox(height:10),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:busy?null:load,icon:const Icon(Icons.search),label:Text(busy?'Ophalen…':'Toon mijn afvalkalender')))
+      ]))),
+      if(busy)const Padding(padding:EdgeInsets.only(top:12),child:LinearProgressIndicator()),
+      if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:Card(child:ListTile(leading:const Icon(Icons.info_outline,color:Colors.orange),title:Text(error)))),
+      if(address.isNotEmpty)...[const SizedBox(height:16),Text(address,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800,color:navy)),const SizedBox(height:8)],
+      if(!busy&&address.isNotEmpty&&shown.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Er zijn geen komende ophaalmomenten gevonden.'))),
+      ...shown.map((e){final id=int.tryParse('${e['afvalstroom_id']??''}')??0;final name=names[id]??'Afval';final raw=(e['ophaaldatum']??'').toString();return Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(leading:CircleAvatar(backgroundColor:const Color(0xFFE8F7EE),child:Icon(icons[id]??Icons.delete_outline,color:const Color(0xFF16834B))),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(dateLabel(raw)),trailing:dateLabel(raw)=='Morgen'?const Chip(label:Text('MORGEN',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900))):null));}),
+      if(address.isNotEmpty)const Padding(padding:EdgeInsets.fromLTRB(4,8,4,20),child:Text('Afvalgegevens worden opgehaald bij Reinis. Je adresvoorkeur wordt alleen op dit toestel bewaard.',style:TextStyle(fontSize:11,color:Colors.black54)))
+    ]));
+  }
 }
 
 class SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }
