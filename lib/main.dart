@@ -984,10 +984,23 @@ class _PlaceNewsPageState extends State<PlaceNewsPage> {
   );
 }
 
+String formatP2000Date(dynamic raw) {
+  final value='${raw??''}'.trim();
+  final d=DateTime.tryParse(value)?.toLocal();
+  if(d==null)return value;
+  const months=['','jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  final now=DateTime.now(),today=DateTime(now.year,now.month,now.day),day=DateTime(d.year,d.month,d.day);
+  final diff=today.difference(day).inDays;
+  final hh=d.hour.toString().padLeft(2,'0'),mm=d.minute.toString().padLeft(2,'0');
+  if(diff==0)return 'Vandaag · $hh:$mm';
+  if(diff==1)return 'Gisteren · $hh:$mm';
+  return '${d.day} ${months[d.month]} · $hh:$mm';
+}
+
 class EmergencyTrafficPage extends StatefulWidget{const EmergencyTrafficPage({super.key});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
 class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
- String place='Rotterdam-Rijnmond';bool traffic=false;late Future<List<dynamic>> items;
- static const p2000Places=['Rotterdam-Rijnmond','Hellevoetsluis','Rockanje','Brielle','Oostvoorne','Voorne aan Zee'];
+ String place='Voorne aan Zee';bool traffic=false;late Future<List<dynamic>> items;
+ static const p2000Places=['Voorne aan Zee','Hellevoetsluis','Rockanje','Brielle','Oostvoorne','Rotterdam-Rijnmond'];
  @override void initState(){super.initState();items=load();}
  String hay(dynamic e)=>[e is Map?e['title']:'',e is Map?e['description']:'',e is Map?e['message']:'',e is Map?e['body']:'',e is Map?e['place']:'',e is Map?e['location']:'',e is Map?e['city']:''].join(' ').toLowerCase();
  Future<List<dynamic>>load()async{
@@ -1007,11 +1020,11 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
    const PageFeedbackButton(page:'112 & Verkeer')
  ]),body:Column(children:[
    Padding(padding:const EdgeInsets.all(16),child:Column(children:[
-     DropdownButtonFormField<String>(initialValue:place,decoration:InputDecoration(labelText:traffic?'Plaats':'P2000-regio / plaats',border:const OutlineInputBorder()),items:(traffic?['Rotterdam-Rijnmond',...appConfig.places.where((x)=>x!='Voorne aan Zee')]:p2000Places).map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){setState(()=>place=v??'Rotterdam-Rijnmond');refresh();}),
+     DropdownButtonFormField<String>(initialValue:place,decoration:InputDecoration(labelText:traffic?'Plaats':'P2000-regio / plaats',border:const OutlineInputBorder()),items:(traffic?['Rotterdam-Rijnmond',...appConfig.places.where((x)=>x!='Voorne aan Zee')]:p2000Places).map((x)=>DropdownMenuItem(value:x,child:Text(x=='Voorne aan Zee'?'Heel Voorne aan Zee':x))).toList(),onChanged:(v){setState(()=>place=v??'Voorne aan Zee');refresh();}),
      const SizedBox(height:12),
      SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112 / P2000'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){setState(()=>traffic=v.first);refresh();})
    ])),
-   Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title='${e['title']??e['message']??e['description']??'Melding'}';final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(date),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
+   Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title='${e['title']??e['message']??e['description']??'Melding'}';final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:date.isEmpty?null:Row(children:[const Icon(Icons.schedule,size:15,color:Colors.black54),const SizedBox(width:5),Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w600,color:Colors.black54))]),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
  ]));}
 
 class P2000MapCard extends StatefulWidget{final String query;const P2000MapCard({super.key,required this.query});@override State<P2000MapCard> createState()=>_P2000MapCardState();}
@@ -1033,7 +1046,7 @@ class P2000DetailPage extends StatelessWidget {
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Icon(traffic?Icons.traffic:Icons.warning_amber_rounded,color:traffic?navy:Colors.red,size:34),const SizedBox(height:12),
         Text(title,style:const TextStyle(fontSize:22,height:1.2,fontWeight:FontWeight.w900,color:navy)),
-        if(date.isNotEmpty)...[const SizedBox(height:14),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.schedule),title:Text(date))],
+        if(date.isNotEmpty)...[const SizedBox(height:14),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.schedule,color:navy),title:Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:const Text('Tijdstip van de melding'))],
         if(place.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(place)),
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
