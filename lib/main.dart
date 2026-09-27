@@ -1090,7 +1090,7 @@ String _ndwXmlText(String raw)=>raw.replaceAll(RegExp(r'<[^>]+>'),' ').replaceAl
 
 String _ndwTag(String block,List<String> names){
   for(final name in names){
-    final m=RegExp('<(?:[A-Za-z0-9_]+:)?'+name+r'[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_]+:)?'+name+r'>',caseSensitive:false).firstMatch(block);
+    final m=RegExp('<(?:[A-Za-z0-9_]+:)?$name'+r'[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_]+:)?'+'$name>',caseSensitive:false).firstMatch(block);
     if(m!=null){final v=_ndwXmlText(m.group(1)??'');if(v.isNotEmpty)return v;}
   }
   return '';
