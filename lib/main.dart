@@ -1066,6 +1066,14 @@ class P2000DetailPage extends StatelessWidget {
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
         if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),P2000MapCard(query:[title,place].where((x)=>x.isNotEmpty).join(' '))],
       ]))),
+      if(!traffic)...[
+        const SizedBox(height:14),
+        OutlinedButton.icon(
+          onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage())),
+          icon:const Icon(Icons.campaign_outlined),
+          label:const Text('Weet je hier meer van? Tip de redactie'),
+        ),
+      ],
       const SizedBox(height:14),
       RotatingAppAd(future:detailAds),
     ]));
