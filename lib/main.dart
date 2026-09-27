@@ -1124,6 +1124,11 @@ Future<List<dynamic>> loadNdwTraffic()async{
     final block=sm.group(0)??'',plain=_ndwXmlText(block),lower=plain.toLowerCase();
     final lats=RegExp(r'<(?:[A-Za-z0-9_]+:)?latitude[^>]*>\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
     final lons=RegExp(r'<(?:[A-Za-z0-9_]+:)?longitude[^>]*>\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
+    if(lats.isEmpty||lons.isEmpty){
+      final pos=RegExp(r'<(?:[A-Za-z0-9_]+:)?posList[^>]*>([^<]+)',caseSensitive:false).firstMatch(block)?.group(1)??'';
+      final coords=pos.trim().split(RegExp(r'\s+')).map(double.tryParse).whereType<double>().toList();
+      if(coords.length>=2){lats.add(coords[0]);lons.add(coords[1]);}
+    }
     var local=localWords.any(lower.contains);
     for(var i=0;!local&&i<lats.length&&i<lons.length;i++){if(lats[i]>=51.72&&lats[i]<=52.08&&lons[i]>=3.82&&lons[i]<=4.62)local=true;}
     if(!local)continue;
@@ -1157,7 +1162,21 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
    for(final type in ['rvaz_p2000','rvaz_112','p2000']){try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/$type?per_page=100&_embed=1')).timeout(const Duration(seconds:10));if(r.statusCode==200){final x=RvazApi.list(jsonDecode(r.body));if(x.isNotEmpty)return x;}}catch(_){}}
    return <dynamic>[];
  }
- List<dynamic> filtered(List<dynamic> all){if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)).toList();}
+ bool trafficNearPlace(dynamic e,String selected){
+   if(e is! Map)return false;
+   final lat=(e['latitude'] as num?)?.toDouble(),lon=(e['longitude'] as num?)?.toDouble();
+   if(lat==null||lon==null)return false;
+   const centers=<String,LatLng>{
+     'Hellevoetsluis':LatLng(51.8333,4.1333),'Rockanje':LatLng(51.8717,4.0708),'Brielle':LatLng(51.9017,4.1625),
+     'Oostvoorne':LatLng(51.9125,4.0986),'Oudenhoorn':LatLng(51.8270,4.1910),'Nieuwenhoorn':LatLng(51.8540,4.1430),
+     'Tinte':LatLng(51.8860,4.1360),'Vierpolders':LatLng(51.8790,4.1790),'Zwartewaal':LatLng(51.8830,4.2200),
+     'Abbenbroek':LatLng(51.8490,4.2430),'Heenvliet':LatLng(51.8640,4.2440),'Geervliet':LatLng(51.8610,4.2640),
+     'Zuidland':LatLng(51.8220,4.2590),'Simonshaven':LatLng(51.8230,4.2880),
+   };
+   final center=centers[selected];if(center==null)return false;
+   return const Distance().as(LengthUnit.Kilometer,center,LatLng(lat,lon))<=8;
+ }
+ List<dynamic> filtered(List<dynamic> all){if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)||(traffic&&trafficNearPlace(e,place))).toList();}
  void refresh(){setState(()=>items=load());}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy,actions:[
    if(!traffic)IconButton(tooltip:'P2000 pushmeldingen',icon:const Icon(Icons.notifications_active_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
