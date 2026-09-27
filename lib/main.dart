@@ -1085,11 +1085,11 @@ Widget p2000ServiceIcon(dynamic item,{double size=24}) {
   return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
 }
 
-class EmergencyTrafficPage extends StatefulWidget{const EmergencyTrafficPage({super.key});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
+class EmergencyTrafficPage extends StatefulWidget{final bool initialTraffic;const EmergencyTrafficPage({super.key,this.initialTraffic=false});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
 class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
  String place='Voorne aan Zee';bool traffic=false;late Future<List<dynamic>> items;
  static const p2000Places=['Voorne aan Zee','Hellevoetsluis','Rockanje','Brielle','Oostvoorne','Rotterdam-Rijnmond'];
- @override void initState(){super.initState();items=load();}
+ @override void initState(){super.initState();traffic=widget.initialTraffic;items=load();}
  String hay(dynamic e)=>[e is Map?e['title']:'',e is Map?e['description']:'',e is Map?e['message']:'',e is Map?e['body']:'',e is Map?e['place']:'',e is Map?e['location']:'',e is Map?e['city']:''].join(' ').toLowerCase();
  Future<List<dynamic>>load()async{
    final region=Uri.encodeQueryComponent('Rotterdam-Rijnmond');
@@ -1510,8 +1510,24 @@ class MyNeighborhoodPage extends StatelessWidget {
         trailing:const Icon(Icons.chevron_right,color:navy),
         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage())),
       )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFFFF4E5),child:Icon(Icons.traffic,color:Colors.deepOrange)),
+        title:const Text('Verkeer in de regio',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:const Text('Bekijk actuele verkeersmeldingen'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:true))),
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFFFECEC),child:Icon(Icons.warning_amber_rounded,color:Colors.red)),
+        title:const Text('Actuele incidenten',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:const Text('Bekijk de actuele 112- en P2000-meldingen'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false))),
+      )),
       const SizedBox(height:14),
-      const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('Mijn Buurt groeit uit tot de vaste plek voor persoonlijke regio-informatie, zonder de voorpagina voller te maken.',style:TextStyle(fontSize:12,color:Colors.black54,height:1.4)))
+      const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('Mijn Buurt is de vaste plek voor persoonlijke regio-informatie, zonder de voorpagina voller te maken.',style:TextStyle(fontSize:12,color:Colors.black54,height:1.4)))
     ])
   );
 }
