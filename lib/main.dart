@@ -1092,6 +1092,7 @@ class P2000DetailPage extends StatelessWidget {
     final title=value(['title','message','description']).isEmpty?'Melding':value(['title','message','description']);
     final date=value(['date','datetime','published','time']);
     final place=value(['place','location','city']);
+    final address=value(['address','adres','street','straat']);
     final service=value(['service','discipline','dienst','agency']);
     final priority=value(['priority','prio']);
     final body=value(['body','description','details','content']);
@@ -1105,7 +1106,11 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
-        if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),P2000MapCard(queries:[place,[title,place].where((x)=>x.isNotEmpty).join(' ')])],
+        if(!traffic&&(address.isNotEmpty||place.isNotEmpty))...[const SizedBox(height:14),P2000MapCard(queries:[
+          [address,place].where((x)=>x.isNotEmpty).join(', '),
+          address,
+          place,
+        ])],
       ]))),
       if(!traffic)...[
         const SizedBox(height:14),
