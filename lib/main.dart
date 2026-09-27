@@ -1140,7 +1140,7 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
    for(final type in ['rvaz_p2000','rvaz_112','p2000']){try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/$type?per_page=100&_embed=1')).timeout(const Duration(seconds:10));if(r.statusCode==200){final x=RvazApi.list(jsonDecode(r.body));if(x.isNotEmpty)return x;}}catch(_){}}
    return <dynamic>[];
  }
- List<dynamic> filtered(List<dynamic> all){if(traffic||place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)).toList();}
+ List<dynamic> filtered(List<dynamic> all){if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)).toList();}
  void refresh(){setState(()=>items=load());}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy,actions:[
    if(!traffic)IconButton(tooltip:'P2000 pushmeldingen',icon:const Icon(Icons.notifications_active_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
@@ -1211,6 +1211,7 @@ class P2000DetailPage extends StatelessWidget {
     final priority=p2000PriorityLabel(item).isNotEmpty?p2000PriorityLabel(item):value(['priority','prio']);
     final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription','capcodes','capcode_description','capcodeDescription']);
     final body=value(['body','description','details','content']);
+    final source=value(['source']);
     final detailAds=loadAppAds(placement:'p2000');
     return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(traffic?'Verkeersmelding':'P2000-melding'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -1221,6 +1222,7 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(!traffic&&unit.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.badge_outlined),title:Text(unit),subtitle:const Text('Post / eenheid')),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
+        if(traffic&&source.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.source_outlined),title:Text(source),subtitle:const Text('Bron verkeersinformatie')),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
         if(!traffic&&(address.isNotEmpty||place.isNotEmpty))...[const SizedBox(height:14),P2000MapCard(queries:[
           [address,place].where((x)=>x.isNotEmpty).join(', '),
