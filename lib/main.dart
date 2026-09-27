@@ -1068,7 +1068,7 @@ Widget p2000ServiceIcon(dynamic item,{double size=24}) {
     item['title'],item['message'],item['description'],item['body']
   ].where((v)=>v!=null).join(' ').toLowerCase();
   if(text.contains('lifeliner')||text.contains('traumaheli')||text.contains('traumahelikopter')||text.contains('mobiel medisch team')||RegExp(r'\\bmmt\\b').hasMatch(text))return Text('🚁',style:TextStyle(fontSize:size));
-  if(text.contains('brandweer')||RegExp(r'\\bbrw\\b').hasMatch(text))return Text('🚒',style:TextStyle(fontSize:size));
+  if(text.contains('brandweer')||RegExp(r'\\bbrw\\b').hasMatch(text)||RegExp(r'\\bbrt(?:-\\d+)?\\b').hasMatch(text))return Text('🚒',style:TextStyle(fontSize:size));
   if(text.contains('ambulance')||RegExp(r'\\bambu\\b').hasMatch(text))return Text('🚑',style:TextStyle(fontSize:size));
   if(text.contains('politie'))return Text('🚓',style:TextStyle(fontSize:size));
   return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
@@ -1159,6 +1159,7 @@ class P2000DetailPage extends StatelessWidget {
     final address=value(['address','adres','street','straat']);
     final service=value(['service','discipline','dienst','agency']);
     final priority=value(['priority','prio']);
+    final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription','capcodes','capcode_description','capcodeDescription']);
     final body=value(['body','description','details','content']);
     final detailAds=loadAppAds(placement:'p2000');
     return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(traffic?'Verkeersmelding':'P2000-melding'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[
@@ -1168,6 +1169,7 @@ class P2000DetailPage extends StatelessWidget {
         if(date.isNotEmpty)...[const SizedBox(height:14),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.schedule,color:navy),title:Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:const Text('Tijdstip van de melding'))],
         if(place.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(place)),
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
+        if(!traffic&&unit.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.badge_outlined),title:Text(unit),subtitle:const Text('Post / eenheid')),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
         if(!traffic&&(address.isNotEmpty||place.isNotEmpty))...[const SizedBox(height:14),P2000MapCard(queries:[
