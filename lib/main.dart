@@ -1062,10 +1062,13 @@ Widget p2000ServiceIcon(dynamic item,{double size=24}) {
   if(item is! Map)return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
   final text=[
     item['service'],item['discipline'],item['dienst'],item['agency'],
+    item['incident'],item['incident_type'],item['incidentType'],
+    item['melding'],item['meldingstekst'],item['original_message'],item['originalMessage'],
+    item['raw_message'],item['rawMessage'],item['cap_message'],item['p2000_message'],
     item['title'],item['message'],item['description'],item['body']
   ].where((v)=>v!=null).join(' ').toLowerCase();
   if(text.contains('lifeliner')||text.contains('traumaheli')||text.contains('traumahelikopter')||text.contains('mobiel medisch team')||RegExp(r'\\bmmt\\b').hasMatch(text))return Text('🚁',style:TextStyle(fontSize:size));
-  if(text.contains('brandweer'))return Text('🚒',style:TextStyle(fontSize:size));
+  if(text.contains('brandweer')||RegExp(r'\\bbrw\\b').hasMatch(text))return Text('🚒',style:TextStyle(fontSize:size));
   if(text.contains('ambulance')||RegExp(r'\\bambu\\b').hasMatch(text))return Text('🚑',style:TextStyle(fontSize:size));
   if(text.contains('politie'))return Text('🚓',style:TextStyle(fontSize:size));
   return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
