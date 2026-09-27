@@ -1033,6 +1033,7 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
+        if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('https://www.openstreetmap.org/search?query='+Uri.encodeQueryComponent(place)),mode:LaunchMode.externalApplication),icon:const Icon(Icons.map_outlined),label:const Text('Bekijk locatie op kaart')))],
       ]))),
       const SizedBox(height:14),
       RotatingAppAd(future:detailAds),
