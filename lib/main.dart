@@ -1241,10 +1241,11 @@ class P2000DetailPage extends StatelessWidget {
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(traffic&&source.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.source_outlined),title:Text(source),subtitle:const Text('Bron verkeersinformatie')),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
-        if(!traffic&&(address.isNotEmpty||place.isNotEmpty))...[const SizedBox(height:14),P2000MapCard(queries:[
+        // Toon alleen een kaart wanneer de P2000-melding zelf een adres/straat bevat.
+        // Alleen een plaatsnaam is te onnauwkeurig en kan een misleidende kaartpin geven.
+        if(!traffic&&address.isNotEmpty)...[const SizedBox(height:14),P2000MapCard(queries:[
           [address,place].where((x)=>x.isNotEmpty).join(', '),
           address,
-          place,
         ])],
       ]))),
       if(!traffic)...[
