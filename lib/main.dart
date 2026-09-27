@@ -131,7 +131,13 @@ Future<void> registerDeviceToken() async {
     final p2000StreetEnabled=(await storage.read(key:'rvaz_p2000_street_enabled'))=='1';
     final p2000StreetPlace=(await storage.read(key:'rvaz_p2000_street_place')??'').trim();
     final p2000StreetName=(await storage.read(key:'rvaz_p2000_street_name')??'').trim();
+    final wastePush=(await storage.read(key:'rvaz_waste_push'))=='1';
+    final wasteBagId=(await storage.read(key:'rvaz_waste_bagid')??'').trim();
+    final wastePostcode=(await storage.read(key:'rvaz_waste_postcode')??'').trim();
+    final wasteHouse=(await storage.read(key:'rvaz_waste_house')??'').trim();
+    final wasteAddition=(await storage.read(key:'rvaz_waste_addition')??'').trim();
     final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];
+    if(wastePush){topics.add('afval');try{await m.subscribeToTopic('afval');}catch(_){}}else{try{await m.unsubscribeFromTopic('afval');}catch(_){}}
     if(p2000OptIn){
       topics.add('112');
       try{await m.subscribeToTopic('112');}catch(_){}
@@ -148,7 +154,7 @@ Future<void> registerDeviceToken() async {
         }
       }
     }
-    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName}});
+    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
     for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
@@ -1090,7 +1096,7 @@ Widget p2000ServiceIcon(dynamic item,{double size=24}) {
   return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
 }
 
-String _ndwXmlText(String raw)=>raw.replaceAll(RegExp(r'<[^>]+>'),' ').replaceAll('&amp;','&').replaceAll('&quot;','"').replaceAll('&apos;',"'").replaceAll(RegExp(r'\\s+'),' ').trim();
+String _ndwXmlText(String raw)=>raw.replaceAll(RegExp(r'<[^>]+>'),' ').replaceAll('&amp;','&').replaceAll('&quot;','"').replaceAll('&apos;',"'").replaceAll(RegExp(r'\s+'),' ').trim();
 
 String _ndwTag(String block,List<String> names){
   for(final name in names){
@@ -1105,17 +1111,17 @@ Future<List<dynamic>> loadNdwTraffic()async{
   final r=await http.get(Uri.parse('https://opendata.ndw.nu/actueel_beeld.xml.gz'),headers:const {'Accept':'application/gzip, application/xml'}).timeout(const Duration(seconds:20));
   if(r.statusCode!=200)throw Exception('NDW HTTP ${r.statusCode}');
   final xml=utf8.decode(gzip.decode(r.bodyBytes),allowMalformed:true);
-  final situations=RegExp(r'<(?:[A-Za-z0-9_]+:)?situation\\b[\\s\\S]*?</(?:[A-Za-z0-9_]+:)?situation>',caseSensitive:false).allMatches(xml);
+  final situations=RegExp(r'<(?:[A-Za-z0-9_]+:)?situation\b[\s\S]*?</(?:[A-Za-z0-9_]+:)?situation>',caseSensitive:false).allMatches(xml);
   final out=<dynamic>[];
   const localWords=['n57','n218','hellevoetsluis','rockanje','brielle','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven','voorne','haringvlietdam','hartelbrug','spijkenisserbrug','spijkenisse','botlek','europoort','maasvlakte'];
   for(final sm in situations){
     final block=sm.group(0)??'',plain=_ndwXmlText(block),lower=plain.toLowerCase();
-    final lats=RegExp(r'<(?:[A-Za-z0-9_]+:)?latitude[^>]*>\\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
-    final lons=RegExp(r'<(?:[A-Za-z0-9_]+:)?longitude[^>]*>\\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
+    final lats=RegExp(r'<(?:[A-Za-z0-9_]+:)?latitude[^>]*>\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
+    final lons=RegExp(r'<(?:[A-Za-z0-9_]+:)?longitude[^>]*>\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
     var local=localWords.any(lower.contains);
     for(var i=0;!local&&i<lats.length&&i<lons.length;i++){if(lats[i]>=51.72&&lats[i]<=52.08&&lons[i]>=3.82&&lons[i]<=4.62)local=true;}
     if(!local)continue;
-    final road=RegExp(r'\\b(?:N57|N218|A15|A4)\\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
+    final road=RegExp(r'\b(?:N57|N218|A15|A4)\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
     final comment=_ndwTag(block,['comment','generalPublicComment','description','situationRecordDescription']);
     final type=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType']);
     final start=_ndwTag(block,['overallStartTime','situationRecordCreationTime']);
@@ -1596,7 +1602,7 @@ class WasteCalendarPage extends StatefulWidget {
 }
 class _WasteCalendarPageState extends State<WasteCalendarPage> {
   final postcode=TextEditingController(), house=TextEditingController(), addition=TextEditingController();
-  bool busy=false; String error='', address=''; List<Map<String,dynamic>> dates=[];
+  bool busy=false,wastePush=false; String error='', address=''; List<Map<String,dynamic>> dates=[];
   static const names=<int,String>{2:'GFT+e',3:'PMD',4:'Oud papier en karton',25:'Restafval'};
   static const icons=<int,IconData>{2:Icons.eco_outlined,3:Icons.recycling,4:Icons.description_outlined,25:Icons.delete_outline};
   @override void initState(){super.initState();_restore();}
@@ -1606,6 +1612,7 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
     postcode.text=await st.read(key:'rvaz_waste_postcode')??'';
     house.text=await st.read(key:'rvaz_waste_house')??'';
     addition.text=await st.read(key:'rvaz_waste_addition')??'';
+    wastePush=(await st.read(key:'rvaz_waste_push'))=='1';
     if(postcode.text.isNotEmpty&&house.text.isNotEmpty)await load();
   }
   Future<void> load() async {
@@ -1635,10 +1642,20 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
       }
       upcoming.sort((a,b)=>(a['ophaaldatum']??'').toString().compareTo((b['ophaaldatum']??'').toString()));
       const st=FlutterSecureStorage();
-      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());
+      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());
+      if(wastePush)await registerDeviceToken();
       if(mounted)setState((){address=(ad['description']??[ad['straat'],ad['huisnummer'],ad['woonplaats']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' ')).toString();dates=upcoming;});
     }catch(_){if(mounted)setState(()=>error='Dit adres of de afvalkalender kon niet worden geladen. Controleer je gegevens en probeer opnieuw.');}
     if(mounted)setState(()=>busy=false);
+  }
+  Future<void> setWastePush(bool value) async {
+    if(value&&address.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul eerst je adres in en laad je afvalkalender.')));return;}
+    final permission=await FirebaseMessaging.instance.requestPermission(alert:true,badge:true,sound:true);
+    if(value&&permission.authorizationStatus==AuthorizationStatus.denied){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sta meldingen toe om afvalherinneringen te ontvangen.')));return;}
+    await const FlutterSecureStorage().write(key:'rvaz_waste_push',value:value?'1':'0');
+    if(value){try{await FirebaseMessaging.instance.subscribeToTopic('afval');}catch(_){}}else{try{await FirebaseMessaging.instance.unsubscribeFromTopic('afval');}catch(_){}}
+    if(mounted)setState(()=>wastePush=value);
+    await registerDeviceToken();
   }
   String dateLabel(String raw){
     final d=DateTime.tryParse(raw);if(d==null)return raw;
@@ -1661,6 +1678,7 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
       if(busy)const Padding(padding:EdgeInsets.only(top:12),child:LinearProgressIndicator()),
       if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:Card(child:ListTile(leading:const Icon(Icons.info_outline,color:Colors.orange),title:Text(error)))),
       if(address.isNotEmpty)...[const SizedBox(height:16),Text(address,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800,color:navy)),const SizedBox(height:8)],
+      if(address.isNotEmpty)Card(child:SwitchListTile(value:wastePush,onChanged:setWastePush,secondary:const Icon(Icons.notifications_active_outlined,color:Color(0xFF16834B)),title:const Text('Afvalherinnering',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Ontvang een pushmelding de avond vóór de ophaaldag'))),
       if(!busy&&address.isNotEmpty&&shown.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Er zijn geen komende ophaalmomenten gevonden.'))),
       ...shown.map((e){final id=int.tryParse('${e['afvalstroom_id']??''}')??0;final name=names[id]??'Afval';final raw=(e['ophaaldatum']??'').toString();return Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(leading:CircleAvatar(backgroundColor:const Color(0xFFE8F7EE),child:Icon(icons[id]??Icons.delete_outline,color:const Color(0xFF16834B))),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(dateLabel(raw)),trailing:dateLabel(raw)=='Morgen'?const Chip(label:Text('MORGEN',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900))):null));}),
       if(address.isNotEmpty)const Padding(padding:EdgeInsets.fromLTRB(4,8,4,20),child:Text('Afvalgegevens worden opgehaald bij Reinis. Je adresvoorkeur wordt alleen op dit toestel bewaard.',style:TextStyle(fontSize:11,color:Colors.black54)))
