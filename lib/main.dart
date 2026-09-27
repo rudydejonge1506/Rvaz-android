@@ -189,6 +189,9 @@ Future<void> openPushMessage(RemoteMessage message) async {
       'title': data['title'] ?? message.notification?.title ?? data['message'] ?? 'P2000-melding',
       'message': data['message'] ?? message.notification?.body ?? data['title'] ?? '',
       'description': data['description'] ?? message.notification?.body ?? '',
+      'incident': data['incident'] ?? data['incident_type'] ?? data['incidentType'] ?? '',
+      'melding': data['melding'] ?? data['meldingstekst'] ?? '',
+      'original_message': data['original_message'] ?? data['originalMessage'] ?? data['raw_message'] ?? data['rawMessage'] ?? data['cap_message'] ?? data['p2000_message'] ?? '',
       'date': data['date'] ?? data['datetime'] ?? data['published'] ?? data['time'] ?? '',
       'place': data['place'] ?? data['location'] ?? data['city'] ?? '',
       'address': data['address'] ?? data['adres'] ?? data['street'] ?? data['straat'] ?? '',
@@ -1024,6 +1027,37 @@ String formatP2000Date(dynamic raw) {
   return '${d.day} ${months[d.month]} · $hh:$mm';
 }
 
+String p2000DisplayTitle(dynamic item) {
+  if(item is! Map)return 'Melding';
+
+  String text(dynamic value) {
+    if(value==null)return '';
+    if(value is Map){
+      for(final key in ['rendered','text','message','description','title','name']){
+        final nested=value[key];
+        if(nested!=null&&'$nested'.trim().isNotEmpty)return '$nested'.trim().replaceAll(RegExp(r'<[^>]*>'),'');
+      }
+      return '';
+    }
+    if(value is List)return value.map(text).where((x)=>x.isNotEmpty).join(' · ');
+    return '$value'.trim().replaceAll(RegExp(r'<[^>]*>'),'');
+  }
+
+  // Prefer the actual incident/P2000 text over a generic app-generated title.
+  for(final key in [
+    'incident','incident_type','incidentType','event','event_type','eventType',
+    'melding','meldingstekst','incident_description','incidentDescription',
+    'original_message','originalMessage','raw_message','rawMessage','cap_message',
+    'p2000_message','p2000Message','text','body','details','description','message'
+  ]){
+    final value=text(item[key]);
+    if(value.isNotEmpty)return value;
+  }
+
+  final title=text(item['title']);
+  return title.isEmpty?'Melding':title;
+}
+
 Widget p2000ServiceIcon(dynamic item,{double size=24}) {
   if(item is! Map)return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
   final text=[
@@ -1064,7 +1098,7 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
      const SizedBox(height:12),
      SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112 / P2000'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){setState(()=>traffic=v.first);refresh();})
    ])),
-   Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title='${e['title']??e['message']??e['description']??'Melding'}';final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:traffic?const Icon(Icons.traffic,color:navy):p2000ServiceIcon(e),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:date.isEmpty?null:Row(children:[const Icon(Icons.schedule,size:15,color:Colors.black54),const SizedBox(width:5),Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w600,color:Colors.black54))]),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
+   Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title=traffic?'${e['title']??e['message']??e['description']??'Melding'}':p2000DisplayTitle(e);final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:traffic?const Icon(Icons.traffic,color:navy):p2000ServiceIcon(e),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:date.isEmpty?null:Row(children:[const Icon(Icons.schedule,size:15,color:Colors.black54),const SizedBox(width:5),Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w600,color:Colors.black54))]),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
  ]));}
 
 class P2000MapCard extends StatefulWidget{
@@ -1116,7 +1150,7 @@ class P2000DetailPage extends StatelessWidget {
   const P2000DetailPage({super.key,required this.item,required this.traffic});
   String value(List<String> keys){if(item is! Map)return '';for(final k in keys){final v=item[k];if(v!=null&&'$v'.trim().isNotEmpty)return '$v'.trim();}return '';}
   @override Widget build(BuildContext context){
-    final title=value(['title','message','description']).isEmpty?'Melding':value(['title','message','description']);
+    final title=traffic?(value(['title','message','description']).isEmpty?'Melding':value(['title','message','description'])):p2000DisplayTitle(item);
     final date=value(['date','datetime','published','time']);
     final place=value(['place','location','city']);
     final address=value(['address','adres','street','straat']);
