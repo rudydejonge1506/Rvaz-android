@@ -1004,7 +1004,7 @@ Widget p2000ServiceIcon(dynamic item,{double size=24}) {
     item['title'],item['message'],item['description'],item['body']
   ].where((v)=>v!=null).join(' ').toLowerCase();
   if(text.contains('lifeliner')||text.contains('traumaheli')||text.contains('traumahelikopter')||text.contains('mobiel medisch team')||RegExp(r'\\bmmt\\b').hasMatch(text))return Text('🚁',style:TextStyle(fontSize:size));
-  if(text.contains('brandweer'))return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
+  if(text.contains('brandweer'))return Text('🚒',style:TextStyle(fontSize:size));
   if(text.contains('ambulance')||RegExp(r'\\bambu\\b').hasMatch(text))return Text('🚑',style:TextStyle(fontSize:size));
   if(text.contains('politie'))return Text('🚓',style:TextStyle(fontSize:size));
   return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
