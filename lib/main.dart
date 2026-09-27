@@ -858,21 +858,25 @@ class _HomePageState extends State<HomePage>{
     FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Row(children:[Icon(_weatherIcon(code),size:19,color:navy),const SizedBox(width:7),Text('$temp° · ${_weatherLabel(code)} · Voorne aan Zee',style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:navy))]));}),
     Padding(
       padding: const EdgeInsets.fromLTRB(16,16,16,8),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),
-          borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage())),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(children:[
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('Mijn Buurt',style:TextStyle(color:Colors.white,fontSize:24,height:1.05,fontWeight:FontWeight.w900)),
+              const SizedBox(height:7),
+              Text('Afval, nieuws, 112 en verkeer uit jouw buurt.',style:TextStyle(color:Colors.white.withValues(alpha:.88),fontSize:14,height:1.35)),
+            ])),
+            const SizedBox(width:12),
+            Container(width:52,height:52,decoration:BoxDecoration(color:Colors.white.withValues(alpha:.13),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.home_work_outlined,color:Colors.white,size:28)),
+          ]),
         ),
-        child: Row(children:[
-          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            const Text('Dichtbij op Voorne',style:TextStyle(color:Colors.white,fontSize:24,height:1.05,fontWeight:FontWeight.w900)),
-            const SizedBox(height:7),
-            Text('Jouw nieuws, 112, verkeer en agenda. Persoonlijk en direct.',style:TextStyle(color:Colors.white.withValues(alpha:.88),fontSize:14,height:1.35)),
-          ])),
-          const SizedBox(width:12),
-          Container(width:52,height:52,decoration:BoxDecoration(color:Colors.white.withValues(alpha:.13),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.location_on_outlined,color:Colors.white,size:28)),
-        ]),
       ),
     ),
     Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.25,children:[
