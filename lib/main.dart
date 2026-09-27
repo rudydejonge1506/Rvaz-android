@@ -882,7 +882,6 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
     ])),
-    Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Card(child:InkWell(borderRadius:BorderRadius.circular(14),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())),child:const Padding(padding:EdgeInsets.all(14),child:Row(children:[CircleAvatar(radius:23,backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.delete_outline,color:Color(0xFF16834B))),SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Mijn afval',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy)),SizedBox(height:2),Text('Persoonlijke afvalkalender voor jouw adres',style:TextStyle(fontSize:12,color:Colors.black54))])),Icon(Icons.chevron_right,color:navy)]))))),
     Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Row(children:[
       Expanded(child:Card(child:InkWell(borderRadius:BorderRadius.circular(12),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage())),child:const Padding(padding:EdgeInsets.symmetric(horizontal:10,vertical:10),child:Row(children:[Icon(Icons.photo_camera_outlined,size:20,color:navy),SizedBox(width:8),Expanded(child:Text('Tip de redactie',maxLines:2,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:navy)))]))))),
       const SizedBox(width:8),
@@ -1442,7 +1441,7 @@ class _AccountPageState extends State<AccountPage>{
         ]) else OutlinedButton.icon(onPressed: logout, icon: const Icon(Icons.logout), label: const Text('Uitloggen')),
       ]))),
       const SizedBox(height: 14),
-      Card(child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.recycling,color:Color(0xFF16834B))),title:const Text('Mijn afval',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Jouw persoonlijke Reinis-afvalkalender'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())))),
+      Card(child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.home_work_outlined,color:navy)),title:const Text('Mijn Buurt',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Afval, meldingen en informatie voor jouw buurt'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage())))),
       Card(child:Column(children:[
         ListTile(leading:const Icon(Icons.feedback_outlined),title:const Text('Feedback over de app'),subtitle:const Text('Meld een fout of geef een suggestie'),trailing:const Icon(Icons.chevron_right),onTap:()=>sendPageFeedback(context,'Algemene app-feedback')),
         const Divider(height:1),
@@ -1468,6 +1467,52 @@ class _AccountPageState extends State<AccountPage>{
           ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Advertentiefacturen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoicesPage()))),
         ],
       ])),    ],
+  );
+}
+
+class MyNeighborhoodPage extends StatelessWidget {
+  const MyNeighborhoodPage({super.key});
+  @override Widget build(BuildContext context)=>Scaffold(
+    backgroundColor:const Color(0xFFF7F9FB),
+    appBar:AppBar(title:const Text('Mijn Buurt')),
+    body:ListView(padding:const EdgeInsets.all(16),children:[
+      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:const Row(children:[
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('Alles dichtbij, op één plek',style:TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
+          SizedBox(height:6),
+          Text('Praktische informatie en meldingen die voor jouw eigen buurt belangrijk zijn.',style:TextStyle(color:Colors.white,height:1.35))
+        ])),
+        SizedBox(width:12),Icon(Icons.home_work_outlined,color:Colors.white,size:44)
+      ])),
+      const SizedBox(height:16),
+      const Text('Voor jouw buurt',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.recycling,color:Color(0xFF16834B))),
+        title:const Text('Afvalkalender',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:const Text('Bekijk wanneer Reinis jouw afval ophaalt'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())),
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFFFF2E8),child:Icon(Icons.notifications_active_outlined,color:Colors.deepOrange)),
+        title:const Text('Buurtmeldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:const Text('Stel P2000 en andere lokale meldingen in'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())),
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.location_on_outlined,color:navy)),
+        title:const Text('Nieuws uit jouw plaats',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:const Text('Ga direct naar nieuws per plaats'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage())),
+      )),
+      const SizedBox(height:14),
+      const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('Mijn Buurt groeit uit tot de vaste plek voor persoonlijke regio-informatie, zonder de voorpagina voller te maken.',style:TextStyle(fontSize:12,color:Colors.black54,height:1.4)))
+    ])
   );
 }
 
