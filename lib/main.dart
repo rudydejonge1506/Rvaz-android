@@ -242,19 +242,14 @@ Future<void> openPushMessage(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await loadConfig();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   final messaging = FirebaseMessaging.instance;
-  final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
-  if (permission.authorizationStatus != AuthorizationStatus.denied) {
-    for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
-      try { await messaging.subscribeToTopic(topic); } catch (_) {}
-    }
-    await registerDeviceToken();
-  }
-  messaging.onTokenRefresh.listen((_) async { await registerDeviceToken(); });
-  FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   final initialMessage = await messaging.getInitialMessage();
+
+  // Render eerst de app (en een eventuele P2000-push) en doe netwerk/configuratie daarna.
+  // Zo blokkeert een cold start niet op config, topic-abonnementen of tokenregistratie.
+  runApp(const RvazApp());
+  FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   if (initialMessage != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
   }
@@ -262,7 +257,18 @@ Future<void> main() async {
     final ctx = navigatorKey.currentContext;
     if (ctx != null && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(m.notification?.title ?? 'Nieuwe RVAZ-melding')));
   });
-  runApp(const RvazApp());
+  messaging.onTokenRefresh.listen((_) { unawaited(registerDeviceToken()); });
+
+  unawaited(() async {
+    await loadConfig();
+    final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
+    if (permission.authorizationStatus != AuthorizationStatus.denied) {
+      for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
+        try { await messaging.subscribeToTopic(topic); } catch (_) {}
+      }
+      await registerDeviceToken();
+    }
+  }());
 }
 
 const navy = Color(0xFF203253);
