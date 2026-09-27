@@ -1027,6 +1027,15 @@ String formatP2000Date(dynamic raw) {
   return '${d.day} ${months[d.month]} · $hh:$mm';
 }
 
+String p2000PriorityLabel(dynamic item) {
+  if (item is! Map) return '';
+  final raw = [item['priority'],item['prio'],item['incident'],item['incident_type'],item['melding'],item['meldingstekst'],item['original_message'],item['raw_message'],item['cap_message'],item['p2000_message'],item['title'],item['message'],item['description'],item['body']].where((v)=>v!=null).join(' ').toUpperCase();
+  final code=RegExp(r'\\b(P[12]|A[12])\\b').firstMatch(raw)?.group(1)??'';
+  if(code=='P1'||code=='A1')return '$code · SPOED';
+  if(code=='P2'||code=='A2')return '$code · Geen spoed';
+  return code;
+}
+
 String p2000DisplayTitle(dynamic item) {
   if(item is! Map)return 'Melding';
 
@@ -1158,7 +1167,7 @@ class P2000DetailPage extends StatelessWidget {
     final place=value(['place','location','city']);
     final address=value(['address','adres','street','straat']);
     final service=value(['service','discipline','dienst','agency']);
-    final priority=value(['priority','prio']);
+    final priority=p2000PriorityLabel(item).isNotEmpty?p2000PriorityLabel(item):value(['priority','prio']);
     final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription','capcodes','capcode_description','capcodeDescription']);
     final body=value(['body','description','details','content']);
     final detailAds=loadAppAds(placement:'p2000');
