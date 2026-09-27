@@ -1003,7 +1003,7 @@ IconData p2000ServiceIcon(dynamic item) {
     item['service'],item['discipline'],item['dienst'],item['agency'],
     item['title'],item['message'],item['description'],item['body']
   ].where((v)=>v!=null).join(' ').toLowerCase();
-  if(text.contains('lifeliner')||text.contains('traumaheli')||text.contains('traumahelikopter')||text.contains('mobiel medisch team')||RegExp(r'\\bmmt\\b').hasMatch(text))return Icons.helicopter_outlined;
+  if(text.contains('lifeliner')||text.contains('traumaheli')||text.contains('traumahelikopter')||text.contains('mobiel medisch team')||RegExp(r'\\bmmt\\b').hasMatch(text))return Icons.airplanemode_active;
   if(text.contains('brandweer'))return Icons.local_fire_department_outlined;
   if(text.contains('ambulance')||RegExp(r'\\bambu\\b').hasMatch(text))return Icons.medical_services_outlined;
   if(text.contains('politie'))return Icons.local_police_outlined;
