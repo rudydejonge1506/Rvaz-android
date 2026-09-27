@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -1085,6 +1086,43 @@ Widget p2000ServiceIcon(dynamic item,{double size=24}) {
   return Icon(Icons.warning_amber_rounded,color:Colors.red,size:size);
 }
 
+String _ndwXmlText(String raw)=>raw.replaceAll(RegExp(r'<[^>]+>'),' ').replaceAll('&amp;','&').replaceAll('&quot;','"').replaceAll('&apos;',"'").replaceAll(RegExp(r'\\s+'),' ').trim();
+
+String _ndwTag(String block,List<String> names){
+  for(final name in names){
+    final m=RegExp('<(?:[A-Za-z0-9_]+:)?'+name+r'[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_]+:)?'+name+r'>',caseSensitive:false).firstMatch(block);
+    if(m!=null){final v=_ndwXmlText(m.group(1)??'');if(v.isNotEmpty)return v;}
+  }
+  return '';
+}
+
+Future<List<dynamic>> loadNdwTraffic()async{
+  final r=await http.get(Uri.parse('https://opendata.ndw.nu/actueel_beeld.xml.gz'),headers:const {'Accept':'application/gzip, application/xml'}).timeout(const Duration(seconds:20));
+  if(r.statusCode!=200)throw Exception('NDW HTTP ${r.statusCode}');
+  final xml=utf8.decode(gzip.decode(r.bodyBytes),allowMalformed:true);
+  final situations=RegExp(r'<(?:[A-Za-z0-9_]+:)?situation\\b[\\s\\S]*?</(?:[A-Za-z0-9_]+:)?situation>',caseSensitive:false).allMatches(xml);
+  final out=<dynamic>[];
+  const localWords=['n57','n218','hellevoetsluis','rockanje','brielle','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven','voorne','haringvlietdam','hartelbrug','spijkenisserbrug','spijkenisse','botlek','europoort','maasvlakte'];
+  for(final sm in situations){
+    final block=sm.group(0)??'',plain=_ndwXmlText(block),lower=plain.toLowerCase();
+    final lats=RegExp(r'<(?:[A-Za-z0-9_]+:)?latitude[^>]*>\\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
+    final lons=RegExp(r'<(?:[A-Za-z0-9_]+:)?longitude[^>]*>\\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
+    var local=localWords.any(lower.contains);
+    for(var i=0;!local&&i<lats.length&&i<lons.length;i++){if(lats[i]>=51.72&&lats[i]<=52.08&&lons[i]>=3.82&&lons[i]<=4.62)local=true;}
+    if(!local)continue;
+    final road=RegExp(r'\\b(?:N57|N218|A15|A4)\\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
+    final comment=_ndwTag(block,['comment','generalPublicComment','description','situationRecordDescription']);
+    final type=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType']);
+    final start=_ndwTag(block,['overallStartTime','situationRecordCreationTime']);
+    final end=_ndwTag(block,['overallEndTime']);
+    final place=localWords.firstWhere((x)=>lower.contains(x),orElse:()=>road.toLowerCase());
+    final label=comment.isNotEmpty?comment:(type.isNotEmpty?type.replaceAll(RegExp(r'(?=[A-Z])'),' ').trim():'Actuele verkeersmelding');
+    out.add(<String,dynamic>{'title':road.isEmpty?label:'$road · $label','description':label,'message':label,'date':start,'end':end,'place':place,'source':'NDW','latitude':lats.isEmpty?null:lats.first,'longitude':lons.isEmpty?null:lons.first});
+  }
+  out.sort((a,b)=>'${b['date']??''}'.compareTo('${a['date']??''}'));
+  return out;
+}
+
 class EmergencyTrafficPage extends StatefulWidget{final bool initialTraffic;final String initialPlace;const EmergencyTrafficPage({super.key,this.initialTraffic=false,this.initialPlace=''});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
 class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
  String place='Voorne aan Zee';bool traffic=false;late Future<List<dynamic>> items;
@@ -1092,16 +1130,17 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
  @override void initState(){super.initState();traffic=widget.initialTraffic;if(widget.initialPlace.isNotEmpty&&p2000Places.contains(widget.initialPlace))place=widget.initialPlace;items=load();}
  String hay(dynamic e)=>[e is Map?e['title']:'',e is Map?e['description']:'',e is Map?e['message']:'',e is Map?e['body']:'',e is Map?e['place']:'',e is Map?e['location']:'',e is Map?e['city']:''].join(' ').toLowerCase();
  Future<List<dynamic>>load()async{
+   if(traffic){try{return await loadNdwTraffic();}catch(e){debugPrint('NDW verkeer: $e');return <dynamic>[];}}
    final region=Uri.encodeQueryComponent('Rotterdam-Rijnmond');
    final primary=await RvazApi.firstList(
-     traffic?['traffic?region=$region&per_page=250','verkeer?region=$region&per_page=250']:['p2000?region=$region&per_page=250','112?region=$region&per_page=250','meldingen?region=$region&per_page=250'],
-     keys:traffic?const ['traffic','verkeer','meldingen']:const ['meldingen','p2000','112','items','data'],
+     ['p2000?region=$region&per_page=250','112?region=$region&per_page=250','meldingen?region=$region&per_page=250'],
+     keys:const ['meldingen','p2000','112','items','data'],
    );
    if(primary.isNotEmpty)return primary;
-   if(!traffic){for(final type in ['rvaz_p2000','rvaz_112','p2000']){try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/$type?per_page=100&_embed=1')).timeout(const Duration(seconds:10));if(r.statusCode==200){final x=RvazApi.list(jsonDecode(r.body));if(x.isNotEmpty)return x;}}catch(_){}}}
+   for(final type in ['rvaz_p2000','rvaz_112','p2000']){try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/$type?per_page=100&_embed=1')).timeout(const Duration(seconds:10));if(r.statusCode==200){final x=RvazApi.list(jsonDecode(r.body));if(x.isNotEmpty)return x;}}catch(_){}}
    return <dynamic>[];
  }
- List<dynamic> filtered(List<dynamic> all){if(traffic||place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)).toList();}
+ List<dynamic> filtered(List<dynamic> all){if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)).toList();}
  void refresh(){setState(()=>items=load());}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy,actions:[
    if(!traffic)IconButton(tooltip:'P2000 pushmeldingen',icon:const Icon(Icons.notifications_active_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
@@ -1172,6 +1211,7 @@ class P2000DetailPage extends StatelessWidget {
     final priority=p2000PriorityLabel(item).isNotEmpty?p2000PriorityLabel(item):value(['priority','prio']);
     final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription','capcodes','capcode_description','capcodeDescription']);
     final body=value(['body','description','details','content']);
+    final source=value(['source']);
     final detailAds=loadAppAds(placement:'p2000');
     return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(traffic?'Verkeersmelding':'P2000-melding'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -1182,6 +1222,7 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(!traffic&&unit.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.badge_outlined),title:Text(unit),subtitle:const Text('Post / eenheid')),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
+        if(traffic&&source.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.source_outlined),title:Text(source),subtitle:const Text('Bron verkeersinformatie')),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
         if(!traffic&&(address.isNotEmpty||place.isNotEmpty))...[const SizedBox(height:14),P2000MapCard(queries:[
           [address,place].where((x)=>x.isNotEmpty).join(', '),
