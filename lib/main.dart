@@ -1059,19 +1059,22 @@ String p2000DisplayTitle(dynamic item) {
     return '$value'.trim().replaceAll(RegExp(r'<[^>]*>'),'');
   }
 
-  // Prefer the actual incident/P2000 text over a generic app-generated title.
+  // P2000 feeds often contain both a short generated incident label and the
+  // original pager text. Use the most informative available text so details
+  // such as "1 Letsel", vehicle numbers and incident numbers are not lost.
+  final candidates=<String>[];
   for(final key in [
-    'incident','incident_type','incidentType','event','event_type','eventType',
-    'melding','meldingstekst','incident_description','incidentDescription',
     'original_message','originalMessage','raw_message','rawMessage','cap_message',
-    'p2000_message','p2000Message','text','body','details','description','message'
+    'p2000_message','p2000Message','meldingstekst','melding','title','incident',
+    'incident_description','incidentDescription','description','message','text',
+    'body','details','incident_type','incidentType','event','event_type','eventType'
   ]){
-    final value=text(item[key]);
-    if(value.isNotEmpty)return value;
+    final v=text(item[key]);
+    if(v.isNotEmpty&&!candidates.contains(v))candidates.add(v);
   }
-
-  final title=text(item['title']);
-  return title.isEmpty?'Melding':title;
+  if(candidates.isEmpty)return 'Melding';
+  candidates.sort((a,b)=>b.length.compareTo(a.length));
+  return candidates.first;
 }
 
 Widget p2000ServiceIcon(dynamic item,{double size=24}) {
@@ -1214,7 +1217,8 @@ class P2000DetailPage extends StatelessWidget {
     final address=value(['address','adres','street','straat']);
     final service=value(['service','discipline','dienst','agency']);
     final priority=p2000PriorityLabel(item).isNotEmpty?p2000PriorityLabel(item):value(['priority','prio']);
-    final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription','capcodes','capcode_description','capcodeDescription']);
+    final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription']);
+    final capcodes=value(['capcodes','capcode','cap_codes','capcode_description','capcodeDescription']);
     final body=value(['body','description','details','content']);
     final source=value(['source']);
     final detailAds=loadAppAds(placement:'p2000');
@@ -1225,7 +1229,8 @@ class P2000DetailPage extends StatelessWidget {
         if(date.isNotEmpty)...[const SizedBox(height:14),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.schedule,color:navy),title:Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:const Text('Tijdstip van de melding'))],
         if(place.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(place)),
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
-        if(!traffic&&unit.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.badge_outlined),title:Text(unit),subtitle:const Text('Post / eenheid')),
+        if(!traffic&&unit.isNotEmpty&&unit.toLowerCase()!=service.toLowerCase())ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.badge_outlined),title:Text(unit),subtitle:const Text('Post / eenheid')),
+        if(!traffic&&capcodes.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.numbers_outlined),title:Text(capcodes),subtitle:const Text('Capcode / eenheid')),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(traffic&&source.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.source_outlined),title:Text(source),subtitle:const Text('Bron verkeersinformatie')),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
