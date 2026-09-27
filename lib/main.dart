@@ -173,6 +173,33 @@ Future<void> testPushOnThisDevice(BuildContext context) async {
 
 Future<void> openPushMessage(RemoteMessage message) async {
   final data = message.data;
+  final pushText = [
+    data['type'], data['kind'], data['screen'], data['topic'], data['category'],
+    data['service'], data['discipline'], data['title'], data['message'],
+    message.notification?.title, message.notification?.body,
+  ].where((v) => v != null).join(' ').toLowerCase();
+  final isP2000 = pushText.contains('p2000') ||
+      pushText.contains('112') ||
+      data.containsKey('p2000_id') ||
+      data.containsKey('p2000');
+
+  if (isP2000) {
+    final item = <String,dynamic>{
+      ...data,
+      'title': data['title'] ?? message.notification?.title ?? data['message'] ?? 'P2000-melding',
+      'message': data['message'] ?? message.notification?.body ?? data['title'] ?? '',
+      'description': data['description'] ?? message.notification?.body ?? '',
+      'date': data['date'] ?? data['datetime'] ?? data['published'] ?? data['time'] ?? '',
+      'place': data['place'] ?? data['location'] ?? data['city'] ?? '',
+      'address': data['address'] ?? data['adres'] ?? data['street'] ?? data['straat'] ?? '',
+      'service': data['service'] ?? data['discipline'] ?? data['dienst'] ?? data['agency'] ?? '',
+      'priority': data['priority'] ?? data['prio'] ?? '',
+      'body': data['body'] ?? data['details'] ?? data['description'] ?? message.notification?.body ?? '',
+    };
+    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => P2000DetailPage(item: item, traffic: false)));
+    return;
+  }
+
   final rawId = data['post_id'] ?? data['postId'] ?? data['id'];
   final postId = int.tryParse('${rawId ?? ''}');
   final link = data['url']?.toString() ?? data['link']?.toString() ?? '';
