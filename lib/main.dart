@@ -1004,8 +1004,8 @@ IconData p2000ServiceIcon(dynamic item) {
     item['title'],item['message'],item['description'],item['body']
   ].where((v)=>v!=null).join(' ').toLowerCase();
   if(text.contains('lifeliner')||text.contains('traumaheli')||text.contains('traumahelikopter')||text.contains('mobiel medisch team')||RegExp(r'\\bmmt\\b').hasMatch(text))return Icons.airplanemode_active;
-  if(text.contains('brandweer'))return Icons.local_fire_department_outlined;
-  if(text.contains('ambulance')||RegExp(r'\\bambu\\b').hasMatch(text))return Icons.medical_services_outlined;
+  if(text.contains('brandweer'))return Icons.warning_amber_rounded;
+  if(text.contains('ambulance')||RegExp(r'\\bambu\\b').hasMatch(text))return Icons.emergency;
   if(text.contains('politie'))return Icons.local_police_outlined;
   return Icons.warning_amber_rounded;
 }
@@ -1040,8 +1040,49 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
    Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title='${e['title']??e['message']??e['description']??'Melding'}';final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:Icon(traffic?Icons.traffic:p2000ServiceIcon(e),color:traffic?navy:Colors.red),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:date.isEmpty?null:Row(children:[const Icon(Icons.schedule,size:15,color:Colors.black54),const SizedBox(width:5),Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w600,color:Colors.black54))]),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
  ]));}
 
-class P2000MapCard extends StatefulWidget{final String query;const P2000MapCard({super.key,required this.query});@override State<P2000MapCard> createState()=>_P2000MapCardState();}
-class _P2000MapCardState extends State<P2000MapCard>{late Future<LatLng?> point;@override void initState(){super.initState();point=locate();}Future<LatLng?>locate()async{try{final u=Uri.https('nominatim.openstreetmap.org','/search',{'q':widget.query,'format':'jsonv2','limit':'1','countrycodes':'nl'});final r=await http.get(u,headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:8));if(r.statusCode!=200)return null;final d=jsonDecode(r.body);if(d is List&&d.isNotEmpty){final a=double.tryParse(d.first['lat'].toString()),b=double.tryParse(d.first['lon'].toString());if(a!=null&&b!=null)return LatLng(a,b);}}catch(_){}return null;}@override Widget build(BuildContext context)=>FutureBuilder<LatLng?>(future:point,builder:(context,s){final p=s.data;if(s.connectionState!=ConnectionState.done)return const SizedBox(height:70,child:Center(child:CircularProgressIndicator()));if(p==null)return const SizedBox.shrink();return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Locatie op de kaart',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(height:220,child:fmap.FlutterMap(options:fmap.MapOptions(initialCenter:p,initialZoom:16),children:[fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),fmap.MarkerLayer(markers:[fmap.Marker(point:p,width:46,height:46,child:const Icon(Icons.location_pin,size:44,color:Colors.red))])])))]);});}
+class P2000MapCard extends StatefulWidget{
+  final List<String> queries;
+  const P2000MapCard({super.key,required this.queries});
+  @override State<P2000MapCard> createState()=>_P2000MapCardState();
+}
+class _P2000MapCardState extends State<P2000MapCard>{
+  late Future<LatLng?> point;
+  @override void initState(){super.initState();point=locate();}
+  Future<LatLng?> locate()async{
+    for(final query in widget.queries.map((q)=>q.trim()).where((q)=>q.isNotEmpty)){
+      try{
+        final u=Uri.https('nominatim.openstreetmap.org','/search',{'q':query,'format':'jsonv2','limit':'1','countrycodes':'nl'});
+        final r=await http.get(u,headers:const {'Accept':'application/json','User-Agent':'RVAZ-Android/1.0 (regiovoorneaanzee.nl)'}).timeout(const Duration(seconds:8));
+        if(r.statusCode!=200)continue;
+        final d=jsonDecode(r.body);
+        if(d is List&&d.isNotEmpty){
+          final a=double.tryParse(d.first['lat'].toString()),b=double.tryParse(d.first['lon'].toString());
+          if(a!=null&&b!=null)return LatLng(a,b);
+        }
+      }catch(_){}
+    }
+    return null;
+  }
+  @override Widget build(BuildContext context)=>FutureBuilder<LatLng?>(
+    future:point,
+    builder:(context,s){
+      final p=s.data;
+      if(s.connectionState!=ConnectionState.done)return const SizedBox(height:70,child:Center(child:CircularProgressIndicator()));
+      if(p==null)return const ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.location_off_outlined),title:Text('Locatie kon niet op de kaart worden gevonden'));
+      return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Locatie op de kaart',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)),
+        const SizedBox(height:8),
+        ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(height:220,child:fmap.FlutterMap(
+          options:fmap.MapOptions(initialCenter:p,initialZoom:16),
+          children:[
+            fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),
+            fmap.MarkerLayer(markers:[fmap.Marker(point:p,width:46,height:46,child:const Icon(Icons.location_pin,size:44,color:Colors.red))])
+          ]
+        )))
+      ]);
+    }
+  );
+}
 
 class P2000DetailPage extends StatelessWidget {
   final dynamic item; final bool traffic;
@@ -1064,7 +1105,7 @@ class P2000DetailPage extends StatelessWidget {
         if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
-        if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),P2000MapCard(query:[title,place].where((x)=>x.isNotEmpty).join(' '))],
+        if(!traffic&&place.isNotEmpty)...[const SizedBox(height:14),P2000MapCard(queries:[place,[title,place].where((x)=>x.isNotEmpty).join(' ')])],
       ]))),
       if(!traffic)...[
         const SizedBox(height:14),
