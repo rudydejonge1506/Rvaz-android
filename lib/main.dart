@@ -196,6 +196,8 @@ Future<void> openPushMessage(RemoteMessage message) async {
       'place': data['place'] ?? data['location'] ?? data['city'] ?? '',
       'address': data['address'] ?? data['adres'] ?? data['street'] ?? data['straat'] ?? '',
       'service': data['service'] ?? data['discipline'] ?? data['dienst'] ?? data['agency'] ?? '',
+      'unit': data['unit'] ?? data['units'] ?? data['eenheid'] ?? data['eenheden'] ?? data['post'] ?? data['station'] ?? data['kazerne'] ?? data['alarm_receiver'] ?? data['alarmReceiver'] ?? data['receiver'] ?? data['cap_description'] ?? data['capDescription'] ?? data['capcodes'] ?? data['capcode_description'] ?? data['capcodeDescription'] ?? '',
+      'capcodes': data['capcodes'] ?? data['capcode'] ?? data['cap_codes'] ?? '',
       'priority': data['priority'] ?? data['prio'] ?? '',
       'body': data['body'] ?? data['details'] ?? data['description'] ?? message.notification?.body ?? '',
     };
