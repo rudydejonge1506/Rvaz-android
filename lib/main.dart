@@ -1714,7 +1714,7 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
       }
       upcoming.sort((a,b)=>(a['ophaaldatum']??'').toString().compareTo((b['ophaaldatum']??'').toString()));
       const st=FlutterSecureStorage();
-      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim())await st.write(key:'rvaz_neighborhood_street',value:(ad['straat']??'').toString().trim());
+      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());await st.write(key:'rvaz_neighborhood_street',value:(ad['straat']??'').toString().trim());
       if(wastePush)await registerDeviceToken();
       if(mounted)setState((){address=(ad['description']??[ad['straat'],ad['huisnummer'],ad['woonplaats']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' ')).toString();dates=upcoming;});
     }catch(_){if(mounted)setState(()=>error='Dit adres of de afvalkalender kon niet worden geladen. Controleer je gegevens en probeer opnieuw.');}
