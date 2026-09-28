@@ -1120,8 +1120,8 @@ String _ndwHuman(String raw)=>raw
     .trim();
 
 String _ndwRecordType(String block){
-  final open=RegExp(r'<(?:[A-Za-z0-9_]+:)?situationRecord\\b[^>]*>',caseSensitive:false).firstMatch(block)?.group(0)??'';
-  final type=RegExp(r'(?:xsi:)?type\\s*=\\s*["\\x27]([^"\\x27]+)',caseSensitive:false).firstMatch(open)?.group(1)??'';
+  final open=RegExp(r'<(?:[A-Za-z0-9_]+:)?situationRecord\b[^>]*>',caseSensitive:false).firstMatch(block)?.group(0)??'';
+  final type=RegExp(r'(?:xsi:)?type\s*=\s*"([^"]+)"',caseSensitive:false).firstMatch(open)?.group(1)??'';
   return _ndwHuman(type);
 }
 
@@ -1146,7 +1146,7 @@ Future<List<dynamic>> loadNdwTraffic()async{
     for(var i=0;!local&&i<lats.length&&i<lons.length;i++){if(lats[i]>=51.72&&lats[i]<=52.08&&lons[i]>=3.82&&lons[i]<=4.62)local=true;}
     if(!local)continue;
     final roadTag=_ndwTag(block,['roadNumber','roadName','roadIdentifier']);
-    final road=roadTag.isNotEmpty?roadTag:RegExp(r'\\b(?:[AN]\\d{1,3})\\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
+    final road=roadTag.isNotEmpty?roadTag:RegExp(r'\b(?:[AN]\d{1,3})\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
     final comment=_ndwTag(block,['comment','situationRecordDescription','description','causeDescription']);
     final codedType=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','maintenanceWorksType','constructionWorkType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType','vehicleObstructionType','environmentalObstructionType','poorEnvironmentType','animalPresenceType','disturbanceActivityType','publicEventType']);
     final recordType=_ndwRecordType(block);
@@ -1168,7 +1168,7 @@ Future<List<dynamic>> loadNdwTraffic()async{
       if(queue.isNotEmpty)'Verkeer: ${_ndwHuman(queue)}',
       if(end.isNotEmpty)'Eindtijd: $end',
     ];
-    final body=details.join('\\n');
+    final body=details.join('\n');
     out.add(<String,dynamic>{'title':road.isEmpty?label:'$road · $label','description':body.isEmpty?label:body,'message':label,'body':body,'date':start,'end':end,'place':place,'source':'NDW','latitude':lats.isEmpty?null:lats.first,'longitude':lons.isEmpty?null:lons.first});
   }
   out.sort((a,b)=>'${b['date']??''}'.compareTo('${a['date']??''}'));
