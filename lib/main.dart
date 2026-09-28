@@ -1584,11 +1584,14 @@ class MyNeighborhoodPage extends StatefulWidget {
   @override State<MyNeighborhoodPage> createState()=>_MyNeighborhoodPageState();
 }
 class _MyNeighborhoodPageState extends State<MyNeighborhoodPage> {
-  String place='';
+  String place='',street='';
   @override void initState(){super.initState();_loadPlace();}
   Future<void> _loadPlace()async{
-    final p=(await const FlutterSecureStorage().read(key:'rvaz_neighborhood_place')??'').trim();
-    if(mounted)setState(()=>place=p);
+    const st=FlutterSecureStorage();
+    final p=(await st.read(key:'rvaz_neighborhood_place')??'').trim();
+    final savedStreet=(await st.read(key:'rvaz_neighborhood_street')??'').trim();
+    final pushStreet=(await st.read(key:'rvaz_p2000_street_name')??'').trim();
+    if(mounted)setState((){place=p;street=savedStreet.isNotEmpty?savedStreet:pushStreet;});
   }
   Future<void> _openWaste()async{
     await Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));
@@ -1605,6 +1608,18 @@ class _MyNeighborhoodPageState extends State<MyNeighborhoodPage> {
           Text(place.isEmpty?'Praktische informatie en meldingen die voor jouw eigen buurt belangrijk zijn.':'Jouw buurt: $place',style:const TextStyle(color:Colors.white,height:1.35))
         ])),
         const SizedBox(width:12),const Icon(Icons.home_work_outlined,color:Colors.white,size:44)
+      ])),
+      const SizedBox(height:16),
+      const Text('Rond mijn straat',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
+      const SizedBox(height:8),
+      Card(child:Column(children:[
+        ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.near_me_outlined,color:navy)),title:Text(street.isEmpty?'Rond mijn straat':street,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(street.isEmpty?(place.isEmpty?'Stel je adres in via de afvalkalender':'Bekijk wat er rond jouw straat speelt in $place'):'Nieuws, 112 en verkeer rond $street${place.isEmpty?'':' · $place'}')),
+        const Divider(height:1),
+        ListTile(leading:const Icon(Icons.warning_amber_rounded,color:Colors.red),title:const Text('112 / P2000'),subtitle:Text(street.isEmpty?'Actuele incidenten in jouw plaats':'Meldingen rond $street'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:false,initialPlace:place)))),
+        const Divider(height:1),
+        ListTile(leading:const Icon(Icons.traffic,color:Colors.deepOrange),title:const Text('Verkeer'),subtitle:Text(place.isEmpty?'Actuele verkeersmeldingen':'Verkeer rond $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place)))),
+        const Divider(height:1),
+        ListTile(leading:const Icon(Icons.article_outlined,color:navy),title:const Text('Nieuws'),subtitle:Text(place.isEmpty?'Nieuws uit jouw buurt':'Nieuws uit $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place.isEmpty?const PlacesPage():PlaceNewsPage(place:place))),
       ])),
       const SizedBox(height:16),
       const Text('Voor jouw buurt',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
@@ -1699,7 +1714,7 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
       }
       upcoming.sort((a,b)=>(a['ophaaldatum']??'').toString().compareTo((b['ophaaldatum']??'').toString()));
       const st=FlutterSecureStorage();
-      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());
+      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());await st.write(key:'rvaz_neighborhood_street',value:(ad['straat']??'').toString().trim());
       if(wastePush)await registerDeviceToken();
       if(mounted)setState((){address=(ad['description']??[ad['straat'],ad['huisnummer'],ad['woonplaats']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' ')).toString();dates=upcoming;});
     }catch(_){if(mounted)setState(()=>error='Dit adres of de afvalkalender kon niet worden geladen. Controleer je gegevens en probeer opnieuw.');}
