@@ -1113,6 +1113,19 @@ String _ndwTag(String block,List<String> names){
   return '';
 }
 
+String _ndwHuman(String raw)=>raw
+    .replaceFirst(RegExp(r'^[A-Za-z0-9_]+:'),'')
+    .replaceAll(RegExp(r'(?<=[a-z0-9])(?=[A-Z])'),' ')
+    .replaceAll('_',' ')
+    .trim();
+
+String _ndwRecordType(String block){
+  final open=RegExp(r'<(?:[A-Za-z0-9_]+:)?situationRecord\\b[^>]*>',caseSensitive:false).firstMatch(block)?.group(0)??'';
+  final type=RegExp(r'(?:xsi:)?type\\s*=\\s*["\\x27]([^"\\x27]+)',caseSensitive:false).firstMatch(open)?.group(1)??'';
+  return _ndwHuman(type);
+}
+
+
 Future<List<dynamic>> loadNdwTraffic()async{
   final r=await http.get(Uri.parse('https://opendata.ndw.nu/actueel_beeld.xml.gz'),headers:const {'Accept':'application/gzip, application/xml'}).timeout(const Duration(seconds:20));
   if(r.statusCode!=200)throw Exception('NDW HTTP ${r.statusCode}');
@@ -1132,14 +1145,31 @@ Future<List<dynamic>> loadNdwTraffic()async{
     var local=localWords.any(lower.contains);
     for(var i=0;!local&&i<lats.length&&i<lons.length;i++){if(lats[i]>=51.72&&lats[i]<=52.08&&lons[i]>=3.82&&lons[i]<=4.62)local=true;}
     if(!local)continue;
-    final road=RegExp(r'\b(?:N57|N218|A15|A4)\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
-    final comment=_ndwTag(block,['comment','generalPublicComment','description','situationRecordDescription']);
-    final type=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType']);
+    final roadTag=_ndwTag(block,['roadNumber','roadName','roadIdentifier']);
+    final road=roadTag.isNotEmpty?roadTag:RegExp(r'\\b(?:[AN]\\d{1,3})\\b',caseSensitive:false).firstMatch(plain)?.group(0)?.toUpperCase()??'';
+    final comment=_ndwTag(block,['comment','situationRecordDescription','description','causeDescription']);
+    final codedType=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','maintenanceWorksType','constructionWorkType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType','vehicleObstructionType','environmentalObstructionType','poorEnvironmentType','animalPresenceType','disturbanceActivityType','publicEventType']);
+    final recordType=_ndwRecordType(block);
+    final type=_ndwHuman(codedType.isNotEmpty?codedType:recordType);
+    final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor']);
+    final direction=_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint']));
+    final delay=_ndwTag(block,['delayTimeValue','minimumDelay','maximumDelay']);
+    final queue=_ndwTag(block,['queueLength','trafficStatusValue']);
     final start=_ndwTag(block,['overallStartTime','situationRecordCreationTime']);
     final end=_ndwTag(block,['overallEndTime']);
-    final place=localWords.firstWhere((x)=>lower.contains(x),orElse:()=>road.toLowerCase());
-    final label=comment.isNotEmpty?comment:(type.isNotEmpty?type.replaceAll(RegExp(r'(?=[A-Z])'),' ').trim():'Actuele verkeersmelding');
-    out.add(<String,dynamic>{'title':road.isEmpty?label:'$road · $label','description':label,'message':label,'date':start,'end':end,'place':place,'source':'NDW','latitude':lats.isEmpty?null:lats.first,'longitude':lons.isEmpty?null:lons.first});
+    final place=location.isNotEmpty?location:localWords.firstWhere((x)=>lower.contains(x),orElse:()=>road.toLowerCase());
+    final label=comment.isNotEmpty?comment:(type.isNotEmpty?type:'Actuele verkeersmelding');
+    final details=<String>[
+      if(type.isNotEmpty&&type.toLowerCase()!=label.toLowerCase())'Type: $type',
+      if(road.isNotEmpty)'Weg: $road',
+      if(location.isNotEmpty&&location.toLowerCase()!=road.toLowerCase())'Locatie: $location',
+      if(direction.isNotEmpty)'Richting: $direction',
+      if(delay.isNotEmpty)'Vertraging: $delay',
+      if(queue.isNotEmpty)'Verkeer: ${_ndwHuman(queue)}',
+      if(end.isNotEmpty)'Eindtijd: $end',
+    ];
+    final body=details.join('\\n');
+    out.add(<String,dynamic>{'title':road.isEmpty?label:'$road · $label','description':body.isEmpty?label:body,'message':label,'body':body,'date':start,'end':end,'place':place,'source':'NDW','latitude':lats.isEmpty?null:lats.first,'longitude':lons.isEmpty?null:lons.first});
   }
   out.sort((a,b)=>'${b['date']??''}'.compareTo('${a['date']??''}'));
   return out;
