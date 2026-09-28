@@ -1619,7 +1619,7 @@ class _MyNeighborhoodPageState extends State<MyNeighborhoodPage> {
         const Divider(height:1),
         ListTile(leading:const Icon(Icons.traffic,color:Colors.deepOrange),title:const Text('Verkeer'),subtitle:Text(place.isEmpty?'Actuele verkeersmeldingen':'Verkeer rond $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place)))),
         const Divider(height:1),
-        ListTile(leading:const Icon(Icons.article_outlined,color:navy),title:const Text('Nieuws'),subtitle:Text(place.isEmpty?'Nieuws uit jouw buurt':'Nieuws uit $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place.isEmpty?const PlacesPage():PlaceNewsPage(place:place))),
+        ListTile(leading:const Icon(Icons.article_outlined,color:navy),title:const Text('Nieuws'),subtitle:Text(place.isEmpty?'Nieuws uit jouw buurt':'Nieuws uit $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place.isEmpty?const PlacesPage():PlaceNewsPage(place:place)))),
       ])),
       const SizedBox(height:16),
       const Text('Voor jouw buurt',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
