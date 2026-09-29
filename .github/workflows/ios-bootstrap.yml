@@ -26,11 +26,9 @@ jobs:
         run: |
           sed -i '' 's/nl\.regiovoorneaanzee\.rvazAndroid/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
           sed -i '' 's/nl\.regiovoorneaanzee\.rvaz_android/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
-      - name: Generate iOS icons from existing RVAZ logo
+      - name: Keep generated Apple icon set
         run: |
-          cp pubspec.yaml /tmp/pubspec-ios-icons.yaml
-          sed -i '' 's/  ios: false/  ios: true/' /tmp/pubspec-ios-icons.yaml
-          dart run flutter_launcher_icons -f /tmp/pubspec-ios-icons.yaml
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
       - name: Verify Android protected files are untouched
         run: |
           git diff --exit-code HEAD -- android .github/workflows/android-apk.yml assets/rvaz-launcher-icon.png.b64
