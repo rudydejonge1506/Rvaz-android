@@ -44,7 +44,7 @@ jobs:
           from pathlib import Path
           import struct, zlib
           src=Path('/tmp/rvaz-icon.png').read_bytes()
-          assert src[:8] == b'\\x89PNG\\r\\n\\x1a\\n', 'Ongeldig RVAZ PNG-icoon'
+          assert src[:8] == bytes.fromhex('89504e470d0a1a0a'), 'Ongeldig RVAZ PNG-icoon'
           # Laat Android het geldige vaste bronicoon zelf schalen per density.
           for d in ('mipmap-mdpi','mipmap-hdpi','mipmap-xhdpi','mipmap-xxhdpi','mipmap-xxxhdpi'):
               p=Path('android/app/src/main/res')/d/'ic_launcher.png'
