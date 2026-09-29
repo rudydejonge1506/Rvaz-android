@@ -1115,7 +1115,7 @@ String _ndwTag(String block,List<String> names){
 
 String _ndwElementBlock(String block,String name){
   final e=RegExp.escape(name);
-  return RegExp('<(?:[A-Za-z0-9_]+:)?${e}[^>]*>[\\\\s\\\\S]*?</(?:[A-Za-z0-9_]+:)?${e}>',caseSensitive:false).firstMatch(block)?.group(0)??'';
+  return RegExp('<(?:[A-Za-z0-9_]+:)?$e[^>]*>[\\\\s\\\\S]*?</(?:[A-Za-z0-9_]+:)?$e>',caseSensitive:false).firstMatch(block)?.group(0)??'';
 }
 
 String _ndwHuman(String raw)=>raw
