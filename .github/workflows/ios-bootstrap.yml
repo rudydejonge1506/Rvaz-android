@@ -1,0 +1,41 @@
+name: Prepare RVAZ iOS project
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/ios-bootstrap-v36
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate iOS platform only
+        run: flutter create --platforms=ios --org nl.regiovoorneaanzee .
+      - name: Configure bundle identifier
+        run: |
+          sed -i '' 's/nl\.regiovoorneaanzee\.rvazAndroid/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/nl\.regiovoorneaanzee\.rvaz_android/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
+      - name: Generate iOS icons from existing RVAZ logo
+        run: |
+          cp pubspec.yaml /tmp/pubspec-ios-icons.yaml
+          sed -i '' 's/  ios: false/  ios: true/' /tmp/pubspec-ios-icons.yaml
+          dart run flutter_launcher_icons -f /tmp/pubspec-ios-icons.yaml
+      - name: Verify Android protected files are untouched
+        run: |
+          git diff --exit-code HEAD -- android .github/workflows/android-apk.yml assets/rvaz-launcher-icon.png.b64
+      - name: Commit generated iOS project
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ios
+          git diff --cached --quiet && exit 0
+          git commit -m "Voeg iOS basis toe zonder Android te wijzigen"
+          git push origin HEAD:feature/ios-bootstrap-v36
