@@ -1160,7 +1160,7 @@ Future<List<dynamic>> loadNdwTraffic()async{
     final codedType=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','maintenanceWorksType','constructionWorkType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType','vehicleObstructionType','environmentalObstructionType','poorEnvironmentType','animalPresenceType','disturbanceActivityType','publicEventType']);
     final recordType=_ndwRecordType(block);
     final type=_ndwNl(_ndwHuman(codedType.isNotEmpty?codedType:recordType));
-    final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor','descriptor','value']);
+    final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor','descriptor']);
     final direction=_ndwNl(_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint'])));
     final delay=_ndwTag(block,['delayTimeValue','minimumDelay','maximumDelay']);
     final queue=_ndwTag(block,['queueLength','trafficStatusValue']);
