@@ -1125,6 +1125,30 @@ String _ndwRecordType(String block){
   return _ndwHuman(type);
 }
 
+String _ndwNl(String raw){
+  final key=raw.replaceFirst(RegExp(r'^[A-Za-z0-9_]+:'),'').replaceAll(RegExp(r'[^A-Za-z0-9]'),'').toLowerCase();
+  const values=<String,String>{
+    'slowtraffic':'Langzaam rijdend verkeer','stationarytraffic':'Stilstaand verkeer','queuingtraffic':'File',
+    'bridgeswinginoperation':'Brug geopend voor scheepvaart','roadorcarriagewayorlanemanagement':'Rijbaan- of rijstrookmaatregel',
+    'roadmaintenance':'Wegwerkzaamheden','maintenanceworks':'Wegwerkzaamheden','constructionwork':'Werkzaamheden',
+    'accident':'Ongeval','obstruction':'Obstakel op de weg','vehicleobstruction':'Voertuig op de weg',
+    'trafficconstriction':'Verkeersbeperking','abnormaltraffic':'Afwijkende verkeerssituatie','other':'Overige verkeersmelding',
+    'oppositedirection':'Tegengestelde richting','aligned':'In de aangegeven richting','both':'Beide richtingen',
+  };
+  return values[key]??_ndwHuman(raw);
+}
+
+String _ndwSeconds(String raw){
+  final value=double.tryParse(raw);if(value==null)return raw;
+  final seconds=value.round();if(seconds<60)return '$seconds seconden';
+  final minutes=(seconds/60).round();return minutes==1?'1 minuut':'$minutes minuten';
+}
+
+String _ndwMetres(String raw){
+  final value=double.tryParse(raw);if(value==null)return raw;
+  if(value>=1000){final km=value/1000;return '${km.toStringAsFixed(value%1000==0?0:1)} km';}
+  return '${value.round()} meter';
+}
 
 Future<List<dynamic>> loadNdwTraffic()async{
   final r=await http.get(Uri.parse('https://opendata.ndw.nu/actueel_beeld.xml.gz'),headers:const {'Accept':'application/gzip, application/xml'}).timeout(const Duration(seconds:20));
@@ -1150,22 +1174,815 @@ Future<List<dynamic>> loadNdwTraffic()async{
     final comment=_ndwTag(block,['comment','situationRecordDescription','description','causeDescription']);
     final codedType=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','maintenanceWorksType','constructionWorkType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType','vehicleObstructionType','environmentalObstructionType','poorEnvironmentType','animalPresenceType','disturbanceActivityType','publicEventType']);
     final recordType=_ndwRecordType(block);
-    final type=_ndwHuman(codedType.isNotEmpty?codedType:recordType);
+    final type=_ndwNl(codedType.isNotEmpty?codedType:recordType);
     final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor']);
-    final direction=_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint']));
+    final directionRaw=_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint']);
+    final direction=directionRaw.isEmpty?'':_ndwNl(directionRaw);
     final delay=_ndwTag(block,['delayTimeValue','minimumDelay','maximumDelay']);
-    final queue=_ndwTag(block,['queueLength','trafficStatusValue']);
+    final queueLength=_ndwTag(block,['queueLength']);
+    final trafficStatus=_ndwTag(block,['trafficStatusValue']);
     final start=_ndwTag(block,['overallStartTime','situationRecordCreationTime']);
     final end=_ndwTag(block,['overallEndTime']);
     final place=location.isNotEmpty?location:localWords.firstWhere((x)=>lower.contains(x),orElse:()=>road.toLowerCase());
-    final label=comment.isNotEmpty?comment:(type.isNotEmpty?type:'Actuele verkeersmelding');
+    final label=comment.isNotEmpty?_ndwNl(comment):(type.isNotEmpty?type:'Actuele verkeersmelding');
     final details=<String>[
       if(type.isNotEmpty&&type.toLowerCase()!=label.toLowerCase())'Type: $type',
       if(road.isNotEmpty)'Weg: $road',
       if(location.isNotEmpty&&location.toLowerCase()!=road.toLowerCase())'Locatie: $location',
       if(direction.isNotEmpty)'Richting: $direction',
-      if(delay.isNotEmpty)'Vertraging: $delay',
-      if(queue.isNotEmpty)'Verkeer: ${_ndwHuman(queue)}',
+      if(delay.isNotEmpty)'Vertraging: ${_ndwSeconds(delay)}',
+      if(queueLength.isNotEmpty)'Filelengte: ${_ndwMetres(queueLength)}',
+      if(trafficStatus.isNotEmpty&&!RegExp(r'^\\d+(?:\\.\\d+)?
+      if(end.isNotEmpty)'Eindtijd: $end',
+    ];
+    final body=details.join('\n');
+    out.add(<String,dynamic>{'title':road.isEmpty?label:'$road · $label','description':body.isEmpty?label:body,'message':label,'body':body,'date':start,'end':end,'place':place,'source':'NDW','latitude':lats.isEmpty?null:lats.first,'longitude':lons.isEmpty?null:lons.first});
+  }
+  out.sort((a,b)=>'${b['date']??''}'.compareTo('${a['date']??''}'));
+  return out;
+}
+
+class EmergencyTrafficPage extends StatefulWidget{final bool initialTraffic;final String initialPlace;const EmergencyTrafficPage({super.key,this.initialTraffic=false,this.initialPlace=''});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
+class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
+ String place='Voorne aan Zee';bool traffic=false;late Future<List<dynamic>> items;
+ static const p2000Places=['Voorne aan Zee','Hellevoetsluis','Rockanje','Brielle','Oostvoorne','Oudenhoorn','Nieuwenhoorn','Tinte','Vierpolders','Zwartewaal','Abbenbroek','Heenvliet','Geervliet','Zuidland','Simonshaven','Rotterdam-Rijnmond'];
+ @override void initState(){super.initState();traffic=widget.initialTraffic;if(widget.initialPlace.isNotEmpty&&p2000Places.contains(widget.initialPlace))place=widget.initialPlace;items=load();}
+ String hay(dynamic e)=>[e is Map?e['title']:'',e is Map?e['description']:'',e is Map?e['message']:'',e is Map?e['body']:'',e is Map?e['place']:'',e is Map?e['location']:'',e is Map?e['city']:''].join(' ').toLowerCase();
+ Future<List<dynamic>>load()async{
+   if(traffic){try{return await loadNdwTraffic();}catch(e){debugPrint('NDW verkeer: $e');return <dynamic>[];}}
+   final region=Uri.encodeQueryComponent('Rotterdam-Rijnmond');
+   final primary=await RvazApi.firstList(
+     ['p2000?region=$region&per_page=250','112?region=$region&per_page=250','meldingen?region=$region&per_page=250'],
+     keys:const ['meldingen','p2000','112','items','data'],
+   );
+   if(primary.isNotEmpty)return primary;
+   for(final type in ['rvaz_p2000','rvaz_112','p2000']){try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/$type?per_page=100&_embed=1')).timeout(const Duration(seconds:10));if(r.statusCode==200){final x=RvazApi.list(jsonDecode(r.body));if(x.isNotEmpty)return x;}}catch(_){}}
+   return <dynamic>[];
+ }
+ bool trafficNearPlace(dynamic e,String selected){
+   if(e is! Map)return false;
+   final lat=(e['latitude'] as num?)?.toDouble(),lon=(e['longitude'] as num?)?.toDouble();
+   if(lat==null||lon==null)return false;
+   const centers=<String,LatLng>{
+     'Hellevoetsluis':LatLng(51.8333,4.1333),'Rockanje':LatLng(51.8717,4.0708),'Brielle':LatLng(51.9017,4.1625),
+     'Oostvoorne':LatLng(51.9125,4.0986),'Oudenhoorn':LatLng(51.8270,4.1910),'Nieuwenhoorn':LatLng(51.8540,4.1430),
+     'Tinte':LatLng(51.8860,4.1360),'Vierpolders':LatLng(51.8790,4.1790),'Zwartewaal':LatLng(51.8830,4.2200),
+     'Abbenbroek':LatLng(51.8490,4.2430),'Heenvliet':LatLng(51.8640,4.2440),'Geervliet':LatLng(51.8610,4.2640),
+     'Zuidland':LatLng(51.8220,4.2590),'Simonshaven':LatLng(51.8230,4.2880),
+   };
+   final center=centers[selected];if(center==null)return false;
+   return const Distance().as(LengthUnit.Kilometer,center,LatLng(lat,lon))<=8;
+ }
+ List<dynamic> filtered(List<dynamic> all){if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)||(traffic&&trafficNearPlace(e,place))).toList();}
+ void refresh(){setState(()=>items=load());}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy,actions:[
+   if(!traffic)IconButton(tooltip:'P2000 pushmeldingen',icon:const Icon(Icons.notifications_active_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
+   const PageFeedbackButton(page:'112 & Verkeer')
+ ]),body:Column(children:[
+   Padding(padding:const EdgeInsets.all(16),child:Column(children:[
+     DropdownButtonFormField<String>(initialValue:place,decoration:InputDecoration(labelText:traffic?'Plaats':'P2000-regio / plaats',border:const OutlineInputBorder()),items:(traffic?['Rotterdam-Rijnmond',...appConfig.places.where((x)=>x!='Voorne aan Zee')]:p2000Places).map((x)=>DropdownMenuItem(value:x,child:Text(x=='Voorne aan Zee'?'Heel Voorne aan Zee':x))).toList(),onChanged:(v){setState(()=>place=v??'Voorne aan Zee');refresh();}),
+     const SizedBox(height:12),
+     SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112 / P2000'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){setState(()=>traffic=v.first);refresh();})
+   ])),
+   Expanded(child:FutureBuilder<List<dynamic>>(future:items,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final x=filtered(s.data??[]);if(x.isEmpty)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(traffic?'Geen actuele verkeersmeldingen voor deze selectie.':'Geen P2000-meldingen gevonden in de aangeleverde Rijnmond-feed.')));return RefreshIndicator(onRefresh:()async{refresh();await items;},child:ListView.separated(padding:const EdgeInsets.fromLTRB(16,0,16,20),itemCount:x.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(c,i){final e=x[i];final title=traffic?'${e['title']??e['message']??e['description']??'Melding'}':p2000DisplayTitle(e);final date='${e['date']??e['datetime']??e['published']??''}';return ListTile(contentPadding:const EdgeInsets.symmetric(vertical:5),leading:traffic?const Icon(Icons.traffic,color:navy):p2000ServiceIcon(e),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:date.isEmpty?null:Row(children:[const Icon(Icons.schedule,size:15,color:Colors.black54),const SizedBox(width:5),Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w600,color:Colors.black54))]),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>P2000DetailPage(item:e,traffic:traffic))));}));}))
+ ]));}
+
+class P2000MapCard extends StatefulWidget{
+  final List<String> queries;
+  const P2000MapCard({super.key,required this.queries});
+  @override State<P2000MapCard> createState()=>_P2000MapCardState();
+}
+class _P2000MapCardState extends State<P2000MapCard>{
+  late Future<LatLng?> point;
+  @override void initState(){super.initState();point=locate();}
+  Future<LatLng?> locate()async{
+    for(final query in widget.queries.map((q)=>q.trim()).where((q)=>q.isNotEmpty)){
+      try{
+        final u=Uri.https('nominatim.openstreetmap.org','/search',{'q':query,'format':'jsonv2','limit':'1','countrycodes':'nl'});
+        final r=await http.get(u,headers:const {'Accept':'application/json','User-Agent':'RVAZ-Android/1.0 (regiovoorneaanzee.nl)'}).timeout(const Duration(seconds:8));
+        if(r.statusCode!=200)continue;
+        final d=jsonDecode(r.body);
+        if(d is List&&d.isNotEmpty){
+          final a=double.tryParse(d.first['lat'].toString()),b=double.tryParse(d.first['lon'].toString());
+          if(a!=null&&b!=null)return LatLng(a,b);
+        }
+      }catch(_){}
+    }
+    return null;
+  }
+  @override Widget build(BuildContext context)=>FutureBuilder<LatLng?>(
+    future:point,
+    builder:(context,s){
+      final p=s.data;
+      if(s.connectionState!=ConnectionState.done)return const SizedBox(height:70,child:Center(child:CircularProgressIndicator()));
+      if(p==null)return const ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.location_off_outlined),title:Text('Locatie kon niet op de kaart worden gevonden'));
+      return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Locatie op de kaart',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)),
+        const SizedBox(height:8),
+        ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(height:220,child:fmap.FlutterMap(
+          options:fmap.MapOptions(initialCenter:p,initialZoom:16),
+          children:[
+            fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),
+            fmap.MarkerLayer(markers:[fmap.Marker(point:p,width:46,height:46,child:const Icon(Icons.location_pin,size:44,color:Colors.red))])
+          ]
+        )))
+      ]);
+    }
+  );
+}
+
+class P2000DetailPage extends StatelessWidget {
+  final dynamic item; final bool traffic;
+  const P2000DetailPage({super.key,required this.item,required this.traffic});
+  String value(List<String> keys){if(item is! Map)return '';for(final k in keys){final v=item[k];if(v!=null&&'$v'.trim().isNotEmpty)return '$v'.trim();}return '';}
+  @override Widget build(BuildContext context){
+    final title=traffic?(value(['title','message','description']).isEmpty?'Melding':value(['title','message','description'])):p2000DisplayTitle(item);
+    final date=value(['date','datetime','published','time']);
+    final place=value(['place','location','city']);
+    final address=value(['address','adres','street','straat']);
+    final service=value(['service','discipline','dienst','agency']);
+    final priority=p2000PriorityLabel(item).isNotEmpty?p2000PriorityLabel(item):value(['priority','prio']);
+    final unit=value(['unit','units','eenheid','eenheden','post','station','kazerne','alarm_receiver','alarmReceiver','receiver','cap_description','capDescription']);
+    final capcodes=value(['capcodes','capcode','cap_codes','capcode_description','capcodeDescription']);
+    final body=value(['body','description','details','content']);
+    final source=value(['source']);
+    final detailAds=loadAppAds(placement:'p2000');
+    return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(traffic?'Verkeersmelding':'P2000-melding'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[
+      Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        traffic?const Icon(Icons.traffic,color:navy,size:34):p2000ServiceIcon(item,size:34),const SizedBox(height:12),
+        Text(title,style:const TextStyle(fontSize:22,height:1.2,fontWeight:FontWeight.w900,color:navy)),
+        if(date.isNotEmpty)...[const SizedBox(height:14),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.schedule,color:navy),title:Text(formatP2000Date(date),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:const Text('Tijdstip van de melding'))],
+        if(place.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(place)),
+        if(service.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.emergency_outlined),title:Text(service)),
+        if(!traffic&&unit.isNotEmpty&&unit.toLowerCase()!=service.toLowerCase())ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.badge_outlined),title:Text(unit),subtitle:const Text('Post / eenheid')),
+        if(!traffic&&capcodes.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.numbers_outlined),title:Text(capcodes),subtitle:const Text('Capcode / eenheid')),
+        if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
+        if(traffic&&source.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.source_outlined),title:Text(source),subtitle:const Text('Bron verkeersinformatie')),
+        if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
+        if(!traffic&&(address.isNotEmpty||title.contains(',')))...[const SizedBox(height:14),P2000MapCard(queries:[
+          if(address.isNotEmpty)[address,place].where((x)=>x.isNotEmpty).join(', '),
+          if(address.isNotEmpty)address,
+          if(address.isEmpty&&title.contains(','))title.split('·').last.trim(),
+        ])],
+      ]))),
+      if(!traffic)...[
+        const SizedBox(height:14),
+        OutlinedButton.icon(
+          onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TipPage(p2000Reference:[title,if(date.isNotEmpty)formatP2000Date(date),place,service,priority].where((x)=>x.trim().isNotEmpty).join(' · ')))),
+          icon:const Icon(Icons.campaign_outlined),
+          label:const Text('Weet je hier meer van? Tip de redactie'),
+        ),
+      ],
+      const SizedBox(height:14),
+      RotatingAppAd(future:detailAds),
+    ]));
+  }
+}
+
+class NewsPage extends StatefulWidget {
+  const NewsPage({super.key});
+  @override
+  State<NewsPage> createState() => _NewsPageState();
+}
+
+class _NewsPageState extends State<NewsPage> {
+  late Future<List<dynamic>> future;
+  late Future<List<AppAd>> adsFuture;
+  @override
+  void initState() {
+    super.initState();
+    future = load();
+    adsFuture = loadAppAds();
+  }
+
+  Future<List<dynamic>> load() async {
+    final count=appConfig.limit('news_per_page',20).clamp(1,100);
+    final r=await http.get(
+      Uri.parse('$site/wp-json/rvaz-app/v1/posts?per_page=$count'),
+      headers:await authHeaders(),
+    ).timeout(const Duration(seconds:15));
+    if(r.statusCode!=200)throw Exception('Nieuws kon niet worden geladen');
+    final d=jsonDecode(r.body);
+    return RvazApi.list(d,const ['posts']);
+  }
+
+  String clean(String s) => s
+      .replaceAll(RegExp(r'<[^>]*>'), '')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&#8217;', "'")
+      .replaceAll('&#8211;', '–');
+
+  @override
+  Widget build(BuildContext context) => RefreshIndicator(
+        onRefresh: () async => setState(() => future = load()),
+        child: FutureBuilder<List<dynamic>>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return ListView(children: [
+                const SizedBox(height: 180),
+                Center(child: Text(snapshot.error.toString()))
+              ]);
+            }
+            final posts = snapshot.data ?? [];
+            return FutureBuilder<List<AppAd>>(future: adsFuture, builder: (context, adSnapshot) {
+            final ads = adSnapshot.data ?? [];
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(appConfig.latestTitle,
+                    style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: navy)),
+                const SizedBox(height: 5),
+                Text(appConfig.homeIntro),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 7,
+                  children: appConfig.places.map((x) => ActionChip(
+                      label: Text(x),
+                      onPressed: () {
+                        final filtered = x == 'Voorne aan Zee'
+                            ? load()
+                            : http.get(Uri.parse('$site/wp-json/wp/v2/search?search=${Uri.encodeQueryComponent(x)}&subtype=post&per_page=30')).then((r) async {
+                                if (r.statusCode != 200) return <dynamic>[];
+                                final ids = (jsonDecode(r.body) as List).map((e) => e['id']).whereType<int>().toList();
+                                if (ids.isEmpty) return <dynamic>[];
+                                final pr = await http.get(Uri.parse('$site/wp-json/wp/v2/posts?include=${ids.join(',')}&per_page=30&_embed=1'));
+                                return pr.statusCode == 200 ? List<dynamic>.from(jsonDecode(pr.body)) : <dynamic>[];
+                              });
+                        setState(() => future = filtered);
+                      },
+                    )).toList(),
+                ),
+                const SizedBox.shrink(),
+                const SizedBox(height: 12),
+                ...posts.asMap().entries.expand((entry) {
+                  final p = entry.value;
+                  final widgets = <Widget>[Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => openArticle(context,p),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (postImage(p).isNotEmpty)
+                            Image.network(postImage(p), height: 190, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                          Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('NIEUWS',
+                                style: TextStyle(
+                                    color: cyan,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 6),
+                            Text(clean((p['title'] is Map?p['title']['rendered']:p['title']??'').toString()),
+                                style: const TextStyle(
+                                    fontSize: 20,
+                                    height: 1.15,
+                                    fontWeight: FontWeight.w900,
+                                    color: navy)),
+                            const SizedBox(height: 6),
+                            if (formatPostDate(p).isNotEmpty) ...[
+                              Row(children: [
+                                const Icon(Icons.schedule, size: 14, color: Colors.black54),
+                                const SizedBox(width: 5),
+                                Text(formatPostDate(p), style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
+                              ]),
+                              const SizedBox(height: 8),
+                            ],
+                            Text(clean((p['excerpt'] is Map?p['excerpt']['rendered']:p['excerpt']??'').toString()),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(height: 1.4)),
+                          ],
+                        ),
+                      ),
+                        ],
+                      ),
+                    ),
+                  )];
+                  final freq=appConfig.limit('ad_frequency',5).clamp(2,20); if (ads.isNotEmpty && entry.key>0 && (entry.key+1)%freq==0) widgets.add(AppAdCard(ad: ads[(entry.key~/freq)%ads.length]));
+                  return widgets;
+                }),
+              ],
+            ); });
+          },
+        ),
+      );
+}
+
+
+class TodayPage extends StatefulWidget{const TodayPage({super.key});@override State<TodayPage> createState()=>_TodayPageState();}
+class _TodayPageState extends State<TodayPage>{
+ late Future<Map<String,dynamic>> future; @override void initState(){super.initState();future=load();}
+ Future<Map<String,dynamic>> load()async{try{final d=await RvazApi.get('today',query:{'place':'Hellevoetsluis'});if(d is Map)return Map<String,dynamic>.from(d);}catch(_){}return{};}
+ List<dynamic> section(Map<String,dynamic>d,String key)=>RvazApi.list(d[key]);
+ String text(dynamic e,String key){if(e is! Map)return'';final v=e[key];if(v is Map)return '${v['rendered']??''}'.replaceAll(RegExp(r'<[^>]*>'),'');return '${v??''}'.replaceAll(RegExp(r'<[^>]*>'),'');}
+ String greeting(){final h=DateTime.now().hour;if(h<12)return'Goedemorgen 👋';if(h<18)return'Goedemiddag 👋';return'Goedenavond 👋';}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Dit speelt er vandaag')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final d=s.data??{};final groups=<String,List<dynamic>>{'Nieuws':section(d,'news'),'112 / P2000':section(d,'p2000'),'Verkeer':section(d,'traffic'),'Agenda':section(d,'agenda')};return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView(padding:const EdgeInsets.all(16),children:[Text(greeting(),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:4),const Text('Dit speelt er vandaag in Hellevoetsluis.',style:TextStyle(color:Colors.black54)),const SizedBox(height:14),if(d.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Het dagoverzicht is momenteel niet beschikbaar.'))),...groups.entries.where((g)=>g.value.isNotEmpty).expand((g)=>[Padding(padding:const EdgeInsets.fromLTRB(2,10,2,7),child:Text(g.key,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy))),...g.value.take(5).map((e)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place')))))]) ]));}));
+}
+
+class AgendaPage extends StatefulWidget{const AgendaPage({super.key});@override State<AgendaPage> createState()=>_AgendaPageState();}
+class _AgendaPageState extends State<AgendaPage>{
+ late Future<List<dynamic>> future;late Future<List<AppAd>> ads;String place='Alle';
+ @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'agenda');}
+ Future<List<dynamic>> load() async {
+   final collected=<dynamic>[];
+   final seen=<String>{};
+   for(final path in [
+     'agenda?per_page=250',
+     'agenda?limit=250',
+     'events?per_page=250',
+     'events?limit=250',
+   ]){
+     try{
+       final parts=path.split('?');
+       final d=await RvazApi.get(parts.first,query:Uri.splitQueryString(parts[1]));
+       for(final e in RvazApi.list(d,const ['events','agenda'])){
+         final key=e is Map?'${e['id']??''}|${e['start_date']??e['date']??''}|${e['title']??''}':'$e';
+         if(seen.add(key))collected.add(e);
+       }
+     }catch(_){}
+   }
+   return collected;
+ }
+ String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
+ String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+ String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
+ String placeOf(dynamic p)=>val(p,['place','city','town','plaats','event_place']);
+ DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','event_start_date','event_date','start','date','datum','datetime']));
+ @override Widget build(BuildContext context)=>ColoredBox(color:const Color(0xFFF7F9FB),child:FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final places=<String>['Alle',...appConfig.places.where((x)=>x!='Voorne aan Zee')];final items=all.where((p)=>place=='Alle'||placeOf(p).toLowerCase()==place.toLowerCase()).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));return Column(children:[
+   SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(14,9,14,7),itemCount:places.length,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i){final x=places[i],on=x==place;return ChoiceChip(label:Text(x),selected:on,onSelected:(_)=>setState(()=>place=x),selectedColor:cyan,labelStyle:TextStyle(color:on?Colors.white:navy,fontSize:11,fontWeight:FontWeight.w700),side:BorderSide(color:on?cyan:const Color(0xFFDCE5ED)),showCheckmark:false); })),
+   Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),RotatingAppAd(future:ads),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
+ ]);}));
+}
+
+class WeekbladPage extends StatefulWidget {
+  const WeekbladPage({super.key});
+  @override State<WeekbladPage> createState()=>_WeekbladPageState();
+}
+class _WeekbladPageState extends State<WeekbladPage> {
+  late Future<List<dynamic>> future;
+  late Future<List<AppAd>> ads;
+  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'weekblad');}
+  Future<List<dynamic>> load() => RvazApi.firstList(
+    ['weekblad','issues'],
+    keys: const ['issues','editions','weekblad'],
+  );
+  @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
+    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
+    final issues=s.data??[];
+    return ListView(padding:const EdgeInsets.all(18),children:[
+      Text(appConfig.weekbladTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
+      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),RotatingAppAd(future:ads),
+      if(issues.isEmpty) Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Er zijn momenteel geen weekbladedities gevonden.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('$site/weekblad/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new),label:const Text('Bekijk weekblad op de website'))]))),
+      ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
+    ]);
+  });
+}
+
+class AccountPage extends StatefulWidget { const AccountPage({super.key}); @override State<AccountPage> createState()=>_AccountPageState(); }
+class _AccountPageState extends State<AccountPage>{
+ String? userName; bool busy=false; bool advertiser=false; Map<String,dynamic> userInfo={};
+ @override void initState(){super.initState();restore();}
+ Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});}}catch(_){}}
+ Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
+ Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;userInfo={};});}
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(18),
+    children: [
+      Text(appConfig.accountTitle, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: navy)),
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('RVAZ-account', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: navy)),
+        const SizedBox(height: 5),
+        Text(userName == null ? 'Hetzelfde account werkt op website en app' : 'Ingelogd als $userName'),
+        const SizedBox(height: 16),
+        if (busy) const LinearProgressIndicator(),
+        if (userName == null) Wrap(spacing: 10, runSpacing: 8, children: [
+          FilledButton.icon(onPressed: busy ? null : () => auth(false), icon: const Icon(Icons.login), label: const Text('Inloggen')),
+          OutlinedButton.icon(onPressed: busy ? null : () => auth(true), icon: const Icon(Icons.person_add), label: const Text('Account aanmaken')),
+        ]) else OutlinedButton.icon(onPressed: logout, icon: const Icon(Icons.logout), label: const Text('Uitloggen')),
+      ]))),
+      const SizedBox(height: 14),
+      Card(child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.home_work_outlined,color:navy)),title:const Text('Mijn Buurt',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Afval, meldingen en informatie voor jouw buurt'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage())))),
+      Card(child:Column(children:[
+        ListTile(leading:const Icon(Icons.feedback_outlined),title:const Text('Feedback over de app'),subtitle:const Text('Meld een fout of geef een suggestie'),trailing:const Icon(Icons.chevron_right),onTap:()=>sendPageFeedback(context,'Algemene app-feedback')),
+        const Divider(height:1),
+        ListTile(leading:const Icon(Icons.campaign_outlined),title:const Text('Tip de redactie'),subtitle:Text(userName==null?'Log in om een tip te versturen':'Stuur nieuws rechtstreeks naar de redactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>userName==null?auth(false):Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),
+      ])),
+      const SizedBox(height:14),
+      if (userName != null) Card(child: Column(children: [
+        ListTile(leading: const Icon(Icons.person_outline), title: const Text('Mijn profiel'), subtitle: Text(userInfo['email']?.toString()??''), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(user:userInfo)))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.notifications_outlined), title: const Text('Meldingen'), subtitle: const Text('Kies welke pushmeldingen je ontvangt'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPreferencesPage()))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.bookmark_outline), title: const Text('Opgeslagen artikelen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedPage()))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.article_outlined), title: const Text('Mijn bijdragen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionsPage()))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Weekblad'), subtitle: const Text('Lees de nieuwste editie'), trailing: const Icon(Icons.chevron_right), onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Weekblad'),backgroundColor:Colors.white,foregroundColor:navy),body:const WeekbladPage())))),
+        const Divider(height:1),
+        ListTile(leading: const Icon(Icons.help_outline), title: const Text('Contact & hulp'), trailing: const Icon(Icons.open_in_new), onTap:()=>launchUrl(Uri.parse('$site/contact/'),mode:LaunchMode.externalApplication)),
+        if (advertiser) ...[
+          const Divider(height:1),
+          ListTile(leading: const Icon(Icons.campaign), title: const Text('Mijn advertenties'), subtitle: const Text('Campagnes, bereik en klikken'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyAdsPage()))),
+          const Divider(height:1),
+          ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Advertentiefacturen'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoicesPage()))),
+        ],
+      ])),    ],
+  );
+}
+
+class MyNeighborhoodPage extends StatefulWidget {
+  const MyNeighborhoodPage({super.key});
+  @override State<MyNeighborhoodPage> createState()=>_MyNeighborhoodPageState();
+}
+class _MyNeighborhoodPageState extends State<MyNeighborhoodPage> {
+  String place='',street='';
+  @override void initState(){super.initState();_loadPlace();}
+  Future<void> _loadPlace()async{
+    const st=FlutterSecureStorage();
+    final p=(await st.read(key:'rvaz_neighborhood_place')??'').trim();
+    final savedStreet=(await st.read(key:'rvaz_neighborhood_street')??'').trim();
+    final pushStreet=(await st.read(key:'rvaz_p2000_street_name')??'').trim();
+    if(mounted)setState((){place=p;street=savedStreet.isNotEmpty?savedStreet:pushStreet;});
+  }
+  Future<void> _openWaste()async{
+    await Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));
+    await _loadPlace();
+  }
+  Future<Map<String,String>> _streetLive()async{
+    if(place.isEmpty)return const {'waste':'Stel eerst je adres in','works':'Adres nodig voor werkzaamheden','traffic':'Adres nodig voor verkeer','p2000':'Adres nodig voor 112-meldingen','agenda':'Adres nodig voor activiteiten'};
+    const st=FlutterSecureStorage();final bag=(await st.read(key:'rvaz_waste_bagid')??'').trim(),pc=(await st.read(key:'rvaz_waste_postcode')??'').trim(),nr=(await st.read(key:'rvaz_waste_house')??'').trim(),addition=(await st.read(key:'rvaz_waste_addition')??'').trim();
+    LatLng? home;try{final r=await http.get(Uri.parse('https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${Uri.encodeQueryComponent('$pc $nr$addition')}&fq=type:adres&rows=1')).timeout(const Duration(seconds:8));final d=jsonDecode(r.body),docs=d is Map&&d['response'] is Map?(d['response']['docs'] as List? ?? const []):const[];if(docs.isNotEmpty){final m=RegExp(r'POINT\\(([-0-9.]+)\\s+([-0-9.]+)\\)').firstMatch('${docs.first['centroide_ll']??''}');if(m!=null){final lon=double.tryParse(m.group(1)??''),lat=double.tryParse(m.group(2)??'');if(lat!=null&&lon!=null)home=LatLng(lat,lon);}}}catch(_){}
+    String waste='Afvalkalender niet beschikbaar';if(bag.isNotEmpty)try{final now=DateTime.now(),today=DateTime(now.year,now.month,now.day);Map? best;DateTime? bd;for(final md in [DateTime(now.year,now.month,1),DateTime(now.year,now.month+1,1)]){final r=await http.get(Uri.parse('https://reinis.nl/rest/waste-calendar/dates?bagId=${Uri.encodeQueryComponent(bag)}&month=${md.month}&year=${md.year}')).timeout(const Duration(seconds:8));if(r.statusCode==200){final x=jsonDecode(r.body);if(x is List)for(final e in x){if(e is Map){final d=DateTime.tryParse('${e['ophaaldatum']??''}');if(d!=null&&!d.isBefore(today)&&(bd==null||d.isBefore(bd))){best=e;bd=d;}}}}}if(best!=null&&bd!=null){const names=<int,String>{2:'GFT+e',3:'PMD',4:'Oud papier en karton',25:'Restafval'};final id=int.tryParse('${best['afvalstroom_id']??best['afvalstroomId']??best['id']??''}'),name=names[id]??'Afval',diff=DateTime(bd.year,bd.month,bd.day).difference(today).inDays;waste=diff==0?'Vandaag: $name':diff==1?'Morgen: $name':'Over $diff dagen: $name';}}catch(_){}
+    List<dynamic> traffic=<dynamic>[];try{traffic=await loadNdwTraffic();}catch(_){}final nearby=<MapEntry<dynamic,double>>[],distance=const Distance();if(home!=null)for(final e in traffic){if(e is Map){final lat=(e['latitude'] as num?)?.toDouble(),lon=(e['longitude'] as num?)?.toDouble();if(lat!=null&&lon!=null){final km=distance.as(LengthUnit.Kilometer,home,LatLng(lat,lon));if(km<=8)nearby.add(MapEntry(e,km));}}}nearby.sort((a,b)=>a.value.compareTo(b.value));final works=nearby.where((x){final h='${x.key['title']??''} ${x.key['description']??''} ${x.key['message']??''}'.toLowerCase();return h.contains('work')||h.contains('maintenance')||h.contains('construction')||h.contains('afsluit');}).toList();final placeTraffic=traffic.where((e)=>'${e is Map?e['place']??'':''} ${e is Map?e['title']??'':''}'.toLowerCase().contains(place.toLowerCase())).length,count=home!=null?nearby.length:placeTraffic;final trafficText=count==0?'Geen actuele verkeersmeldingen in de buurt':'$count actuele verkeersmelding${count==1?'':'en'} in de buurt';final worksText=works.isEmpty?(home==null?'Geen actuele werkzaamheden gevonden in $place':'Geen actuele werkzaamheden in de buurt'):'Werkzaamheden op ${works.first.value<1?'${(works.first.value*1000).round()} meter':'${works.first.value.toStringAsFixed(1).replaceAll('.',',')} km'}';
+    final region=Uri.encodeQueryComponent('Rotterdam-Rijnmond');List<dynamic> incidents=<dynamic>[];try{incidents=await RvazApi.firstList(['p2000?region=$region&per_page=250','112?region=$region&per_page=250','meldingen?region=$region&per_page=250'],keys:const ['meldingen','p2000','112','items','data']);}catch(_){}final needle=(street.isEmpty?place:street).toLowerCase(),ic=incidents.where((e)=>'$e'.toLowerCase().contains(needle)).length;final incidentText=ic==0?'Geen recente 112-meldingen ${street.isEmpty?'in $place':'in jouw straat'}':'$ic recente 112-melding${ic==1?'':'en'} ${street.isEmpty?'in $place':'in jouw straat'}';
+    final events=<dynamic>[];for(final path in ['agenda?per_page=250','events?per_page=250']){try{final p=path.split('?'),d=await RvazApi.get(p.first,query:Uri.splitQueryString(p[1]));events.addAll(RvazApi.list(d,const ['events','agenda']));}catch(_){}}final now=DateTime.now(),today=DateTime(now.year,now.month,now.day);var ec=0;for(final e in events){if(e is! Map)continue;String v(List<String> ks){for(final k in ks){if(e[k]!=null&&'${e[k]}'.trim().isNotEmpty)return'${e[k]}';}return'';}final d=DateTime.tryParse(v(['start_date','event_start_date','event_date','start','date','datum','datetime'])),p=v(['place','city','town','plaats','event_place']).toLowerCase();if(d!=null&&DateTime(d.year,d.month,d.day)==today&&d.hour>=17&&p.contains(place.toLowerCase()))ec++;}
+    return {'waste':waste,'works':worksText,'traffic':trafficText,'p2000':incidentText,'agenda':ec==0?'Vanavond: geen activiteit gevonden in $place':'Vanavond: $ec activiteit${ec==1?'':'en'} in $place'};
+  }
+  @override Widget build(BuildContext context)=>Scaffold(
+    backgroundColor:const Color(0xFFF7F9FB),
+    appBar:AppBar(title:const Text('Mijn Buurt')),
+    body:ListView(padding:const EdgeInsets.all(16),children:[
+      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:Row(children:[
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Alles dichtbij, op één plek',style:TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
+          const SizedBox(height:6),
+          Text(place.isEmpty?'Praktische informatie en meldingen die voor jouw eigen buurt belangrijk zijn.':'Jouw buurt: $place',style:const TextStyle(color:Colors.white,height:1.35))
+        ])),
+        const SizedBox(width:12),const Icon(Icons.home_work_outlined,color:Colors.white,size:44)
+      ])),
+      const SizedBox(height:16),
+      const Text('Rond mijn straat',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
+      const SizedBox(height:8),
+      Card(child:FutureBuilder<Map<String,String>>(future:_streetLive(),builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Padding(padding:EdgeInsets.all(18),child:Center(child:CircularProgressIndicator()));final d=s.data??const <String,String>{};Widget row(IconData icon,String key)=>Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),child:Row(children:[Icon(icon,size:20,color:navy),const SizedBox(width:10),Expanded(child:Text(d[key]??'Niet beschikbaar'))]));return Column(children:[
+        ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.near_me_outlined,color:navy)),title:Text(street.isEmpty?'Rond jouw straat':street,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(street.isEmpty?(place.isEmpty?'Stel je adres in via de afvalkalender':'Actuele informatie voor $place'):'Actuele informatie rond $street${place.isEmpty?'':' · $place'}')),
+        const Divider(height:1),row(Icons.recycling,'waste'),row(Icons.construction,'works'),row(Icons.traffic,'traffic'),row(Icons.warning_amber_rounded,'p2000'),row(Icons.event_outlined,'agenda'),
+      ]);})),
+      const SizedBox(height:16),
+      const Text('Voor jouw buurt',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.recycling,color:Color(0xFF16834B))),
+        title:const Text('Afvalkalender',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:Text(place.isEmpty?'Stel je adres in en bekijk wanneer Reinis jouw afval ophaalt':'Afvalkalender voor $place'),
+        trailing:const Icon(Icons.chevron_right,color:navy),onTap:_openWaste,
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFFFF2E8),child:Icon(Icons.notifications_active_outlined,color:Colors.deepOrange)),
+        title:const Text('Buurtmeldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:const Text('Stel P2000 en andere lokale meldingen in'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())),
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.location_on_outlined,color:navy)),
+        title:Text(place.isEmpty?'Nieuws uit jouw plaats':'Nieuws uit $place',style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:Text(place.isEmpty?'Kies een plaats voor lokaal nieuws':'Bekijk nieuws uit jouw eigen plaats'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place.isEmpty?const PlacesPage():PlaceNewsPage(place:place))),
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFFFF4E5),child:Icon(Icons.traffic,color:Colors.deepOrange)),
+        title:const Text('Verkeer in de regio',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:Text(place.isEmpty?'Bekijk actuele verkeersmeldingen':'Start met $place als selectie'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place))),
+      )),
+      const SizedBox(height:8),
+      Card(child:ListTile(
+        leading:const CircleAvatar(backgroundColor:Color(0xFFFFECEC),child:Icon(Icons.warning_amber_rounded,color:Colors.red)),
+        title:const Text('Actuele incidenten',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
+        subtitle:Text(place.isEmpty?'Bekijk de actuele 112- en P2000-meldingen':'Start met meldingen voor $place'),
+        trailing:const Icon(Icons.chevron_right,color:navy),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:false,initialPlace:place))),
+      )),
+      const SizedBox(height:14),
+      const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('Je buurt wordt bepaald via het adres dat je bij de afvalkalender instelt. Deze voorkeur blijft op je toestel.',style:TextStyle(fontSize:12,color:Colors.black54,height:1.4)))
+    ])
+  );
+}
+
+class WasteCalendarPage extends StatefulWidget {
+  const WasteCalendarPage({super.key});
+  @override State<WasteCalendarPage> createState()=>_WasteCalendarPageState();
+}
+class _WasteCalendarPageState extends State<WasteCalendarPage> {
+  final postcode=TextEditingController(), house=TextEditingController(), addition=TextEditingController();
+  bool busy=false,wastePush=false; String error='', address=''; List<Map<String,dynamic>> dates=[];
+  static const names=<int,String>{2:'GFT+e',3:'PMD',4:'Oud papier en karton',25:'Restafval'};
+  static const icons=<int,IconData>{2:Icons.eco_outlined,3:Icons.recycling,4:Icons.description_outlined,25:Icons.delete_outline};
+  @override void initState(){super.initState();_restore();}
+  @override void dispose(){postcode.dispose();house.dispose();addition.dispose();super.dispose();}
+  Future<void> _restore() async {
+    const st=FlutterSecureStorage();
+    postcode.text=await st.read(key:'rvaz_waste_postcode')??'';
+    house.text=await st.read(key:'rvaz_waste_house')??'';
+    addition.text=await st.read(key:'rvaz_waste_addition')??'';
+    wastePush=(await st.read(key:'rvaz_waste_push'))=='1';
+    if(postcode.text.isNotEmpty&&house.text.isNotEmpty)await load();
+  }
+  Future<void> load() async {
+    final pc=postcode.text.replaceAll(' ','').toUpperCase(), nr=house.text.trim(), add=addition.text.trim();
+    if(pc.isEmpty||nr.isEmpty){setState(()=>error='Vul je postcode en huisnummer in.');return;}
+    setState((){busy=true;error='';});
+    try{
+      final suffix='$nr$add';
+      final ar=await http.get(Uri.parse('https://reinis.nl/adressen/${Uri.encodeComponent('$pc:$suffix')}'),headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:12));
+      if(ar.statusCode!=200)throw Exception('Adres niet gevonden');
+      dynamic ad=jsonDecode(ar.body); if(ad is List&&ad.isNotEmpty)ad=ad.first;
+      if(ad is! Map)throw Exception('Adres niet gevonden');
+      final bag=(ad['bagid']??ad['bagId']??'').toString();
+      if(bag.isEmpty)throw Exception('Geen afvalkalender voor dit adres');
+      final now=DateTime.now();
+      final dr=await http.get(Uri.parse('https://reinis.nl/rest/waste-calendar/dates?bagId=${Uri.encodeQueryComponent(bag)}&month=${now.month}&year=${now.year}'),headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:12));
+      if(dr.statusCode!=200)throw Exception('Afvalkalender niet beschikbaar');
+      final raw=jsonDecode(dr.body);
+      final list=raw is List?raw:<dynamic>[];
+      final today=DateTime(now.year,now.month,now.day);
+      final upcoming=<Map<String,dynamic>>[];
+      for(final x in list){
+        if(x is! Map)continue;
+        final d=DateTime.tryParse((x['ophaaldatum']??'').toString());
+        if(d==null||d.isBefore(today))continue;
+        upcoming.add(Map<String,dynamic>.from(x));
+      }
+      upcoming.sort((a,b)=>(a['ophaaldatum']??'').toString().compareTo((b['ophaaldatum']??'').toString()));
+      const st=FlutterSecureStorage();
+      await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());await st.write(key:'rvaz_neighborhood_street',value:(ad['straat']??'').toString().trim());
+      if(wastePush)await registerDeviceToken();
+      if(mounted)setState((){address=(ad['description']??[ad['straat'],ad['huisnummer'],ad['woonplaats']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' ')).toString();dates=upcoming;});
+    }catch(_){if(mounted)setState(()=>error='Dit adres of de afvalkalender kon niet worden geladen. Controleer je gegevens en probeer opnieuw.');}
+    if(mounted)setState(()=>busy=false);
+  }
+  Future<void> setWastePush(bool value) async {
+    if(value&&address.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul eerst je adres in en laad je afvalkalender.')));return;}
+    final permission=await FirebaseMessaging.instance.requestPermission(alert:true,badge:true,sound:true);
+    if(value&&permission.authorizationStatus==AuthorizationStatus.denied){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sta meldingen toe om afvalherinneringen te ontvangen.')));return;}
+    await const FlutterSecureStorage().write(key:'rvaz_waste_push',value:value?'1':'0');
+    if(value){try{await FirebaseMessaging.instance.subscribeToTopic('afval');}catch(_){}}else{try{await FirebaseMessaging.instance.unsubscribeFromTopic('afval');}catch(_){}}
+    if(mounted)setState(()=>wastePush=value);
+    await registerDeviceToken();
+  }
+  String dateLabel(String raw){
+    final d=DateTime.tryParse(raw);if(d==null)return raw;
+    const days=['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
+    const months=['','januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+    final now=DateTime.now(),today=DateTime(now.year,now.month,now.day),target=DateTime(d.year,d.month,d.day);
+    final diff=target.difference(today).inDays;
+    if(diff==0)return'Vandaag';if(diff==1)return'Morgen';
+    return '${days[d.weekday-1]} ${d.day} ${months[d.month]}';
+  }
+  @override Widget build(BuildContext context){
+    final shown=dates.take(12).toList();
+    return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn afval')),body:ListView(padding:const EdgeInsets.all(16),children:[
+      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF0C6B4E),Color(0xFF15A66F)]),borderRadius:BorderRadius.circular(18)),child:const Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Wanneer zet jij de bak buiten?',style:TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),SizedBox(height:6),Text('Vul één keer je adres in. RVAZ toont daarna jouw eerstvolgende ophaalmomenten.',style:TextStyle(color:Colors.white,height:1.35))])),SizedBox(width:12),Icon(Icons.recycling,color:Colors.white,size:46)])),
+      const SizedBox(height:14),
+      Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
+        Row(children:[Expanded(flex:2,child:TextField(controller:postcode,textCapitalization:TextCapitalization.characters,decoration:const InputDecoration(labelText:'Postcode',hintText:'3235SJ'))),const SizedBox(width:8),Expanded(child:TextField(controller:house,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Nr.'))),const SizedBox(width:8),Expanded(child:TextField(controller:addition,decoration:const InputDecoration(labelText:'Toev.')))]),
+        const SizedBox(height:10),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:busy?null:load,icon:const Icon(Icons.search),label:Text(busy?'Ophalen…':'Toon mijn afvalkalender')))
+      ]))),
+      if(busy)const Padding(padding:EdgeInsets.only(top:12),child:LinearProgressIndicator()),
+      if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:Card(child:ListTile(leading:const Icon(Icons.info_outline,color:Colors.orange),title:Text(error)))),
+      if(address.isNotEmpty)...[const SizedBox(height:16),Text(address,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800,color:navy)),const SizedBox(height:8)],
+      if(address.isNotEmpty)Card(child:SwitchListTile(value:wastePush,onChanged:setWastePush,secondary:const Icon(Icons.notifications_active_outlined,color:Color(0xFF16834B)),title:const Text('Afvalherinnering',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Ontvang een pushmelding de avond vóór de ophaaldag'))),
+      if(!busy&&address.isNotEmpty&&shown.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Er zijn geen komende ophaalmomenten gevonden.'))),
+      ...shown.map((e){final id=int.tryParse('${e['afvalstroom_id']??''}')??0;final name=names[id]??'Afval';final raw=(e['ophaaldatum']??'').toString();return Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(leading:CircleAvatar(backgroundColor:const Color(0xFFE8F7EE),child:Icon(icons[id]??Icons.delete_outline,color:const Color(0xFF16834B))),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(dateLabel(raw)),trailing:dateLabel(raw)=='Morgen'?const Chip(label:Text('MORGEN',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900))):null));}),
+      if(address.isNotEmpty)const Padding(padding:EdgeInsets.fromLTRB(4,8,4,20),child:Text('Afvalgegevens worden opgehaald bij Reinis. Je adresvoorkeur wordt alleen op dit toestel bewaard.',style:TextStyle(fontSize:11,color:Colors.black54)))
+    ]));
+  }
+}
+
+class SearchPage extends StatefulWidget { const SearchPage({super.key}); @override State<SearchPage> createState()=>_SearchPageState(); }
+class _SearchPageState extends State<SearchPage>{final c=TextEditingController();List<dynamic> results=[];bool busy=false;Future<void> go()async{final q=c.text.trim();if(q.isEmpty)return;setState(()=>busy=true);try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(q)}&per_page=30&_embed=1'));if(r.statusCode==200)results=List<dynamic>.from(jsonDecode(r.body));}catch(_){}if(mounted)setState(()=>busy=false);}@override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const LogoMark(),backgroundColor:Colors.white,foregroundColor:navy),body:Column(children:[Padding(padding:const EdgeInsets.all(16),child:TextField(controller:c,textInputAction:TextInputAction.search,onSubmitted:(_)=>go(),decoration:InputDecoration(hintText:'Zoek nieuws op Voorne',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:go,icon:const Icon(Icons.arrow_forward))))),if(busy)const LinearProgressIndicator(),Expanded(child:ListView.builder(itemCount:results.length,itemBuilder:(context,i){final p=results[i];final title=(p['title']?['rendered']??'').toString().replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–').replaceAll('&amp;','&');return ListTile(leading:postImage(p).isEmpty?const Icon(Icons.article_outlined):Image.network(postImage(p),width:72,height:54,fit:BoxFit.cover),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(formatPostDate(p)),onTap:()=>openArticle(context,p));}))]));}
+
+
+// ignore: unused_element
+class NativeInfoPage extends StatelessWidget { final String title,text; final IconData icon; const NativeInfoPage({super.key,required this.title,required this.icon,required this.text}); @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(title),backgroundColor:Colors.white,foregroundColor:navy),body:Padding(padding:const EdgeInsets.all(22),child:Card(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,size:42,color:cyan),const SizedBox(height:16),Text(title,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),Text(text,style:const TextStyle(fontSize:16,height:1.5))]))))); }
+
+
+
+Future<Map<String,String>> authHeaders() async { final t=await const FlutterSecureStorage().read(key:'rvaz_token'); return {'Accept':'application/json',if(t!=null&&t.isNotEmpty)'Authorization':'Bearer $t'}; }
+class SavedPage extends StatefulWidget{const SavedPage({super.key});@override State<SavedPage> createState()=>_SavedPageState();}class _SavedPageState extends State<SavedPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/saved'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}Future<void>open(dynamic e)async{final id=int.tryParse('${e['post_id']??e['id']??''}');if(id==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts/$id?_embed=1'));if(r.statusCode==200&&mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:jsonDecode(r.body))));}catch(_){}}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Opgeslagen artikelen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Nog geen opgeslagen artikelen.')):ListView(children:x.map((e){final t=e['title'];final title=t is Map?t['rendered']:'${t??'Artikel'}';return ListTile(leading:const Icon(Icons.bookmark,color:navy),title:Text('$title'),trailing:const Icon(Icons.chevron_right),onTap:()=>open(e));}).toList());}));}
+class ContributionsPage extends StatefulWidget{const ContributionsPage({super.key});@override State<ContributionsPage> createState()=>_ContributionsPageState();}class _ContributionsPageState extends State<ContributionsPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/contributions'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn bijdragen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Je hebt nog geen bijdragen.')):ListView(children:x.map((e)=>ListTile(title:Text('${e['title']}'),subtitle:Text('${e['status']} · ${e['type']}'))).toList());}));}
+bool _businessIsPro(dynamic e){
+ if(e is! Map)return false;
+ final p=e['pro'];
+ if(p==true||p==1)return true;
+ final ps=(p??'').toString().trim().toLowerCase();
+ if(ps=='true'||ps=='1'||ps=='yes'||ps=='pro')return true;
+ return (e['plan']??'').toString().trim().toLowerCase()=='pro';
+}
+Map<String,dynamic> _normalizeBusiness(dynamic e){
+ if(e is! Map)return <String,dynamic>{};
+ final m=Map<String,dynamic>.from(e);
+ if(m['title'] is Map)m['title']=m['title']['rendered']??'';
+ if(m['content'] is Map)m['content']=m['content']['rendered']??'';
+ if((m['image']??'').toString().isEmpty){
+  final emb=m['_embedded'];
+  if(emb is Map&&emb['wp:featuredmedia'] is List&&(emb['wp:featuredmedia'] as List).isNotEmpty)m['image']=emb['wp:featuredmedia'][0]['source_url']??'';
+ }
+ return m;
+}
+Future<List<dynamic>> loadBusinesses()async{
+ for(final endpoint in [
+  '$site/wp-json/rvaz-app/v1/businesses?per_page=100',
+  '$site/wp-json/rvaz-business/v1/businesses?per_page=100',
+  '$site/wp-json/wp/v2/rvaz_bedrijf?per_page=100&_embed=1'
+ ]){
+  try{
+   final r=await http.get(Uri.parse(endpoint)).timeout(const Duration(seconds:10));
+   if(r.statusCode==200){
+    final d=jsonDecode(r.body);
+    final dynamic raw=d is List?d:(d is Map?(d['items']??d['businesses']??d['data']):null);
+    if(raw is List&&raw.isNotEmpty)return raw.map(_normalizeBusiness).toList();
+   }
+  }catch(_){}
+ }
+ return <dynamic>[];
+}
+class BusinessesPage extends StatefulWidget{const BusinessesPage({super.key});@override State<BusinessesPage> createState()=>_BusinessesPageState();}
+class _BusinessesPageState extends State<BusinessesPage>{
+ late Future<List<dynamic>> future; String query='',place='',category='';
+ @override void initState(){super.initState();future=load();}
+ Future<List<dynamic>> load()=>loadBusinesses();
+ String v(dynamic e,String k)=>e is Map?e[k]?.toString()??'':'';
+ List<String> vals(dynamic e,String plural,String single){final x=e is Map?e[plural]:null;if(x is List)return x.map((z)=>z.toString()).where((z)=>z.isNotEmpty).toList();final one=v(e,single);return one.isEmpty?[]:[one];}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Bedrijvengids'),backgroundColor:Colors.white,foregroundColor:navy,actions:const [PageFeedbackButton(page:'Bedrijvengids')]),body:FutureBuilder<List<dynamic>>(future:future,builder:(c,s){
+   if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];if(all.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Er zijn nog geen bedrijven via de app-API beschikbaar.')));
+   final places=all.expand((e)=>vals(e,'places','place')).toSet().toList()..sort();final cats=all.expand((e)=>vals(e,'categories','category')).toSet().toList()..sort();final q=query.trim().toLowerCase();final x=all.where((e){final matchQ=q.isEmpty||[v(e,'title'),v(e,'address'),...vals(e,'places','place'),...vals(e,'categories','category')].join(' ').toLowerCase().contains(q);final matchP=place.isEmpty||vals(e,'places','place').contains(place);final matchC=category.isEmpty||vals(e,'categories','category').contains(category);return matchQ&&matchP&&matchC;}).toList()..sort((a,b){final ap=_businessIsPro(a),bp=_businessIsPro(b);if(ap!=bp)return ap?-1:1;return v(a,'title').toLowerCase().compareTo(v(b,'title').toLowerCase());});
+   return Column(children:[Padding(padding:const EdgeInsets.fromLTRB(16,14,16,8),child:Column(children:[TextField(onChanged:(z)=>setState(()=>query=z),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Zoek bedrijf…',border:OutlineInputBorder())),const SizedBox(height:8),Row(children:[
+     Expanded(child:DropdownButtonFormField<String>(initialValue:place.isEmpty?null:place,isExpanded:true,decoration:const InputDecoration(labelText:'Plaats',border:OutlineInputBorder()),items:[const DropdownMenuItem(value:'',child:Text('Alle plaatsen')),...places.map((z)=>DropdownMenuItem(value:z,child:Text(z,overflow:TextOverflow.ellipsis)))],onChanged:(z)=>setState(()=>place=z??''))),const SizedBox(width:8),
+     Expanded(child:DropdownButtonFormField<String>(initialValue:category.isEmpty?null:category,isExpanded:true,decoration:const InputDecoration(labelText:'Categorie',border:OutlineInputBorder()),items:[const DropdownMenuItem(value:'',child:Text('Alle categorieën')),...cats.map((z)=>DropdownMenuItem(value:z,child:Text(z,overflow:TextOverflow.ellipsis)))],onChanged:(z)=>setState(()=>category=z??'')))
+   ])])),Expanded(child:x.isEmpty?const Center(child:Text('Geen bedrijven gevonden met deze filters.')):ListView.separated(padding:const EdgeInsets.fromLTRB(16,8,16,16),itemCount:x.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(c,i){final e=x[i],img=v(e,'image');return Card(child:ListTile(contentPadding:const EdgeInsets.all(10),leading:img.isEmpty?const CircleAvatar(child:Icon(Icons.storefront)):ClipRRect(borderRadius:BorderRadius.circular(8),child:Image.network(img,width:64,height:64,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.storefront))),title:Text(v(e,'title'),style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text([if(_businessIsPro(e))'PRO',v(e,'place'),v(e,'address')].where((z)=>z.isNotEmpty).join(' · ')),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>BusinessDetailPage(item:e)))));}))]
+   );
+ }));
+}
+class _BusinessLinkIcon extends StatelessWidget{
+ final IconData? icon;final String? text;final Color color;final String tooltip,url;
+ const _BusinessLinkIcon({this.icon,this.text,required this.color,required this.tooltip,required this.url});
+ @override Widget build(BuildContext context)=>Tooltip(message:tooltip,child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:Container(width:44,height:44,decoration:BoxDecoration(color:Colors.white,border:Border.all(color:color),shape:BoxShape.circle),alignment:Alignment.center,child:icon!=null?Icon(icon,color:color,size:28):Text(text??'',style:TextStyle(color:color,fontSize:20,fontWeight:FontWeight.w900)))));
+}
+class BusinessDetailPage extends StatelessWidget{
+ final dynamic item;const BusinessDetailPage({super.key,required this.item});
+ String v(String k)=>item is Map?item[k]?.toString()??'':'';
+ dynamic rawValue(List<String> keys){if(item is! Map)return null;for(final k in keys){final x=item[k];if(x!=null&&x.toString().trim().isNotEmpty)return x;}return null;}
+ Map<dynamic,dynamic> hoursMap(){
+  dynamic raw=rawValue(['hours','opening_hours','openingHours','openingstijden']);
+  if(raw is String&&raw.trim().isNotEmpty){try{raw=jsonDecode(raw);}catch(_){}}
+  if(raw is Map){
+   for(final k in ['hours','opening_hours','openingHours','days','week']){final nested=raw[k];if(nested is Map)raw=nested;}
+   return raw;
+  }
+  if(raw is List){
+   final out=<dynamic,dynamic>{};
+   for(final row in raw){if(row is Map){final day=(row['day']??row['name']??row['weekday']??'').toString().toLowerCase();if(day.isNotEmpty)out[day]=row;}}
+   return out;
+  }
+  return <dynamic,dynamic>{};
+ }
+ @override Widget build(BuildContext context){
+  final img=v('image'),web=v('website'),phone=v('phone'),content=v('content'),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
+  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
+  final isPro=_businessIsPro(item);
+  final hours=hoursMap();
+  const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};
+  final hourRows=<Widget>[];
+  days.forEach((key,label){
+   final aliases=<String,List<String>>{'monday':['maandag','mon'],'tuesday':['dinsdag','tue'],'wednesday':['woensdag','wed'],'thursday':['donderdag','thu'],'friday':['vrijdag','fri'],'saturday':['zaterdag','sat'],'sunday':['zondag','sun']};
+   dynamic d=hours[key]??hours[label.toLowerCase()]??hours[label];
+   for(final a in aliases[key]??const <String>[]){d??=hours[a];}
+   var text='Niet opgegeven';
+   if(d is Map){
+    final closed=d['closed']==1||d['closed']==true||d['closed']=='1';
+    final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();
+    if(closed){text='Gesloten';}else if(open.isNotEmpty||close.isNotEmpty){text=[open,close].where((z)=>z.isNotEmpty).join(' – ');}
+   }else if(d!=null&&d.toString().trim().isNotEmpty){text=d.toString().trim();}
+   hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));
+  });
+  return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(v('title')),actions:[PageFeedbackButton(page:'Bedrijvengids',detail:v('title'))]),body:ListView(children:[
+   if(img.isNotEmpty)Image.network(img,height:220,width:double.infinity,fit:BoxFit.cover),
+   Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[Expanded(child:Text(v('title'),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy))),if(isPro)const Padding(padding:EdgeInsets.only(left:8),child:Text('PRO',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))) ]),
+    if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),
+    if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
+    if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
+    if(isPro&&(web.isNotEmpty||facebook.isNotEmpty||instagram.isNotEmpty||linkedin.isNotEmpty))Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Wrap(spacing:14,runSpacing:10,children:[
+      if(web.isNotEmpty)_BusinessLinkIcon(icon:Icons.language,color:const Color(0xFF0A66C2),tooltip:'Website',url:web),
+      if(facebook.isNotEmpty)_BusinessLinkIcon(icon:Icons.facebook,color:const Color(0xFF1877F2),tooltip:'Facebook',url:facebook),
+      if(instagram.isNotEmpty)_BusinessLinkIcon(icon:Icons.camera_alt_outlined,color:const Color(0xFFE4405F),tooltip:'Instagram',url:instagram),
+      if(linkedin.isNotEmpty)_BusinessLinkIcon(text:'in',color:const Color(0xFF0A66C2),tooltip:'LinkedIn',url:linkedin),
+    ])),
+    if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4,bottom:8),child:Text(socials)),
+    const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows,
+    if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],
+    if(isPro&&additional.isNotEmpty)...[const SizedBox(height:18),const Text('Aanvullende informatie',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),Html(data:cleanArticleHtml(additional))],
+    
+   ]))
+  ]));
+ }
+}
+Future<Map<String,dynamic>> _editorialCapabilities()async{try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/editorial/capabilities'),headers:await authHeaders());if(r.statusCode==200)return Map<String,dynamic>.from(jsonDecode(r.body));}catch(_){}return{};}
+
+class TipPage extends StatefulWidget{final String? p2000Reference;const TipPage({super.key,this.p2000Reference});@override State<TipPage> createState()=>_TipPageState();}
+class _TipPageState extends State<TipPage>{final subject=TextEditingController(),place=TextEditingController(),body=TextEditingController(),name=TextEditingController(),email=TextEditingController();final photos=<XFile>[];XFile? video;bool busy=false,logged=false,rights=false;@override void initState(){super.initState();loadUser();}Future<void>loadUser()async{try{final h=await authHeaders();if(h.containsKey('Authorization')){final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:h);if(r.statusCode==200){final u=Map<String,dynamic>.from(jsonDecode(r.body)['user']??{});name.text=u['name']?.toString()??'';email.text=u['email']?.toString()??'';if(mounted)setState(()=>logged=true);}}}catch(_){}}
+Future<void>pick()async{if(photos.length>=5)return;final x=await ImagePicker().pickMultiImage(imageQuality:88);if(!mounted)return;setState((){for(final f in x){if(photos.length<5){photos.add(f);}}});}
+Future<void>camera()async{if(photos.length>=5)return;final x=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:88);if(x!=null&&mounted)setState(()=>photos.add(x));}
+Future<void>pickVideo()async{final x=await ImagePicker().pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:2));if(x!=null&&mounted)setState(()=>video=x);}
+Future<void>send()async{final s=subject.text.trim(),b=body.text.trim();if(s.isEmpty||b.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul een onderwerp in en omschrijf wat er gaande is.')));return;}if(!logged&&(name.text.trim().isEmpty||email.text.trim().isEmpty)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul je naam en e-mailadres in.')));return;}if((photos.isNotEmpty||video!=null)&&!rights){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bevestig eerst dat je de rechten op de foto’s bezit.')));return;}setState(()=>busy=true);try{final req=http.MultipartRequest('POST',Uri.parse('$site/wp-json/rvaz-app/v1/tip'));req.headers.addAll(await authHeaders());req.fields.addAll({'subject':s,'place':place.text.trim(),'text':b,'name':name.text.trim(),'email':email.text.trim(),'photo_rights':rights?'1':'0','submitted_at':DateTime.now().toIso8601String(),if(widget.p2000Reference!=null&&widget.p2000Reference!.isNotEmpty)'p2000_reference':widget.p2000Reference!});for(var i=0;i<photos.length;i++){req.files.add(await http.MultipartFile.fromPath('photo_$i',photos[i].path));}if(video!=null){req.files.add(await http.MultipartFile.fromPath('video_0',video!.path));}final r=await req.send().timeout(const Duration(seconds:30));if(!mounted)return;setState(()=>busy=false);if(r.statusCode>=200&&r.statusCode<300){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bedankt! Je tip is ontvangen. Je krijgt een bevestiging per e-mail.')));Navigator.pop(context);}else{ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Versturen mislukt (${r.statusCode}). Probeer opnieuw.')));}}catch(_){if(mounted){setState(()=>busy=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding. Je tip is niet verstuurd.')));}}}
+@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Tip de redactie')),body:ListView(padding:const EdgeInsets.all(18),children:[const Text('Iets gezien of gebeurt er iets?',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),const Text('Vertel de redactie wat er gaande is. Voeg eventueel foto’s of een korte video toe van bijvoorbeeld een brand, ongeval of gebeurtenis.'),const SizedBox(height:10),const Row(children:[Icon(Icons.schedule,size:17,color:Colors.black54),SizedBox(width:6),Expanded(child:Text('Datum en tijd worden automatisch met je tip meegestuurd.',style:TextStyle(fontSize:12,color:Colors.black54)))]),const SizedBox(height:16),if(widget.p2000Reference!=null&&widget.p2000Reference!.isNotEmpty)...[Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Deze tip gaat over deze P2000-melding:',style:TextStyle(fontWeight:FontWeight.w800,color:navy)),const SizedBox(height:6),Text(widget.p2000Reference!),const SizedBox(height:6),const Text('Deze melding wordt automatisch met je tip meegestuurd.',style:TextStyle(fontSize:12,color:Colors.black54))]))),const SizedBox(height:12)],if(!logged)...[TextField(controller:name,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:email,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),const SizedBox(height:8)]else const Text('Je naam en e-mailadres worden automatisch uit je RVAZ-account gebruikt.',style:TextStyle(color:Colors.black54)),TextField(controller:subject,decoration:const InputDecoration(labelText:'Onderwerp *')),TextField(controller:place,decoration:const InputDecoration(labelText:'Plaats / locatie')),const SizedBox(height:12),TextField(controller:body,minLines:7,maxLines:14,decoration:const InputDecoration(labelText:'Wat is er gaande / gebeurd? *',border:OutlineInputBorder())),const SizedBox(height:14),Row(children:[Expanded(child:OutlinedButton.icon(onPressed:photos.length>=5?null:pick,icon:const Icon(Icons.photo_library_outlined),label:const Text('Foto’s kiezen'))),const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:photos.length>=5?null:camera,icon:const Icon(Icons.photo_camera_outlined),label:const Text('Foto maken')))]),if(photos.isNotEmpty)...[const SizedBox(height:10),Wrap(spacing:8,runSpacing:8,children:[for(var i=0;i<photos.length;i++)Chip(label:Text('Foto ${i+1}'),onDeleted:()=>setState(()=>photos.removeAt(i)))])],const SizedBox(height:8),Text('${photos.length}/5 foto’s',style:const TextStyle(color:Colors.black54)),const SizedBox(height:8),OutlinedButton.icon(onPressed:video==null?pickVideo:null,icon:const Icon(Icons.videocam_outlined),label:Text(video==null?'Video kiezen (max. 2 min.)':'Video gekozen')),if(video!=null)Align(alignment:Alignment.centerLeft,child:Chip(label:const Text('Video'),onDeleted:()=>setState(()=>video=null))),CheckboxListTile(contentPadding:EdgeInsets.zero,value:rights,onChanged:(photos.isEmpty&&video==null)?null:(v)=>setState(()=>rights=v??false),title:const Text('Ik heb deze foto’s/video zelf gemaakt en bezit de rechten.'),subtitle:const Text('Door het materiaal te versturen geef ik Regio Voorne aan Zee toestemming het redactioneel te gebruiken.')),const SizedBox(height:12),FilledButton.icon(onPressed:busy?null:send,icon:const Icon(Icons.send),label:Text(busy?'Versturen…':'Tip versturen'))]));}
+
+class EditorialSubmitPage extends StatefulWidget{const EditorialSubmitPage({super.key});@override State<EditorialSubmitPage> createState()=>_EditorialSubmitPageState();}
+class _EditorialSubmitPageState extends State<EditorialSubmitPage>{final title=TextEditingController(),content=TextEditingController();List<dynamic> cats=[];int? cat;XFile? featured;final gallery=<XFile>[];bool membersOnly=false,push=false,busy=false;@override void initState(){super.initState();load();}Future<void>load()async{try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/editorial/categories'),headers:await authHeaders());if(r.statusCode==200&&mounted)setState(()=>cats=List<dynamic>.from(jsonDecode(r.body)));}catch(_){}}
+Future<void>pickFeatured()async{final x=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:90);if(x!=null&&mounted)setState(()=>featured=x);}
+Future<void>pickGallery()async{final x=await ImagePicker().pickMultiImage(imageQuality:88);if(mounted)setState((){for(final f in x){if(gallery.length<10){gallery.add(f);}}});}
+Future<void>send()async{if(title.text.trim().isEmpty||content.text.trim().isEmpty||cat==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Titel, categorie en bericht zijn verplicht.')));return;}setState(()=>busy=true);try{final req=http.MultipartRequest('POST',Uri.parse('$site/wp-json/rvaz-app/v1/editorial/submit'));req.headers.addAll(await authHeaders());req.fields.addAll({'title':title.text.trim(),'content':content.text.trim(),'category':cat.toString(),'members_only':membersOnly?'1':'','push':push?'1':''});if(featured!=null){req.files.add(await http.MultipartFile.fromPath('featured',featured!.path));}for(var i=0;i<gallery.length;i++){req.files.add(await http.MultipartFile.fromPath('gallery_$i',gallery[i].path));}final r=await req.send().timeout(const Duration(seconds:45));if(!mounted)return;setState(()=>busy=false);if(r.statusCode>=200&&r.statusCode<300){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Nieuwsbericht is ingediend en wacht op goedkeuring.')));Navigator.pop(context);}else{ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Indienen mislukt (${r.statusCode}).')));}}catch(_){if(mounted){setState(()=>busy=false);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding. Bericht is niet ingediend.')));}}}
+@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws insturen')),body:ListView(padding:const EdgeInsets.all(18),children:[const Text('Voor redactieleden',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900,color:navy)),const Text('Je bericht wordt eerst ter goedkeuring aan de eindredactie aangeboden.'),const SizedBox(height:16),TextField(controller:title,decoration:const InputDecoration(labelText:'Titel *')),const SizedBox(height:10),DropdownButtonFormField<int>(initialValue:cat,decoration:const InputDecoration(labelText:'Categorie *'),items:cats.map<DropdownMenuItem<int>>((e)=>DropdownMenuItem(value:int.tryParse(e['id'].toString()),child:Text(e['name'].toString()))).toList(),onChanged:(v)=>setState(()=>cat=v)),const SizedBox(height:12),TextField(controller:content,minLines:10,maxLines:24,decoration:const InputDecoration(labelText:'Nieuwsbericht *',border:OutlineInputBorder())),const SizedBox(height:14),OutlinedButton.icon(onPressed:pickFeatured,icon:const Icon(Icons.image_outlined),label:Text(featured==null?'Uitgelichte foto kiezen':'Uitgelichte foto gekozen')),OutlinedButton.icon(onPressed:gallery.length>=10?null:pickGallery,icon:const Icon(Icons.collections_outlined),label:Text('Foto’s onder bericht (${gallery.length})')),if(gallery.isNotEmpty)Wrap(spacing:8,children:[for(var i=0;i<gallery.length;i++)Chip(label:Text('Foto ${i+1}'),onDeleted:()=>setState(()=>gallery.removeAt(i)))]),SwitchListTile(contentPadding:EdgeInsets.zero,value:membersOnly,onChanged:(v)=>setState(()=>membersOnly=v),title:const Text('Alleen voor geregistreerde gebruikers'),subtitle:const Text('Ja: volledig bericht alleen na inloggen')),SwitchListTile(contentPadding:EdgeInsets.zero,value:push,onChanged:(v)=>setState(()=>push=v),title:const Text('Push via de app na goedkeuring'),subtitle:const Text('De push wordt pas verstuurd wanneer het bericht is goedgekeurd en gepubliceerd.')),const SizedBox(height:10),FilledButton.icon(onPressed:busy?null:send,icon:const Icon(Icons.upload),label:Text(busy?'Indienen…':'Ter goedkeuring indienen'))]));}
+
+class InAppWebPage extends StatelessWidget{final String title,url;const InAppWebPage({super.key,required this.title,required this.url});@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(title)),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.ads_click,size:44,color:navy),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:10),const Text('Advertentielink. Je verlaat de app alleen wanneer je hieronder kiest om de bestemming te openen.'),const SizedBox(height:16),FilledButton(onPressed:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:const Text('Open bestemming'))]))));}
+
+
+class EventDetailPage extends StatelessWidget{final dynamic event;const EventDetailPage({super.key,required this.event});String v(List<String> keys){for(final k in keys){final x=event[k];if(x!=null&&'$x'.trim().isNotEmpty)return '$x';}return'';}String title(){final x=event['title'];return x is Map?'${x['rendered']??''}':'${x??''}';}String category(){final x=event['category']??event['categories']??event['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}String address(){final full=v(['full_address','address']);if(full.isNotEmpty)return full;final street=v(['street','straat','location']),nr=v(['house_number','number','huisnummer']),zip=v(['postcode','postal_code']),city=v(['place','city','town','plaats']);final first=[street,nr].where((x)=>x.isNotEmpty).join(' '),second=[zip,city].where((x)=>x.isNotEmpty).join(' ');return[first,second].where((x)=>x.isNotEmpty).join('\n');}
+DateTime? eventStart(){final raw=v(['start_date','event_start_date','event_date','start','date','datum','datetime']);return DateTime.tryParse(raw);}
+DateTime? eventEnd(){final raw=v(['end_date','event_end_date','end']);return DateTime.tryParse(raw);}
+Future<void> addToCalendar(BuildContext context)async{final start=eventStart();if(start==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Voor dit evenement ontbreekt een geldige datum.')));return;}final end=eventEnd()??start.add(const Duration(hours:2));final event=Event(title:title(),description:v(['excerpt','description']),location:[v(['venue','location_name']),address()].where((x)=>x.isNotEmpty).join(', '),startDate:start,endDate:end);await Add2Calendar.addEvent2Cal(event);}
+@override Widget build(BuildContext context){final image=v(['image','featured_image']),html=v(['content','description']),venue=v(['venue','location_name']),addr=address(),cat=category();return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(backgroundColor:Colors.white,foregroundColor:navy,title:const LogoMark()),body:ListView(children:[if(image.isNotEmpty)Image.network(image,height:230,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('AGENDA',style:TextStyle(color:cyan,fontWeight:FontWeight.w900)),const SizedBox(height:8),Text(title(),style:const TextStyle(fontSize:28,height:1.1,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:16),if(v(['display_date','start_date','date']).isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.calendar_month,color:navy),title:Text(v(['display_date','start_date','date'])),subtitle:v(['time','start_time']).isNotEmpty?Text(v(['time','start_time'])):null),if(cat.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.category_outlined,color:navy),title:Text(cat)),if(venue.isNotEmpty||addr.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined,color:navy),title:Text(venue.isNotEmpty?venue:addr),subtitle:venue.isNotEmpty&&addr.isNotEmpty?Text(addr):null),if(v(['organizer','organisation','organisatie']).isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.groups_outlined,color:navy),title:Text(v(['organizer','organisation','organisatie']))),if(v(['price','kosten']).isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.euro_outlined,color:navy),title:Text(v(['price','kosten']))),const SizedBox(height:8),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:()=>addToCalendar(context),icon:const Icon(Icons.event_available_outlined),label:const Text('Toevoegen aan agenda'))),const Divider(height:28),if(html.isNotEmpty)Html(data:html,style:{'body':Style(fontSize:FontSize(16),lineHeight:const LineHeight(1.5),margin:Margins.zero)}),if(html.isEmpty&&v(['excerpt']).isNotEmpty)Text(v(['excerpt']),style:const TextStyle(fontSize:16,height:1.5))]))]));}}
+
+
+class MyAdsPage extends StatefulWidget{const MyAdsPage({super.key});@override State<MyAdsPage> createState()=>_MyAdsPageState();}
+class _MyAdsPageState extends State<MyAdsPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/my-ads'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn advertenties'),backgroundColor:Colors.white,foregroundColor:navy),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Je hebt nog geen advertentiecampagnes.')):ListView(padding:const EdgeInsets.all(16),children:x.map((e)=>Card(child:ListTile(title:Text('${e['title']}',style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text('${e['approved']==true?'Actief':'Wacht op goedkeuring'} · ${e['channel']}\nWebsite: ${e['web_impressions']} vertoningen / ${e['web_clicks']} klikken\nApp: ${e['app_impressions']} vertoningen / ${e['app_clicks']} klikken')))).toList());}));}
+class InvoicesPage extends StatefulWidget{const InvoicesPage({super.key});@override State<InvoicesPage> createState()=>_InvoicesPageState();}
+class _InvoicesPageState extends State<InvoicesPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/invoices'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Facturen'),backgroundColor:Colors.white,foregroundColor:navy),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Nog geen facturen.')):ListView(padding:const EdgeInsets.all(16),children:x.map((e)=>Card(child:ListTile(leading:const Icon(Icons.receipt_long,color:navy),title:Text('${e['number']}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${e['date']}'),trailing:Text('€ ${e['total']}',style:const TextStyle(fontWeight:FontWeight.w900,color:navy))))).toList());}));}
+
+class ProfilePage extends StatelessWidget{final Map<String,dynamic> user;const ProfilePage({super.key,required this.user});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn profiel'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[Card(child:Column(children:[ListTile(leading:const Icon(Icons.person),title:Text(user['name']?.toString()??''),subtitle:const Text('Naam')),const Divider(height:1),ListTile(leading:const Icon(Icons.email_outlined),title:Text(user['email']?.toString()??''),subtitle:const Text('E-mailadres')),if((user['place']?.toString()??'').isNotEmpty)...[const Divider(height:1),ListTile(leading:const Icon(Icons.location_on_outlined),title:Text(user['place'].toString()),subtitle:const Text('Woonplaats'))]]))]));}
+class NotificationPreferencesPage extends StatefulWidget{const NotificationPreferencesPage({super.key});@override State<NotificationPreferencesPage> createState()=>_NotificationPreferencesPageState();}
+class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{
+ Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true,'weekblad':true};Map<String,bool> p2000={'hellevoetsluis':false,'rockanje':false,'brielle':false,'oostvoorne':false,'voorne-aan-zee':false};bool busy=true,streetEnabled=false;
+ final streetPlace=TextEditingController(),streetName=TextEditingController();
+ static const labels={'hellevoetsluis':'Hellevoetsluis','rockanje':'Rockanje','brielle':'Brielle','oostvoorne':'Oostvoorne','voorne-aan-zee':'Voorne aan Zee'};
+ @override void initState(){super.initState();load();}
+ @override void dispose(){streetPlace.dispose();streetName.dispose();super.dispose();}
+ Future<void>load()async{const st=FlutterSecureStorage();final local=await st.read(key:'rvaz_push_112');if(local!=null)p['emergency112']=local=='1';for(final k in p2000.keys){p2000[k]=(await st.read(key:'rvaz_p2000_$k'))=='1';}streetEnabled=(await st.read(key:'rvaz_p2000_street_enabled'))=='1';streetPlace.text=await st.read(key:'rvaz_p2000_street_place')??'';streetName.text=await st.read(key:'rvaz_p2000_street_name')??'';try{final h=await authHeaders();if(h.containsKey('Authorization')){final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:h);if(r.statusCode==200){final d=Map<String,dynamic>.from(jsonDecode(r.body));for(final k in p.keys){if(d.containsKey(k))p[k]=d[k]==true;}}}}catch(_){}if(mounted)setState(()=>busy=false);}
+ Future<void>save(String k,bool v)async{setState(()=>p[k]=v);try{if(k=='emergency112'){await const FlutterSecureStorage().write(key:'rvaz_push_112',value:v?'1':'0');if(v){await disableStreet();for(final place in p2000.keys){await FirebaseMessaging.instance.unsubscribeFromTopic('p2000-$place');}}}final h=await authHeaders();if(h.containsKey('Authorization'))await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/preferences'),headers:{...h,'Content-Type':'application/json'},body:jsonEncode(p));final topic=k=='emergency112'?'112':(k=='traffic'?'verkeer':k);if(v){await FirebaseMessaging.instance.subscribeToTopic(topic);}else{await FirebaseMessaging.instance.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
+ Future<void>saveP2000(String place,bool v)async{setState(()=>p2000[place]=v);try{if(v)await disableStreet();await const FlutterSecureStorage().write(key:'rvaz_p2000_$place',value:v?'1':'0');final topic='p2000-$place';if(v){await FirebaseMessaging.instance.subscribeToTopic(topic);}else{await FirebaseMessaging.instance.unsubscribeFromTopic(topic);}await registerDeviceToken();}catch(_){}}
+ Future<void>disableStreet()async{streetEnabled=false;await const FlutterSecureStorage().write(key:'rvaz_p2000_street_enabled',value:'0');if(mounted)setState((){});}
+ Future<void>saveStreet()async{final place=streetPlace.text.trim(),street=streetName.text.trim();if(place.isEmpty||street.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Vul zowel een plaats als straatnaam in.')));return;}const st=FlutterSecureStorage();setState(()=>streetEnabled=true);await st.write(key:'rvaz_p2000_street_enabled',value:'1');await st.write(key:'rvaz_p2000_street_place',value:place);await st.write(key:'rvaz_p2000_street_name',value:street);p['emergency112']=false;await st.write(key:'rvaz_push_112',value:'0');try{await FirebaseMessaging.instance.unsubscribeFromTopic('112');}catch(_){}for(final k in p2000.keys){p2000[k]=false;await st.write(key:'rvaz_p2000_$k',value:'0');try{await FirebaseMessaging.instance.unsubscribeFromTopic('p2000-$k');}catch(_){}}await registerDeviceToken();if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Straatfilter opgeslagen: $street, $place')));}}
+ Future<void>removeStreet()async{await disableStreet();await registerDeviceToken();}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Meldingen'),backgroundColor:Colors.white,foregroundColor:navy),body:busy?const Center(child:CircularProgressIndicator()):ListView(children:[
+ SwitchListTile(value:p['emergency112']??false,onChanged:(v)=>save('emergency112',v),title:const Text('Heel Rotterdam-Rijnmond'),subtitle:const Text('Alle nieuwe P2000-meldingen uit de regio')),
+ const Padding(padding:EdgeInsets.fromLTRB(16,12,16,4),child:Text('P2000 per plaats',style:TextStyle(fontWeight:FontWeight.w800,color:navy))),
+ for(final e in labels.entries)SwitchListTile(value:p2000[e.key]??false,onChanged:(v)=>saveP2000(e.key,v),title:Text(e.value),subtitle:const Text('Alleen P2000-meldingen voor deze plaats')),
+ const Divider(height:1),
+ SwitchListTile(value:streetEnabled,onChanged:(v)=>v?saveStreet():removeStreet(),title:const Text('Alleen een bepaalde straat'),subtitle:Text(streetEnabled?'Straatfilter is actief':'Ontvang alleen P2000 als plaats én straatnaam in de melding staan')),
+ Padding(padding:const EdgeInsets.fromLTRB(16,0,16,16),child:Column(children:[
+  TextField(controller:streetPlace,decoration:const InputDecoration(labelText:'Plaats',hintText:'Bijv. Hellevoetsluis')),
+  const SizedBox(height:8),
+  TextField(controller:streetName,decoration:const InputDecoration(labelText:'Straatnaam',hintText:'Bijv. Rijksstraatweg')),
+  const SizedBox(height:10),
+  SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:saveStreet,icon:const Icon(Icons.notifications_active_outlined),label:const Text('Straatfilter opslaan'))),
+  const SizedBox(height:4),
+  const Text('Werkt alleen wanneer de plaats en straatnaam in het oorspronkelijke P2000-bericht staan.',style:TextStyle(fontSize:12,color:Colors.black54))
+ ])),
+ const Divider(height:1),
+ for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))
+ ]));}).hasMatch(trafficStatus))'Verkeer: ${_ndwNl(trafficStatus)}',
       if(end.isNotEmpty)'Eindtijd: $end',
     ];
     final body=details.join('\n');
