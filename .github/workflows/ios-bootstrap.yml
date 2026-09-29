@@ -1,9 +1,6 @@
 name: Prepare RVAZ iOS project
 
 on:
-  push:
-    branches:
-      - feature/ios-bootstrap-v36
   workflow_dispatch:
 
 permissions:
@@ -22,21 +19,52 @@ jobs:
           cache: true
       - name: Generate iOS platform only
         run: flutter create --platforms=ios --org nl.regiovoorneaanzee .
-      - name: Configure bundle identifier
+
+      - name: Configure Apple bundle identifier
         run: |
           sed -i '' 's/nl\.regiovoorneaanzee\.rvazAndroid/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
           sed -i '' 's/nl\.regiovoorneaanzee\.rvaz_android/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
-      - name: Keep generated Apple icon set
+
+      - name: Generate RVAZ Apple app icons only
         run: |
-          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
+          python3 - <<'PY'
+          import base64, pathlib
+          src = pathlib.Path('/tmp/rvaz-ios-source.png')
+          raw = ''.join(pathlib.Path('assets/rvaz-launcher-icon.png.b64').read_text().split())
+          src.write_bytes(base64.b64decode(raw))
+          PY
+          sips -s format png /tmp/rvaz-ios-source.png --out /tmp/rvaz-ios-source-clean.png
+          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+          while IFS='|' read -r file pixels; do
+            sips -z "$pixels" "$pixels" /tmp/rvaz-ios-source-clean.png --out "$ICON_DIR/$file"
+          done <<'EOF'
+          Icon-App-20x20@1x.png|20
+          Icon-App-20x20@2x.png|40
+          Icon-App-20x20@3x.png|60
+          Icon-App-29x29@1x.png|29
+          Icon-App-29x29@2x.png|58
+          Icon-App-29x29@3x.png|87
+          Icon-App-40x40@1x.png|40
+          Icon-App-40x40@2x.png|80
+          Icon-App-40x40@3x.png|120
+          Icon-App-60x60@2x.png|120
+          Icon-App-60x60@3x.png|180
+          Icon-App-76x76@1x.png|76
+          Icon-App-76x76@2x.png|152
+          Icon-App-83.5x83.5@2x.png|167
+          Icon-App-1024x1024@1x.png|1024
+          EOF
+          test -s "$ICON_DIR/Icon-App-1024x1024@1x.png"
+
       - name: Verify Android protected files are untouched
         run: |
           git diff --exit-code HEAD -- android .github/workflows/android-apk.yml assets/rvaz-launcher-icon.png.b64
+
       - name: Commit generated iOS project
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ios
           git diff --cached --quiet && exit 0
-          git commit -m "Voeg iOS basis toe zonder Android te wijzigen"
+          git commit -m "Gebruik juiste RVAZ icoon alleen voor Apple"
           git push origin HEAD:feature/ios-bootstrap-v36
