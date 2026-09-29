@@ -1140,7 +1140,7 @@ Future<List<dynamic>> loadNdwTraffic()async{
   const localWords=['n57','n218','hellevoetsluis','rockanje','brielle','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven','voorne','haringvlietdam','hartelbrug','spijkenisserbrug','spijkenisse','botlek','europoort','maasvlakte'];
   for(final sm in situations){
     final situationBlock=sm.group(0)??'';
-    final recordMatches=RegExp(r'<(?:[A-Za-z0-9_]+:)?situationRecord\\b[\\s\\S]*?</(?:[A-Za-z0-9_]+:)?situationRecord>',caseSensitive:false).allMatches(situationBlock).toList();
+    final recordMatches=RegExp(r'<(?:[A-Za-z0-9_]+:)?situationRecord\b[\s\S]*?</(?:[A-Za-z0-9_]+:)?situationRecord>',caseSensitive:false).allMatches(situationBlock).toList();
     final recordBlocks=recordMatches.isEmpty?<String>[situationBlock]:recordMatches.map((m)=>m.group(0)??'').where((b)=>b.isNotEmpty).toList();
     for(final block in recordBlocks){
     final plain=_ndwXmlText(block),lower=plain.toLowerCase();
