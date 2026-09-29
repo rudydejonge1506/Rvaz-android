@@ -1139,7 +1139,11 @@ Future<List<dynamic>> loadNdwTraffic()async{
   final out=<dynamic>[];
   const localWords=['n57','n218','hellevoetsluis','rockanje','brielle','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven','voorne','haringvlietdam','hartelbrug','spijkenisserbrug','spijkenisse','botlek','europoort','maasvlakte'];
   for(final sm in situations){
-    final block=sm.group(0)??'',plain=_ndwXmlText(block),lower=plain.toLowerCase();
+    final situationBlock=sm.group(0)??'';
+    final recordMatches=RegExp(r'<(?:[A-Za-z0-9_]+:)?situationRecord\\b[\\s\\S]*?</(?:[A-Za-z0-9_]+:)?situationRecord>',caseSensitive:false).allMatches(situationBlock).toList();
+    final recordBlocks=recordMatches.isEmpty?<String>[situationBlock]:recordMatches.map((m)=>m.group(0)??'').where((b)=>b.isNotEmpty).toList();
+    for(final block in recordBlocks){
+    final plain=_ndwXmlText(block),lower=plain.toLowerCase();
     final lats=RegExp(r'<(?:[A-Za-z0-9_]+:)?latitude[^>]*>\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
     final lons=RegExp(r'<(?:[A-Za-z0-9_]+:)?longitude[^>]*>\s*([0-9.]+)',caseSensitive:false).allMatches(block).map((m)=>double.tryParse(m.group(1)??'')).whereType<double>().toList();
     if(lats.isEmpty||lons.isEmpty){
@@ -1156,7 +1160,7 @@ Future<List<dynamic>> loadNdwTraffic()async{
     final codedType=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','maintenanceWorksType','constructionWorkType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType','vehicleObstructionType','environmentalObstructionType','poorEnvironmentType','animalPresenceType','disturbanceActivityType','publicEventType']);
     final recordType=_ndwRecordType(block);
     final type=_ndwNl(_ndwHuman(codedType.isNotEmpty?codedType:recordType));
-    final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor']);
+    final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor','descriptor','value']);
     final direction=_ndwNl(_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint'])));
     final delay=_ndwTag(block,['delayTimeValue','minimumDelay','maximumDelay']);
     final queue=_ndwTag(block,['queueLength','trafficStatusValue']);
@@ -1171,10 +1175,11 @@ Future<List<dynamic>> loadNdwTraffic()async{
       if(direction.isNotEmpty)'Richting: $direction',
       if(delay.isNotEmpty)'Vertraging: ${double.tryParse(delay)==null?delay:'${(double.parse(delay)/60).round()} minuten'}',
       if(queue.isNotEmpty&&!RegExp(r'^\d+(?:\.\d+)?$').hasMatch(queue))'Verkeer: ${_ndwNl(_ndwHuman(queue))}',
-      if(end.isNotEmpty)'Eindtijd: $end',
+      if(end.isNotEmpty)'Eindtijd: ${DateTime.tryParse(end)?.toLocal().toString().substring(0,16).replaceFirst('T',' ')??end}',
     ];
     final body=details.join('\n');
     out.add(<String,dynamic>{'title':road.isEmpty?label:'$road · $label','description':body.isEmpty?label:body,'message':label,'body':body,'date':start,'end':end,'place':place,'source':'NDW','latitude':lats.isEmpty?null:lats.first,'longitude':lons.isEmpty?null:lons.first});
+    }
   }
   out.sort((a,b)=>'${b['date']??''}'.compareTo('${a['date']??''}'));
   return out;
