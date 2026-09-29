@@ -40,12 +40,17 @@ jobs:
         run: |
           test -f assets/rvaz-launcher-icon.png.b64 || { echo "Vast RVAZ launcher-icoon ontbreekt"; exit 1; }
           base64 -d assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon.png
-          sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
-          for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
-            dir="${spec%%:*}"; size="${spec##*:}"
-            mkdir -p "android/app/src/main/res/$dir"
-            convert /tmp/rvaz-icon.png -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
-          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct, zlib
+          src=Path('/tmp/rvaz-icon.png').read_bytes()
+          assert src[:8] == b'\\x89PNG\\r\\n\\x1a\\n', 'Ongeldig RVAZ PNG-icoon'
+          # Laat Android het geldige vaste bronicoon zelf schalen per density.
+          for d in ('mipmap-mdpi','mipmap-hdpi','mipmap-xhdpi','mipmap-xxhdpi','mipmap-xxxhdpi'):
+              p=Path('android/app/src/main/res')/d/'ic_launcher.png'
+              p.parent.mkdir(parents=True,exist_ok=True)
+              p.write_bytes(src)
+          PY
       - name: Analyze
         run: flutter analyze
       - name: Configure RVAZ app identity
