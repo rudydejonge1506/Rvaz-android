@@ -1,6 +1,9 @@
 name: Prepare RVAZ iOS project
 
 on:
+  push:
+    branches:
+      - feature/ios-bootstrap-v36
   workflow_dispatch:
 
 permissions:
