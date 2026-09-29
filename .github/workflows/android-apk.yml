@@ -38,24 +38,9 @@ jobs:
         run: flutter pub get
       - name: Prepare RVAZ Android app icon
         run: |
-          ICON_SOURCE=""
-          if [ -f "assets/images/app_icon.png" ]; then ICON_SOURCE="assets/images/app_icon.png"; fi
-          if [ -z "$ICON_SOURCE" ] && [ -f "assets/app_icon.png" ]; then ICON_SOURCE="assets/app_icon.png"; fi
-          if [ -z "$ICON_SOURCE" ]; then
-            API="https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config"
-            if curl -4 --fail --location --connect-timeout 10 --max-time 25 "$API" -o /tmp/rvaz-config.json; then
-              ICON_URL=$(python3 -c "import json; d=json.load(open('/tmp/rvaz-config.json')); print(d.get('app_icon_url') or d.get('app_icon') or '')")
-              if [ -n "$ICON_URL" ] && curl -4 --fail --location --connect-timeout 10 --max-time 30 "$ICON_URL" -o /tmp/rvaz-icon-source; then
-                ICON_SOURCE="/tmp/rvaz-icon-source"
-              fi
-            fi
-          fi
-          if [ -z "$ICON_SOURCE" ]; then
-            echo "App API tijdelijk onbereikbaar; bestaande Flutter launcher iconen blijven behouden."
-            exit 0
-          fi
+          test -f assets/rvaz-launcher-icon.png.b64 || { echo "Vast RVAZ launcher-icoon ontbreekt"; exit 1; }
+          base64 -d assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon.png
           sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
-          convert "$ICON_SOURCE" -strip /tmp/rvaz-icon.png
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
             dir="${spec%%:*}"; size="${spec##*:}"
             mkdir -p "android/app/src/main/res/$dir"
