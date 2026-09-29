@@ -1113,6 +1113,11 @@ String _ndwTag(String block,List<String> names){
   return '';
 }
 
+String _ndwElementBlock(String block,String name){
+  final e=RegExp.escape(name);
+  return RegExp('<(?:[A-Za-z0-9_]+:)?'+e+'[^>]*>[\\s\\S]*?</(?:[A-Za-z0-9_]+:)?'+e+'>',caseSensitive:false).firstMatch(block)?.group(0)??'';
+}
+
 String _ndwHuman(String raw)=>raw
     .replaceFirst(RegExp(r'^[A-Za-z0-9_]+:'),'')
     .replaceAll(RegExp(r'(?<=[a-z0-9])(?=[A-Z])'),' ')
@@ -1161,17 +1166,23 @@ Future<List<dynamic>> loadNdwTraffic()async{
     final recordType=_ndwRecordType(block);
     final type=_ndwNl(_ndwHuman(codedType.isNotEmpty?codedType:recordType));
     final location=_ndwTag(block,['alertCLocationName','locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor','descriptor']);
-    final direction=_ndwNl(_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint'])));
+    final primaryBlock=_ndwElementBlock(block,'alertCMethod4PrimaryPointLocation');
+    final secondaryBlock=_ndwElementBlock(block,'alertCMethod4SecondaryPointLocation');
+    final primaryLocation=_ndwTag(primaryBlock,['alertCLocationName']);
+    final secondaryLocation=_ndwTag(secondaryBlock,['alertCLocationName']);
+    final alertCLocations=<String>[primaryLocation,secondaryLocation].where((v)=>v.isNotEmpty).toSet().toList();
+    final resolvedLocation=alertCLocations.isEmpty?location:alertCLocations.join(' – ');
+    final direction=_ndwNl(_ndwHuman(_ndwTag(block,['alertCDirectionCoded','alertCAffectedDirection','directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint'])));
     final delay=_ndwTag(block,['delayTimeValue','minimumDelay','maximumDelay']);
     final queue=_ndwTag(block,['queueLength','trafficStatusValue']);
     final start=_ndwTag(block,['overallStartTime','situationRecordCreationTime']);
     final end=_ndwTag(block,['overallEndTime']);
-    final place=location.isNotEmpty?location:localWords.firstWhere((x)=>lower.contains(x),orElse:()=>road.toLowerCase());
+    final place=resolvedLocation.isNotEmpty?resolvedLocation:localWords.firstWhere((x)=>lower.contains(x),orElse:()=>road.toLowerCase());
     final label=comment.isNotEmpty?comment:(type.isNotEmpty?type:'Actuele verkeersmelding');
     final details=<String>[
       if(type.isNotEmpty&&type.toLowerCase()!=label.toLowerCase())'Type: $type',
       if(road.isNotEmpty)'Weg: $road',
-      if(location.isNotEmpty&&location.toLowerCase()!=road.toLowerCase())'Locatie: $location',
+      if(resolvedLocation.isNotEmpty&&resolvedLocation.toLowerCase()!=road.toLowerCase())'Locatie: $resolvedLocation',
       if(direction.isNotEmpty)'Richting: $direction',
       if(delay.isNotEmpty)'Vertraging: ${double.tryParse(delay)==null?delay:'${(double.parse(delay)/60).round()} minuten'}',
       if(queue.isNotEmpty&&!RegExp(r'^\d+(?:\.\d+)?$').hasMatch(queue))'Verkeer: ${_ndwNl(_ndwHuman(queue))}',
