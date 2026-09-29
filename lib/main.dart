@@ -1125,6 +1125,11 @@ String _ndwRecordType(String block){
   return _ndwHuman(type);
 }
 
+String _ndwNl(String raw){
+  const m=<String,String>{'slow Traffic':'Langzaam rijdend verkeer','stationary Traffic':'Stilstaand verkeer','bridge Swing In Operation':'Brug geopend voor scheepvaart','Road Or Carriageway Or Lane Management':'Rijbaan- of rijstrookmaatregel','other':'Overige verkeersmelding'};
+  return m[raw]??raw;
+}
+
 
 Future<List<dynamic>> loadNdwTraffic()async{
   final r=await http.get(Uri.parse('https://opendata.ndw.nu/actueel_beeld.xml.gz'),headers:const {'Accept':'application/gzip, application/xml'}).timeout(const Duration(seconds:20));
@@ -1150,9 +1155,9 @@ Future<List<dynamic>> loadNdwTraffic()async{
     final comment=_ndwTag(block,['comment','situationRecordDescription','description','causeDescription']);
     final codedType=_ndwTag(block,['accidentType','obstructionType','roadMaintenanceType','maintenanceWorksType','constructionWorkType','generalNetworkManagementType','trafficConstrictionType','abnormalTrafficType','vehicleObstructionType','environmentalObstructionType','poorEnvironmentType','animalPresenceType','disturbanceActivityType','publicEventType']);
     final recordType=_ndwRecordType(block);
-    final type=_ndwHuman(codedType.isNotEmpty?codedType:recordType);
+    final type=_ndwNl(_ndwHuman(codedType.isNotEmpty?codedType:recordType));
     final location=_ndwTag(block,['locationName','roadName','fromPointName','toPointName','tpegAreaDescriptor','tpegPointDescriptor']);
-    final direction=_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint']));
+    final direction=_ndwNl(_ndwHuman(_ndwTag(block,['directionBoundOnLinearSection','directionRelativeOnLinearSection','directionRelativeAtPoint'])));
     final delay=_ndwTag(block,['delayTimeValue','minimumDelay','maximumDelay']);
     final queue=_ndwTag(block,['queueLength','trafficStatusValue']);
     final start=_ndwTag(block,['overallStartTime','situationRecordCreationTime']);
@@ -1164,8 +1169,8 @@ Future<List<dynamic>> loadNdwTraffic()async{
       if(road.isNotEmpty)'Weg: $road',
       if(location.isNotEmpty&&location.toLowerCase()!=road.toLowerCase())'Locatie: $location',
       if(direction.isNotEmpty)'Richting: $direction',
-      if(delay.isNotEmpty)'Vertraging: $delay',
-      if(queue.isNotEmpty)'Verkeer: ${_ndwHuman(queue)}',
+      if(delay.isNotEmpty)'Vertraging: ${double.tryParse(delay)==null?delay:'${(double.parse(delay)/60).round()} minuten'}',
+      if(queue.isNotEmpty&&!RegExp(r'^\d+(?:\.\d+)?$').hasMatch(queue))'Verkeer: ${_ndwNl(_ndwHuman(queue))}',
       if(end.isNotEmpty)'Eindtijd: $end',
     ];
     final body=details.join('\n');
