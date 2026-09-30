@@ -26,7 +26,9 @@ jobs:
           test "$(find screenshots/ipad -type f -name '*.png' | wc -l | tr -d ' ')" = "4"
 
       - name: Install API dependencies
-        run: python3 -m pip install --quiet PyJWT cryptography requests
+        run: |
+          python3 -m venv "$RUNNER_TEMP/asc-venv"
+          "$RUNNER_TEMP/asc-venv/bin/python" -m pip install --quiet PyJWT cryptography requests
 
       - name: Upload screenshots to App Store Connect
         env:
@@ -143,4 +145,4 @@ jobs:
                   raise SystemExit(f"{display} did not reach COMPLETE in time")
           print("All 8 RVAZ screenshots uploaded and processed by App Store Connect.")
           PY
-          python3 "$RUNNER_TEMP/upload_screenshots.py"
+          "$RUNNER_TEMP/asc-venv/bin/python" "$RUNNER_TEMP/upload_screenshots.py"
