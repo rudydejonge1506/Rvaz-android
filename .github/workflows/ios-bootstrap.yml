@@ -94,9 +94,34 @@ jobs:
           </plist>
           PLIST
 
-      - name: Build signed App Store IPA
+      - name: Build Flutter iOS release without signing
         run: |
-          flutter build ipa --release --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+          flutter build ios --release --no-codesign
+
+      - name: Archive with Apple Distribution signing
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            DEVELOPMENT_TEAM=XQ8MH83ZV9 \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="RVAZ App Store" \
+            archive
+
+      - name: Export signed App Store IPA
+        run: |
+          set -euo pipefail
+          mkdir -p build/ios/ipa
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
 
       - name: Upload signed IPA artifact
         uses: actions/upload-artifact@v4
