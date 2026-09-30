@@ -28,6 +28,8 @@
 	<string>Regio Voorne aan Zee gebruikt de camera wanneer je een foto bij een tip of bijdrage wilt toevoegen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Regio Voorne aan Zee gebruikt je fotobibliotheek wanneer je een bestaande foto bij een tip of bijdrage wilt toevoegen.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Regio Voorne aan Zee gebruikt je agenda alleen wanneer je ervoor kiest een evenement uit de app aan je agenda toe te voegen.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
