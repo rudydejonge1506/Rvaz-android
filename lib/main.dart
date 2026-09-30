@@ -261,6 +261,8 @@ Future<void> main() async {
 
   unawaited(() async {
     await loadConfig();
+    const screenshotMode = String.fromEnvironment('RVAZ_SCREENSHOT_TAB', defaultValue: '');
+    if (screenshotMode.isNotEmpty) return;
     final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (permission.authorizationStatus != AuthorizationStatus.denied) {
       for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
