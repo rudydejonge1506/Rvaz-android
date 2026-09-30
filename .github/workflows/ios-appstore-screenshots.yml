@@ -9,7 +9,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: macos-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,6 +22,15 @@ jobs:
 
       - name: Install Flutter dependencies
         run: flutter pub get
+
+      - name: Prepare single-build screenshot sequence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c "from pathlib import Path; p=Path('lib/main.dart'); s=p.read_text(); old='    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));'; new=\"    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab=='sequence'){\\n      var shotIndex=0;\\n      Timer.periodic(const Duration(seconds:15),(timer){\\n        if(!mounted){timer.cancel();return;}\\n        shotIndex++;\\n        if(shotIndex>3){timer.cancel();return;}\\n        setState(()=>index=shotIndex);\\n      });\\n    }\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));\"; assert old in s, 'Screenshot hook niet gevonden'; p.write_text(s.replace(old,new,1))"
+
+      - name: Build iOS simulator app once
+        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=sequence
 
       - name: Start App Store simulators
         id: sims
@@ -56,25 +65,20 @@ jobs:
           )
           IPHONE=$(xcrun simctl create "RVAZ AppStore iPhone" "$IPHONE_TYPE" "$RUNTIME")
           IPAD=$(xcrun simctl create "RVAZ AppStore iPad" "$IPAD_TYPE" "$RUNTIME")
-          xcrun simctl boot "$IPHONE"
-          xcrun simctl boot "$IPAD"
-          xcrun simctl bootstatus "$IPHONE" -b
-          xcrun simctl bootstatus "$IPAD" -b
+          xcrun simctl boot "$IPHONE" &
+          xcrun simctl boot "$IPAD" &
+          wait
+          xcrun simctl bootstatus "$IPHONE" -b &
+          P1=$!
+          xcrun simctl bootstatus "$IPAD" -b &
+          P2=$!
+          wait "$P1" "$P2"
           for DEVICE in "$IPHONE" "$IPAD"; do
             xcrun simctl status_bar "$DEVICE" override --time "09:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
           done
           echo "iphone=$IPHONE" >> "$GITHUB_OUTPUT"
           echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
           mkdir -p screenshots/iphone screenshots/ipad
-
-      - name: Prepare single-build screenshot sequence
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -c "from pathlib import Path; p=Path('lib/main.dart'); s=p.read_text(); old='    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));'; new=\"    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab=='sequence'){\\n      var shotIndex=0;\\n      Timer.periodic(const Duration(seconds:15),(timer){\\n        if(!mounted){timer.cancel();return;}\\n        shotIndex++;\\n        if(shotIndex>3){timer.cancel();return;}\\n        setState(()=>index=shotIndex);\\n      });\\n    }\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));\"; assert old in s, 'Screenshot hook niet gevonden'; p.write_text(s.replace(old,new,1))"
-
-      - name: Build iOS simulator app once
-        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=sequence
 
       - name: Capture real RVAZ screens
         env:
@@ -89,14 +93,14 @@ jobs:
             xcrun simctl install "$DEVICE" "$APP"
             xcrun simctl launch --terminate-running-process "$DEVICE" "$BUNDLE_ID"
           done
-
-          # De app wisselt in screenshotmodus iedere 15 seconden van tab.
-          # Neem elke foto ruim tussen twee wisselmomenten in.
           sleep 8
           for TAB in home news emergency agenda; do
             echo "Capturing $TAB"
-            xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png"
-            xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png"
+            xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png" &
+            P1=$!
+            xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png" &
+            P2=$!
+            wait "$P1" "$P2"
             if [ "$TAB" != "agenda" ]; then sleep 15; fi
           done
 
@@ -106,7 +110,7 @@ jobs:
           test "$(find screenshots/iphone -name '*.png' | wc -l | tr -d ' ')" = "4"
           test "$(find screenshots/ipad -name '*.png' | wc -l | tr -d ' ')" = "4"
           for f in screenshots/iphone/*.png screenshots/ipad/*.png; do
-            echo "$f: $(sips -g pixelWidth -g pixelHeight "$f" | tail -n +2 | tr '\n' ' ')"
+            echo "$f: $(sips -g pixelWidth -g pixelHeight "$f" | tail -n +2 | tr '\\n' ' ')"
           done
 
       - name: Upload App Store screenshots
