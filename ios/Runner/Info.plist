@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Regio Voorne aan Zee gebruikt de camera wanneer je een foto bij een tip of bijdrage wilt toevoegen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Regio Voorne aan Zee gebruikt je fotobibliotheek wanneer je een bestaande foto bij een tip of bijdrage wilt toevoegen.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
