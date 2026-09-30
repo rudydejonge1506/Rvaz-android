@@ -98,7 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -D -i assets/rvaz-launcher-icon.png.b64 -o /tmp/rvaz-app-icon.png
+          cp assets/rvaz-logo.png /tmp/rvaz-app-icon.png
           ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
           while IFS='|' read -r file pixels; do
             sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
@@ -124,7 +124,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.0 --build-number=38
+          flutter build ios --release --no-codesign --build-name=1.0 --build-number=39
 
       - name: Archive with Apple Distribution signing
         run: |
