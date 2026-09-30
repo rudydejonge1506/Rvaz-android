@@ -98,7 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-app-icon.png
+          base64 -D -i assets/rvaz-launcher-icon.png.b64 -o /tmp/rvaz-app-icon.png
           ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
           while IFS='|' read -r file pixels; do
             sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
