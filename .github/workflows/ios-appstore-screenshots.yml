@@ -24,7 +24,7 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS simulator app once
-        run: flutter build ios --simulator --debug
+        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=home
 
       - name: Start App Store simulators
         id: sims
