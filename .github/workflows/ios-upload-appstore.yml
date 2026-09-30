@@ -1,0 +1,80 @@
+name: Upload RVAZ IPA to App Store Connect
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-latest
+    steps:
+      - name: Find latest successful signed IPA build
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ios-bootstrap.yml/runs?status=success&per_page=20" --jq '.workflow_runs[0].id')
+          test -n "$RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Using successful signed IPA run: $RUN_ID"
+
+      - name: Download signed IPA artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.find.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ipa
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name RVAZ-iOS-AppStore --dir ipa
+          IPA=$(find ipa -type f -name '*.ipa' -print -quit)
+          test -n "$IPA"
+          echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
+          echo "Found signed IPA: $IPA"
+
+      - name: Install App Store Connect API key
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$API_KEY_P8"
+          test -n "$API_KEY_ID"
+          test -n "$API_ISSUER_ID"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          printf '%s\n' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+      - name: Validate IPA with Apple
+        env:
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun altool --validate-app \
+            -f "$IPA_PATH" \
+            -t ios \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER_ID"
+
+      - name: Upload IPA to App Store Connect
+        env:
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun altool --upload-app \
+            -f "$IPA_PATH" \
+            -t ios \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER_ID"
