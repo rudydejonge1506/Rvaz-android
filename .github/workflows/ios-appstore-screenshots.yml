@@ -9,7 +9,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: macos-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,8 +54,6 @@ jobs:
           print(hit['identifier'])
           PY
           )
-          echo "iPhone simulator: $IPHONE_TYPE"
-          echo "iPad simulator: $IPAD_TYPE"
           IPHONE=$(xcrun simctl create "RVAZ AppStore iPhone" "$IPHONE_TYPE" "$RUNTIME")
           IPAD=$(xcrun simctl create "RVAZ AppStore iPad" "$IPAD_TYPE" "$RUNTIME")
           xcrun simctl boot "$IPHONE"
@@ -69,6 +67,35 @@ jobs:
           echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
           mkdir -p screenshots/iphone screenshots/ipad
 
+      - name: Prepare single-build screenshot sequence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('lib/main.dart')
+          s=p.read_text()
+          old="""    index=screenshotIndexes[screenshotTab]??0;
+    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));"""
+          new="""    index=screenshotIndexes[screenshotTab]??0;
+    if(screenshotTab=='sequence'){
+      var shotIndex=0;
+      Timer.periodic(const Duration(seconds:15),(timer){
+        if(!mounted){timer.cancel();return;}
+        shotIndex++;
+        if(shotIndex>3){timer.cancel();return;}
+        setState(()=>index=shotIndex);
+      });
+    }
+    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));"""
+          if old not in s:
+              raise SystemExit('Screenshot hook niet gevonden in lib/main.dart')
+          p.write_text(s.replace(old,new,1))
+          PY
+
+      - name: Build iOS simulator app once
+        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=sequence
+
       - name: Capture real RVAZ screens
         env:
           IPHONE: ${{ steps.sims.outputs.iphone }}
@@ -77,24 +104,27 @@ jobs:
         run: |
           set -euo pipefail
           BUNDLE_ID="nl.regiovoorneaanzee.app"
+          APP="build/ios/iphonesimulator/Runner.app"
+          for DEVICE in "$IPHONE" "$IPAD"; do
+            xcrun simctl install "$DEVICE" "$APP"
+            xcrun simctl launch --terminate-running-process "$DEVICE" "$BUNDLE_ID"
+          done
+
+          # De app wisselt in screenshotmodus iedere 15 seconden van tab.
+          # Neem elke foto ruim tussen twee wisselmomenten in.
+          sleep 8
           for TAB in home news emergency agenda; do
-            echo "Building screenshot screen: $TAB"
-            flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB="$TAB"
-            APP="build/ios/iphonesimulator/Runner.app"
-            for DEVICE in "$IPHONE" "$IPAD"; do
-              xcrun simctl install "$DEVICE" "$APP"
-              xcrun simctl launch --terminate-running-process "$DEVICE" "$BUNDLE_ID"
-            done
-            sleep 12
+            echo "Capturing $TAB"
             xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png"
             xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png"
-            xcrun simctl terminate "$IPHONE" "$BUNDLE_ID" || true
-            xcrun simctl terminate "$IPAD" "$BUNDLE_ID" || true
+            if [ "$TAB" != "agenda" ]; then sleep 15; fi
           done
 
       - name: Verify screenshot dimensions
         run: |
           set -euo pipefail
+          test "$(find screenshots/iphone -name '*.png' | wc -l | tr -d ' ')" = "4"
+          test "$(find screenshots/ipad -name '*.png' | wc -l | tr -d ' ')" = "4"
           for f in screenshots/iphone/*.png screenshots/ipad/*.png; do
             echo "$f: $(sips -g pixelWidth -g pixelHeight "$f" | tail -n +2 | tr '\n' ' ')"
           done
