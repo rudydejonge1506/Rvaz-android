@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -c "from pathlib import Path; p=Path('lib/main.dart'); s=p.read_text(); old='    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));'; new=\"    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab=='sequence'){\\n      var shotIndex=0;\\n      Timer.periodic(const Duration(seconds:30),(timer){\\n        if(!mounted){timer.cancel();return;}\\n        shotIndex++;\\n        if(shotIndex>3){timer.cancel();return;}\\n        setState(()=>index=shotIndex);\\n      });\\n    }\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));\"; assert old in s, 'Screenshot hook niet gevonden'; p.write_text(s.replace(old,new,1))"
+          python3 -c "from pathlib import Path; p=Path('lib/main.dart'); s=p.read_text(); old='    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));'; new=\"    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab=='sequence'){\\n      var shotIndex=0;\\n      Timer.periodic(const Duration(seconds:60),(timer){\\n        if(!mounted){timer.cancel();return;}\\n        shotIndex++;\\n        if(shotIndex>3){timer.cancel();return;}\\n        setState(()=>index=shotIndex);\\n      });\\n    }\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));\"; assert old in s, 'Screenshot hook niet gevonden'; p.write_text(s.replace(old,new,1))"
 
       - name: Build iOS simulator app once
         run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=sequence
@@ -103,7 +103,7 @@ jobs:
             xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png" &
             P2=$!
             wait "$P1" "$P2"
-            if [ "$TAB" != "agenda" ]; then sleep 30; fi
+            if [ "$TAB" != "agenda" ]; then sleep 60; fi
           done
 
       - name: Verify screenshot dimensions
