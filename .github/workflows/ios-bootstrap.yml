@@ -27,7 +27,11 @@ jobs:
       - name: Verify Flutter project
         run: |
           flutter analyze
-          flutter test
+          if [ -d test ] && find test -type f -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test
+          else
+            echo 'Geen Flutter-tests gevonden; teststap overgeslagen.'
+          fi
 
       - name: Install Apple signing credentials
         env:
