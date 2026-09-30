@@ -1,0 +1,146 @@
+name: Upload RVAZ App Store screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: macos-latest
+    env:
+      APPLE_ID: "6817375521"
+      SCREENSHOT_RUN_ID: "36701021265"
+    steps:
+      - name: Download approved screenshot artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p screenshots
+          gh run download "$SCREENSHOT_RUN_ID" --repo "$GITHUB_REPOSITORY" --name RVAZ-App-Store-Screenshots --dir screenshots
+          find screenshots -type f -name '*.png' -print
+          test "$(find screenshots/iphone -type f -name '*.png' | wc -l | tr -d ' ')" = "4"
+          test "$(find screenshots/ipad -type f -name '*.png' | wc -l | tr -d ' ')" = "4"
+
+      - name: Install API dependencies
+        run: python3 -m pip install --quiet PyJWT cryptography requests
+
+      - name: Upload screenshots to App Store Connect
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/upload_screenshots.py" <<'PY'
+          import glob, hashlib, json, os, time
+          import jwt, requests
+
+          BASE="https://api.appstoreconnect.apple.com/v1"
+          key_id=os.environ["API_KEY_ID"]
+          issuer=os.environ["API_ISSUER_ID"]
+          private_key=os.environ["API_KEY_P8"].replace("\\n","\n")
+          app_id=os.environ["APPLE_ID"]
+
+          def token():
+              now=int(time.time())
+              return jwt.encode(
+                  {"iss":issuer,"iat":now,"exp":now+1100,"aud":"appstoreconnect-v1"},
+                  private_key,algorithm="ES256",
+                  headers={"kid":key_id,"typ":"JWT"}
+              )
+
+          def api(method,path,**kwargs):
+              headers=kwargs.pop("headers",{})
+              headers["Authorization"]="Bearer "+token()
+              headers.setdefault("Content-Type","application/json")
+              r=requests.request(method, BASE+path, headers=headers, timeout=60, **kwargs)
+              if not r.ok:
+                  raise SystemExit(f"{method} {path}: {r.status_code} {r.text}")
+              return r.json() if r.content else {}
+
+          versions=api("GET",f"/apps/{app_id}/appStoreVersions",params={
+              "filter[platform]":"IOS","filter[versionString]":"1.0","limit":"20"
+          })["data"]
+          editable=[v for v in versions if v["attributes"].get("appStoreState") in {
+              "PREPARE_FOR_SUBMISSION","DEVELOPER_REJECTED","REJECTED","METADATA_REJECTED","INVALID_BINARY"
+          }]
+          if not editable:
+              raise SystemExit("Editable iOS App Store version 1.0 not found")
+          version_id=editable[0]["id"]
+
+          locs=api("GET",f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",params={"limit":"200"})["data"]
+          loc=next((x for x in locs if x["attributes"].get("locale")=="nl-NL"),None)
+          if not loc:
+              raise SystemExit("Dutch nl-NL version localization not found")
+          loc_id=loc["id"]
+
+          # Apple display types matching the already approved source dimensions.
+          targets=[
+              ("APP_IPHONE_65", sorted(glob.glob("screenshots/iphone/*.png"))),
+              ("APP_IPAD_PRO_3GEN_129", sorted(glob.glob("screenshots/ipad/*.png"))),
+          ]
+
+          existing=api("GET",f"/appStoreVersionLocalizations/{loc_id}/appScreenshotSets",params={"limit":"200"})["data"]
+          by_type={x["attributes"]["screenshotDisplayType"]:x for x in existing}
+
+          def ensure_set(display):
+              if display in by_type:
+                  return by_type[display]["id"]
+              body={"data":{"type":"appScreenshotSets","attributes":{"screenshotDisplayType":display},
+                    "relationships":{"appStoreVersionLocalization":{"data":{"type":"appStoreVersionLocalizations","id":loc_id}}}}}
+              return api("POST","/appScreenshotSets",data=json.dumps(body))["data"]["id"]
+
+          def upload_file(set_id,path):
+              name=os.path.basename(path)
+              size=os.path.getsize(path)
+              body={"data":{"type":"appScreenshots","attributes":{"fileSize":size,"fileName":name},
+                    "relationships":{"appScreenshotSet":{"data":{"type":"appScreenshotSets","id":set_id}}}}}
+              shot=api("POST","/appScreenshots",data=json.dumps(body))["data"]
+              sid=shot["id"]
+              ops=shot["attributes"]["uploadOperations"]
+              with open(path,"rb") as f:
+                  raw=f.read()
+              for op in ops:
+                  headers={h["name"]:h["value"] for h in op.get("requestHeaders",[])}
+                  part=raw[op["offset"]:op["offset"]+op["length"]]
+                  r=requests.request(op["method"],op["url"],headers=headers,data=part,timeout=120)
+                  r.raise_for_status()
+              md5=hashlib.md5(raw).hexdigest()
+              commit={"data":{"type":"appScreenshots","id":sid,
+                       "attributes":{"uploaded":True,"sourceFileChecksum":md5}}}
+              api("PATCH",f"/appScreenshots/{sid}",data=json.dumps(commit))
+              return sid
+
+          for display,files in targets:
+              if len(files)!=4:
+                  raise SystemExit(f"Expected 4 files for {display}, found {len(files)}")
+              set_id=ensure_set(display)
+              current=api("GET",f"/appScreenshotSets/{set_id}/appScreenshots",params={"limit":"200"})["data"]
+              if current:
+                  raise SystemExit(f"{display} already contains screenshots; refusing to duplicate/overwrite automatically")
+              ids=[upload_file(set_id,p) for p in files]
+              order={"data":[{"type":"appScreenshots","id":x} for x in ids]}
+              api("PATCH",f"/appScreenshotSets/{set_id}/relationships/appScreenshots",data=json.dumps(order))
+              print(f"Uploaded {len(ids)} screenshots to {display}")
+
+          # Verify Apple has accepted/processed all eight assets.
+          for display,_ in targets:
+              set_id=ensure_set(display)
+              for attempt in range(30):
+                  shots=api("GET",f"/appScreenshotSets/{set_id}/appScreenshots",params={"limit":"200"})["data"]
+                  states=[s["attributes"].get("assetDeliveryState",{}).get("state") for s in shots]
+                  if len(shots)==4 and all(s=="COMPLETE" for s in states):
+                      print(display,"COMPLETE")
+                      break
+                  bad=[s for s in states if s in {"FAILED","UPLOAD_FAILED"}]
+                  if bad:
+                      raise SystemExit(f"{display} processing failed: {states}")
+                  time.sleep(10)
+              else:
+                  raise SystemExit(f"{display} did not reach COMPLETE in time")
+          print("All 8 RVAZ screenshots uploaded and processed by App Store Connect.")
+          PY
+          python3 "$RUNNER_TEMP/upload_screenshots.py"
