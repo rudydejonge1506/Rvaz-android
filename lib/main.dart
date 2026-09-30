@@ -356,12 +356,37 @@ class _ShellState extends State<Shell> {
           if(appConfig.feature('push') && keys.contains('account')) IconButton(tooltip:'Mijn RVAZ',onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.person_outline)),
         ],
       ),
-      body: ColoredBox(color: const Color(0xFFF7F9FB), child: pageMap[keys[index]]!),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex:index,
-        onDestinationSelected:(v)=>setState(()=>index=v),
-        destinations:keys.map((k)=>NavigationDestination(icon:Icon(iconMap[k]),label:labelMap[k]??k)).toList(),
-      ),
+      body: LayoutBuilder(builder:(context,constraints){
+        final useIPadLayout=Platform.isIOS && constraints.maxWidth>=900;
+        final page=ColoredBox(
+          color:const Color(0xFFF7F9FB),
+          child:Center(
+            child:ConstrainedBox(
+              constraints:BoxConstraints(maxWidth:useIPadLayout?1100:double.infinity),
+              child:pageMap[keys[index]]!,
+            ),
+          ),
+        );
+        if(!useIPadLayout)return page;
+        return Row(children:[
+          NavigationRail(
+            selectedIndex:index,
+            onDestinationSelected:(v)=>setState(()=>index=v),
+            labelType:NavigationRailLabelType.all,
+            destinations:keys.map((k)=>NavigationRailDestination(icon:Icon(iconMap[k]),label:Text(labelMap[k]??k))).toList(),
+          ),
+          const VerticalDivider(width:1),
+          Expanded(child:page),
+        ]);
+      }),
+      bottomNavigationBar: LayoutBuilder(builder:(context,constraints){
+        if(Platform.isIOS && constraints.maxWidth>=900)return const SizedBox.shrink();
+        return NavigationBar(
+          selectedIndex:index,
+          onDestinationSelected:(v)=>setState(()=>index=v),
+          destinations:keys.map((k)=>NavigationDestination(icon:Icon(iconMap[k]),label:labelMap[k]??k)).toList(),
+        );
+      }),
     );
   }
 }
