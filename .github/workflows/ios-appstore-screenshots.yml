@@ -29,10 +29,33 @@ jobs:
         run: |
           set -euo pipefail
           RUNTIME=$(xcrun simctl list runtimes -j | python3 -c "import json,sys; d=json.load(sys.stdin); xs=[x for x in d['runtimes'] if x.get('isAvailable') and x['identifier'].startswith('com.apple.CoreSimulator.SimRuntime.iOS-')]; print(xs[-1]['identifier'])")
-          IPHONE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-14-Plus"
-          IPAD_TYPE="com.apple.CoreSimulator.SimDeviceType.iPad-Pro-12-9-inch-6th-generation"
-          xcrun simctl list devicetypes | grep -q "iPhone 14 Plus" || { echo "iPhone 14 Plus simulator type ontbreekt"; exit 1; }
-          xcrun simctl list devicetypes | grep -q "iPad Pro (12.9-inch) (6th generation)" || { echo "iPad Pro 12.9 simulator type ontbreekt"; exit 1; }
+          TYPES_JSON="$RUNNER_TEMP/device-types.json"
+          xcrun simctl list devicetypes -j > "$TYPES_JSON"
+          IPHONE_TYPE=$(python3 - "$TYPES_JSON" <<'PY'
+          import json,sys
+          xs=json.load(open(sys.argv[1]))['devicetypes']
+          preferred=['iPhone 14 Plus','iPhone 15 Plus','iPhone 16 Plus']
+          for name in preferred:
+              hit=next((x for x in xs if x.get('name')==name),None)
+              if hit:
+                  print(hit['identifier']); break
+          else:
+              raise SystemExit('Geen geschikte Plus-iPhone simulator gevonden')
+          PY
+          )
+          IPAD_TYPE=$(python3 - "$TYPES_JSON" <<'PY'
+          import json,sys
+          xs=json.load(open(sys.argv[1]))['devicetypes']
+          hit=next((x for x in xs if x.get('name')=='iPad Pro (12.9-inch) (6th generation)'),None)
+          if not hit:
+              hit=next((x for x in xs if 'iPad Pro' in x.get('name','') and ('13-inch' in x.get('name','') or '12.9-inch' in x.get('name',''))),None)
+          if not hit:
+              raise SystemExit('Geen geschikte grote iPad Pro simulator gevonden')
+          print(hit['identifier'])
+          PY
+          )
+          echo "iPhone simulator: $IPHONE_TYPE"
+          echo "iPad simulator: $IPAD_TYPE"
           IPHONE=$(xcrun simctl create "RVAZ AppStore iPhone" "$IPHONE_TYPE" "$RUNTIME")
           IPAD=$(xcrun simctl create "RVAZ AppStore iPad" "$IPAD_TYPE" "$RUNTIME")
           xcrun simctl boot "$IPHONE"
