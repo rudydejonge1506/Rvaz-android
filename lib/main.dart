@@ -329,7 +329,13 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int index = 0;
-  @override void initState(){super.initState();WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));}
+  static const screenshotTab=String.fromEnvironment('RVAZ_SCREENSHOT_TAB',defaultValue:'');
+  @override void initState(){
+    super.initState();
+    const screenshotIndexes={'home':0,'news':1,'emergency':2,'agenda':3,'account':4};
+    index=screenshotIndexes[screenshotTab]??0;
+    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
+  }
   static const pageMap = <String,Widget>{
     'home': HomePage(),
     'news': NewsPage(),
