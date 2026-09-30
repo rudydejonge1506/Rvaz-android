@@ -23,14 +23,8 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Prepare single-build screenshot sequence
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -c "from pathlib import Path; p=Path('lib/main.dart'); s=p.read_text(); old='    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));'; new=\"    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab=='sequence'){\\n      var shotIndex=0;\\n      Timer.periodic(const Duration(seconds:60),(timer){\\n        if(!mounted){timer.cancel();return;}\\n        shotIndex++;\\n        if(shotIndex>3){timer.cancel();return;}\\n        setState(()=>index=shotIndex);\\n      });\\n    }\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));\"; assert old in s, 'Screenshot hook niet gevonden'; p.write_text(s.replace(old,new,1))"
-
       - name: Build iOS simulator app once
-        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=sequence
+        run: flutter build ios --simulator --debug
 
       - name: Start App Store simulators
         id: sims
@@ -43,8 +37,7 @@ jobs:
           IPHONE_TYPE=$(python3 - "$TYPES_JSON" <<'PY'
           import json,sys
           xs=json.load(open(sys.argv[1]))['devicetypes']
-          preferred=['iPhone 14 Plus','iPhone 15 Plus','iPhone 16 Plus']
-          for name in preferred:
+          for name in ['iPhone 14 Plus','iPhone 15 Plus','iPhone 16 Plus']:
               hit=next((x for x in xs if x.get('name')==name),None)
               if hit:
                   print(hit['identifier']); break
@@ -65,13 +58,11 @@ jobs:
           )
           IPHONE=$(xcrun simctl create "RVAZ AppStore iPhone" "$IPHONE_TYPE" "$RUNTIME")
           IPAD=$(xcrun simctl create "RVAZ AppStore iPad" "$IPAD_TYPE" "$RUNTIME")
-          xcrun simctl boot "$IPHONE" &
-          xcrun simctl boot "$IPAD" &
-          wait
-          xcrun simctl bootstatus "$IPHONE" -b &
-          P1=$!
-          xcrun simctl bootstatus "$IPAD" -b &
-          P2=$!
+          xcrun simctl boot "$IPHONE" & P1=$!
+          xcrun simctl boot "$IPAD" & P2=$!
+          wait "$P1" "$P2"
+          xcrun simctl bootstatus "$IPHONE" -b & P1=$!
+          xcrun simctl bootstatus "$IPAD" -b & P2=$!
           wait "$P1" "$P2"
           for DEVICE in "$IPHONE" "$IPAD"; do
             xcrun simctl status_bar "$DEVICE" override --time "09:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
@@ -80,7 +71,7 @@ jobs:
           echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
           mkdir -p screenshots/iphone screenshots/ipad
 
-      - name: Capture real RVAZ screens
+      - name: Capture deterministic RVAZ screens
         env:
           IPHONE: ${{ steps.sims.outputs.iphone }}
           IPAD: ${{ steps.sims.outputs.ipad }}
@@ -92,18 +83,15 @@ jobs:
           xcrun simctl install "$IPHONE" "$APP" & P1=$!
           xcrun simctl install "$IPAD" "$APP" & P2=$!
           wait "$P1" "$P2"
-          xcrun simctl launch --terminate-running-process "$IPHONE" "$BUNDLE_ID" & P1=$!
-          xcrun simctl launch --terminate-running-process "$IPAD" "$BUNDLE_ID" & P2=$!
-          wait "$P1" "$P2"
-          sleep 8
           for TAB in home news emergency agenda; do
-            echo "Capturing $TAB"
-            xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png" &
-            P1=$!
-            xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png" &
-            P2=$!
+            echo "Launching exact tab: $TAB"
+            SIMCTL_CHILD_RVAZ_SCREENSHOT_TAB="$TAB" xcrun simctl launch --terminate-running-process "$IPHONE" "$BUNDLE_ID" & P1=$!
+            SIMCTL_CHILD_RVAZ_SCREENSHOT_TAB="$TAB" xcrun simctl launch --terminate-running-process "$IPAD" "$BUNDLE_ID" & P2=$!
             wait "$P1" "$P2"
-            if [ "$TAB" != "agenda" ]; then sleep 60; fi
+            sleep 12
+            xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png" & P1=$!
+            xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png" & P2=$!
+            wait "$P1" "$P2"
           done
 
       - name: Verify screenshot dimensions
