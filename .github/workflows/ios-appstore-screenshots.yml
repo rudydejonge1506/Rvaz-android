@@ -1,0 +1,85 @@
+name: Maak RVAZ App Store screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/ios-bootstrap-v36
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Start App Store simulators
+        id: sims
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME=$(xcrun simctl list runtimes -j | python3 -c "import json,sys; d=json.load(sys.stdin); xs=[x for x in d['runtimes'] if x.get('isAvailable') and x['identifier'].startswith('com.apple.CoreSimulator.SimRuntime.iOS-')]; print(xs[-1]['identifier'])")
+          IPHONE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-14-Plus"
+          IPAD_TYPE="com.apple.CoreSimulator.SimDeviceType.iPad-Pro-12-9-inch-6th-generation"
+          xcrun simctl list devicetypes | grep -q "iPhone 14 Plus" || { echo "iPhone 14 Plus simulator type ontbreekt"; exit 1; }
+          xcrun simctl list devicetypes | grep -q "iPad Pro (12.9-inch) (6th generation)" || { echo "iPad Pro 12.9 simulator type ontbreekt"; exit 1; }
+          IPHONE=$(xcrun simctl create "RVAZ AppStore iPhone" "$IPHONE_TYPE" "$RUNTIME")
+          IPAD=$(xcrun simctl create "RVAZ AppStore iPad" "$IPAD_TYPE" "$RUNTIME")
+          xcrun simctl boot "$IPHONE"
+          xcrun simctl boot "$IPAD"
+          xcrun simctl bootstatus "$IPHONE" -b
+          xcrun simctl bootstatus "$IPAD" -b
+          for DEVICE in "$IPHONE" "$IPAD"; do
+            xcrun simctl status_bar "$DEVICE" override --time "09:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+          done
+          echo "iphone=$IPHONE" >> "$GITHUB_OUTPUT"
+          echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
+          mkdir -p screenshots/iphone screenshots/ipad
+
+      - name: Capture real RVAZ screens
+        env:
+          IPHONE: ${{ steps.sims.outputs.iphone }}
+          IPAD: ${{ steps.sims.outputs.ipad }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE_ID="nl.regiovoorneaanzee.app"
+          for TAB in home news emergency agenda; do
+            echo "Building screenshot screen: $TAB"
+            flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB="$TAB"
+            APP="build/ios/iphonesimulator/Runner.app"
+            for DEVICE in "$IPHONE" "$IPAD"; do
+              xcrun simctl install "$DEVICE" "$APP"
+              xcrun simctl launch --terminate-running-process "$DEVICE" "$BUNDLE_ID"
+            done
+            sleep 12
+            xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png"
+            xcrun simctl io "$IPAD" screenshot "screenshots/ipad/$TAB.png"
+            xcrun simctl terminate "$IPHONE" "$BUNDLE_ID" || true
+            xcrun simctl terminate "$IPAD" "$BUNDLE_ID" || true
+          done
+
+      - name: Verify screenshot dimensions
+        run: |
+          set -euo pipefail
+          for f in screenshots/iphone/*.png screenshots/ipad/*.png; do
+            echo "$f: $(sips -g pixelWidth -g pixelHeight "$f" | tail -n +2 | tr '\n' ' ')"
+          done
+
+      - name: Upload App Store screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: RVAZ-App-Store-Screenshots
+          path: screenshots/**/*.png
+          if-no-files-found: error
+          retention-days: 14
