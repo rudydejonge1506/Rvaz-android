@@ -261,8 +261,9 @@ Future<void> main() async {
 
   unawaited(() async {
     await loadConfig();
+    const screenshotSequence = bool.fromEnvironment('RVAZ_SCREENSHOT_SEQUENCE', defaultValue: false);
     final screenshotMode = Platform.environment['RVAZ_SCREENSHOT_TAB'] ?? const String.fromEnvironment('RVAZ_SCREENSHOT_TAB', defaultValue: '');
-    if (screenshotMode.isNotEmpty) return;
+    if (screenshotSequence || screenshotMode.isNotEmpty) return;
     final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (permission.authorizationStatus != AuthorizationStatus.denied) {
       for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
@@ -331,12 +332,24 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int index = 0;
+  static const screenshotSequence = bool.fromEnvironment('RVAZ_SCREENSHOT_SEQUENCE', defaultValue: false);
   static final screenshotTab=Platform.environment['RVAZ_SCREENSHOT_TAB'] ?? const String.fromEnvironment('RVAZ_SCREENSHOT_TAB',defaultValue:'');
   @override void initState(){
     super.initState();
     const screenshotIndexes={'home':0,'news':1,'emergency':2,'agenda':3,'account':4};
-    index=screenshotIndexes[screenshotTab]??0;
-    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
+    if (screenshotSequence) {
+      // Deterministic App Store capture: each fresh process advances exactly one tab.
+      // The file lives in this app's simulator sandbox and survives process relaunches.
+      final marker=File('${Directory.systemTemp.path}/rvaz_screenshot_sequence.txt');
+      var step=0;
+      try { step=int.tryParse(marker.readAsStringSync().trim())??0; } catch (_) {}
+      index=step.clamp(0,3);
+      try { marker.writeAsStringSync('${step+1}',flush:true); } catch (_) {}
+      debugPrint('RVAZ_SCREENSHOT_SEQUENCE step=$step index=$index');
+    } else {
+      index=screenshotIndexes[screenshotTab]??0;
+    }
+    if(!screenshotSequence && screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
   }
   static const pageMap = <String,Widget>{
     'home': HomePage(),
