@@ -71,27 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('lib/main.dart')
-          s=p.read_text()
-          old="""    index=screenshotIndexes[screenshotTab]??0;
-    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));"""
-          new="""    index=screenshotIndexes[screenshotTab]??0;
-    if(screenshotTab=='sequence'){
-      var shotIndex=0;
-      Timer.periodic(const Duration(seconds:15),(timer){
-        if(!mounted){timer.cancel();return;}
-        shotIndex++;
-        if(shotIndex>3){timer.cancel();return;}
-        setState(()=>index=shotIndex);
-      });
-    }
-    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));"""
-          if old not in s:
-              raise SystemExit('Screenshot hook niet gevonden in lib/main.dart')
-          p.write_text(s.replace(old,new,1))
-          PY
+          python3 -c "from pathlib import Path; p=Path('lib/main.dart'); s=p.read_text(); old='    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));'; new=\"    index=screenshotIndexes[screenshotTab]??0;\\n    if(screenshotTab=='sequence'){\\n      var shotIndex=0;\\n      Timer.periodic(const Duration(seconds:15),(timer){\\n        if(!mounted){timer.cancel();return;}\\n        shotIndex++;\\n        if(shotIndex>3){timer.cancel();return;}\\n        setState(()=>index=shotIndex);\\n      });\\n    }\\n    if(screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));\"; assert old in s, 'Screenshot hook niet gevonden'; p.write_text(s.replace(old,new,1))"
 
       - name: Build iOS simulator app once
         run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=sequence
