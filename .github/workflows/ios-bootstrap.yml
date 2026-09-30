@@ -110,7 +110,6 @@ jobs:
             DEVELOPMENT_TEAM=XQ8MH83ZV9 \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="RVAZ App Store" \
             archive
 
       - name: Export signed App Store IPA
