@@ -93,7 +93,9 @@ jobs:
                   return by_type[display]["id"]
               body={"data":{"type":"appScreenshotSets","attributes":{"screenshotDisplayType":display},
                     "relationships":{"appStoreVersionLocalization":{"data":{"type":"appStoreVersionLocalizations","id":loc_id}}}}}
-              return api("POST","/appScreenshotSets",data=json.dumps(body))["data"]["id"]
+              created=api("POST","/appScreenshotSets",data=json.dumps(body))["data"]
+              by_type[display]=created
+              return created["id"]
 
           def upload_file(set_id,path):
               name=os.path.basename(path)
@@ -122,7 +124,10 @@ jobs:
               set_id=ensure_set(display)
               current=api("GET",f"/appScreenshotSets/{set_id}/appScreenshots",params={"limit":"200"})["data"]
               if current:
-                  raise SystemExit(f"{display} already contains screenshots; refusing to duplicate/overwrite automatically")
+                  if len(current)==4:
+                      print(f"{display} already contains 4 screenshots; upload skipped")
+                      continue
+                  raise SystemExit(f"{display} contains {len(current)} screenshots; refusing automatic changes")
               ids=[upload_file(set_id,p) for p in files]
               order={"data":[{"type":"appScreenshots","id":x} for x in ids]}
               api("PATCH",f"/appScreenshotSets/{set_id}/relationships/appScreenshots",data=json.dumps(order))
