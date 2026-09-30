@@ -98,8 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp assets/rvaz-logo.png /tmp/rvaz-app-icon.png
-          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+          # Apple rejects App Store icons that contain an alpha channel.\n          # Flatten the official RVAZ logo onto white without cropping or zooming.\n          sips -s format jpeg assets/rvaz-logo.png --out /tmp/rvaz-app-icon.jpg >/dev/null\n          sips -s format png /tmp/rvaz-app-icon.jpg --out /tmp/rvaz-app-icon.png >/dev/null\n          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
           while IFS='|' read -r file pixels; do
             sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
           done <<'ICONS'
@@ -124,7 +123,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.0 --build-number=39
+          flutter build ios --release --no-codesign --build-name=1.0 --build-number=40
 
       - name: Archive with Apple Distribution signing
         run: |
