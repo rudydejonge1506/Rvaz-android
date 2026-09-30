@@ -25,6 +25,15 @@ jobs:
           sed -i '' 's/nl\.regiovoorneaanzee\.rvazAndroid/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
           sed -i '' 's/nl\.regiovoorneaanzee\.rvaz_android/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
 
+      - name: Install dependencies and verify Flutter code
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Compile unsigned iOS release
+        run: flutter build ios --release --no-codesign
+
       - name: Generate RVAZ Apple app icons only
         run: |
           python3 - <<'PY'
