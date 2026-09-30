@@ -98,7 +98,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Apple rejects App Store icons that contain an alpha channel.\n          # Flatten the official RVAZ logo onto white without cropping or zooming.\n          sips -s format jpeg assets/rvaz-logo.png --out /tmp/rvaz-app-icon.jpg >/dev/null\n          sips -s format png /tmp/rvaz-app-icon.jpg --out /tmp/rvaz-app-icon.png >/dev/null\n          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+          # Apple rejects App Store icons that contain an alpha channel.
+          # Flatten the official RVAZ logo onto white without cropping or zooming.
+          sips -s format jpeg assets/rvaz-logo.png --out /tmp/rvaz-app-icon.jpg >/dev/null
+          sips -s format png /tmp/rvaz-app-icon.jpg --out /tmp/rvaz-app-icon.png >/dev/null
+          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
           while IFS='|' read -r file pixels; do
             sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
           done <<'ICONS'
@@ -120,6 +124,7 @@ jobs:
           ICONS
           test "$(sips -g pixelWidth "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelWidth/ {print $2}')" = "1024"
           test "$(sips -g pixelHeight "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelHeight/ {print $2}')" = "1024"
+          test "$(sips -g hasAlpha "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/hasAlpha/ {print $2}')" = "no"
 
       - name: Build Flutter iOS release without signing
         run: |
