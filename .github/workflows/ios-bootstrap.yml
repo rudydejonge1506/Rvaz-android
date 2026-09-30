@@ -1,79 +1,103 @@
-name: Prepare RVAZ iOS project
+name: Build RVAZ iOS App Store IPA
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  prepare-ios:
+  build-ios:
     runs-on: macos-latest
+    env:
+      BUNDLE_ID: nl.regiovoorneaanzee.app
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/ios-bootstrap-v36
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - name: Generate iOS platform only
-        run: flutter create --platforms=ios --org nl.regiovoorneaanzee .
 
-      - name: Configure Apple bundle identifier
-        run: |
-          sed -i '' 's/nl\.regiovoorneaanzee\.rvazAndroid/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/nl\.regiovoorneaanzee\.rvaz_android/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
+      - name: Install Flutter dependencies
+        run: flutter pub get
 
-      - name: Install dependencies and verify Flutter code
+      - name: Verify Flutter project
         run: |
-          flutter pub get
           flutter analyze
           flutter test
 
-      - name: Compile unsigned iOS release
-        run: flutter build ios --release --no-codesign
-
-      - name: Generate RVAZ Apple app icons only
+      - name: Install Apple signing credentials
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
         run: |
-          python3 - <<'PY'
-          import base64, pathlib
-          src = pathlib.Path('/tmp/rvaz-ios-source.png')
-          raw = ''.join(pathlib.Path('assets/rvaz-launcher-icon.png.b64').read_text().split())
-          src.write_bytes(base64.b64decode(raw))
-          PY
-          sips -s format png /tmp/rvaz-ios-source.png --out /tmp/rvaz-ios-source-clean.png
-          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
-          while IFS='|' read -r file pixels; do
-            sips -z "$pixels" "$pixels" /tmp/rvaz-ios-source-clean.png --out "$ICON_DIR/$file"
-          done <<'EOF'
-          Icon-App-20x20@1x.png|20
-          Icon-App-20x20@2x.png|40
-          Icon-App-20x20@3x.png|60
-          Icon-App-29x29@1x.png|29
-          Icon-App-29x29@2x.png|58
-          Icon-App-29x29@3x.png|87
-          Icon-App-40x40@1x.png|40
-          Icon-App-40x40@2x.png|80
-          Icon-App-40x40@3x.png|120
-          Icon-App-60x60@2x.png|120
-          Icon-App-60x60@3x.png|180
-          Icon-App-76x76@1x.png|76
-          Icon-App-76x76@2x.png|152
-          Icon-App-83.5x83.5@2x.png|167
-          Icon-App-1024x1024@1x.png|1024
-          EOF
-          test -s "$ICON_DIR/Icon-App-1024x1024@1x.png"
+          set -euo pipefail
+          test -n "$BUILD_CERTIFICATE_BASE64"
+          test -n "$P12_PASSWORD"
+          test -n "$BUILD_PROVISION_PROFILE_BASE64"
+          test -n "$KEYCHAIN_PASSWORD"
 
-      - name: Verify Android protected files are untouched
-        run: |
-          git diff --exit-code HEAD -- android .github/workflows/android-apk.yml assets/rvaz-launcher-icon.png.b64
+          CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
+          PP_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
-      - name: Commit generated iOS project
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< "$(security cms -D -i "$PP_PATH")")
+          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+          security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
+          PROFILE_APP_ID=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:application-identifier' "$PROFILE_PLIST")
+          case "$PROFILE_APP_ID" in
+            *."$BUNDLE_ID") ;;
+            *) echo "Provisioning profile does not match $BUNDLE_ID"; exit 1 ;;
+          esac
+
+      - name: Create App Store export options
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ios
-          git diff --cached --quiet && exit 0
-          git commit -m "Gebruik juiste RVAZ icoon alleen voor Apple"
-          git push origin HEAD:feature/ios-bootstrap-v36
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>XQ8MH83ZV9</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>nl.regiovoorneaanzee.app</key>
+              <string>RVAZ App Store</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Build signed App Store IPA
+        run: |
+          flutter build ipa --release --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload signed IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RVAZ-iOS-AppStore
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 14
