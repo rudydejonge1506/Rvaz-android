@@ -24,7 +24,7 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS simulator app once
-        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_TAB=home
+        run: flutter build ios --simulator --debug --dart-define=RVAZ_SCREENSHOT_SEQUENCE=true
 
       - name: Start App Store simulators
         id: sims
@@ -85,8 +85,8 @@ jobs:
           wait "$P1" "$P2"
           for TAB in home news emergency agenda; do
             echo "Launching exact tab: $TAB"
-            SIMCTL_CHILD_RVAZ_SCREENSHOT_TAB="$TAB" xcrun simctl launch --terminate-running-process "$IPHONE" "$BUNDLE_ID" & P1=$!
-            SIMCTL_CHILD_RVAZ_SCREENSHOT_TAB="$TAB" xcrun simctl launch --terminate-running-process "$IPAD" "$BUNDLE_ID" & P2=$!
+            xcrun simctl launch --terminate-running-process "$IPHONE" "$BUNDLE_ID" & P1=$!
+            xcrun simctl launch --terminate-running-process "$IPAD" "$BUNDLE_ID" & P2=$!
             wait "$P1" "$P2"
             sleep 12
             xcrun simctl io "$IPHONE" screenshot "screenshots/iphone/$TAB.png" & P1=$!
@@ -99,6 +99,9 @@ jobs:
           set -euo pipefail
           test "$(find screenshots/iphone -name '*.png' | wc -l | tr -d ' ')" = "4"
           test "$(find screenshots/ipad -name '*.png' | wc -l | tr -d ' ')" = "4"
+          # Fail hard if the four captures on either device are duplicates.
+          test "$(shasum -a 256 screenshots/iphone/*.png | awk '{print $1}' | sort -u | wc -l | tr -d ' ')" = "4"
+          test "$(shasum -a 256 screenshots/ipad/*.png | awk '{print $1}' | sort -u | wc -l | tr -d ' ')" = "4"
           for f in screenshots/iphone/*.png screenshots/ipad/*.png; do
             echo "$f: $(sips -g pixelWidth -g pixelHeight "$f" | tail -n +2 | tr '\\n' ' ')"
           done
