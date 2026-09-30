@@ -261,7 +261,7 @@ Future<void> main() async {
 
   unawaited(() async {
     await loadConfig();
-    const screenshotMode = String.fromEnvironment('RVAZ_SCREENSHOT_TAB', defaultValue: '');
+    final screenshotMode = Platform.environment['RVAZ_SCREENSHOT_TAB'] ?? const String.fromEnvironment('RVAZ_SCREENSHOT_TAB', defaultValue: '');
     if (screenshotMode.isNotEmpty) return;
     final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (permission.authorizationStatus != AuthorizationStatus.denied) {
@@ -331,7 +331,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int index = 0;
-  static const screenshotTab=String.fromEnvironment('RVAZ_SCREENSHOT_TAB',defaultValue:'');
+  static final screenshotTab=Platform.environment['RVAZ_SCREENSHOT_TAB'] ?? const String.fromEnvironment('RVAZ_SCREENSHOT_TAB',defaultValue:'');
   @override void initState(){
     super.initState();
     const screenshotIndexes={'home':0,'news':1,'emergency':2,'agenda':3,'account':4};
