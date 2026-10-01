@@ -65,9 +65,8 @@ class RvazApi {
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final _voucherLinks=AppLinks();
-StreamSubscription<Uri>? _voucherLinkSub;
 void _openVoucherUri(Uri uri){final t=(uri.queryParameters['token']??uri.queryParameters['rvaz_voucher_scan']??'').trim();if(t.isNotEmpty)navigatorKey.currentState?.push(MaterialPageRoute(builder:(_)=>VoucherRedeemPage(token:t)));}
-Future<void> setupVoucherAppLinks() async {try{final u=await _voucherLinks.getInitialLink();if(u!=null)WidgetsBinding.instance.addPostFrameCallback((_)=>_openVoucherUri(u));}catch(_){} _voucherLinkSub=_voucherLinks.uriLinkStream.listen(_openVoucherUri,onError:(_){});}
+Future<void> setupVoucherAppLinks() async {try{final u=await _voucherLinks.getInitialLink();if(u!=null)WidgetsBinding.instance.addPostFrameCallback((_)=>_openVoucherUri(u));}catch(_){} _voucherLinks.uriLinkStream.listen(_openVoucherUri,onError:(_){});}
 
 class AppConfig {
   final String logoUrl, homeHeroUrl, homeIntro, breakingBanner, homeTitle, latestTitle, agendaTitle, weekbladTitle, accountTitle;
