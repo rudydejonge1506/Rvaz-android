@@ -13,6 +13,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:flutter_map/flutter_map.dart' as fmap;
 import 'package:latlong2/latlong.dart';
+import 'package:app_links/app_links.dart';
+import 'vouchers_business.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -62,6 +64,10 @@ class RvazApi {
 }
 
 final navigatorKey = GlobalKey<NavigatorState>();
+final _voucherLinks=AppLinks();
+StreamSubscription<Uri>? _voucherLinkSub;
+void _openVoucherUri(Uri uri){final t=(uri.queryParameters['token']??uri.queryParameters['rvaz_voucher_scan']??'').trim();if(t.isNotEmpty)navigatorKey.currentState?.push(MaterialPageRoute(builder:(_)=>VoucherRedeemPage(token:t)));}
+Future<void> setupVoucherAppLinks() async {try{final u=await _voucherLinks.getInitialLink();if(u!=null)WidgetsBinding.instance.addPostFrameCallback((_)=>_openVoucherUri(u));}catch(_){} _voucherLinkSub=_voucherLinks.uriLinkStream.listen(_openVoucherUri,onError:(_){});}
 
 class AppConfig {
   final String logoUrl, homeHeroUrl, homeIntro, breakingBanner, homeTitle, latestTitle, agendaTitle, weekbladTitle, accountTitle;
@@ -249,6 +255,7 @@ Future<void> main() async {
   // Render eerst de app (en een eventuele P2000-push) en doe netwerk/configuratie daarna.
   // Zo blokkeert een cold start niet op config, topic-abonnementen of tokenregistratie.
   runApp(const RvazApp());
+  unawaited(setupVoucherAppLinks());
   FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   if (initialMessage != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
@@ -1587,6 +1594,12 @@ class _AccountPageState extends State<AccountPage>{
         ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Kies welke pushmeldingen je wilt ontvangen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
+        const Divider(height:1,indent:72),
+        ListTile(leading:_menuIcon(Icons.local_offer_outlined),title:const Text('Mijn vouchers',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Bekijk je persoonlijke QR-codes en status'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
+        const Divider(height:1,indent:72),
+        ListTile(leading:_menuIcon(Icons.storefront_outlined),title:const Text('Mijn bedrijf',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je bedrijfsprofiel en openingstijden'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessManagePage()))),
+        const Divider(height:1,indent:72),
+        ListTile(leading:_menuIcon(Icons.qr_code_scanner),title:const Text('Voucher scannen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor ondernemers: controleer en wissel een voucher in'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessVoucherScannerPage()))),
       ])),
       if(userName!=null)const SizedBox(height:14),
       Card(clipBehavior:Clip.antiAlias,child:Column(children:[
