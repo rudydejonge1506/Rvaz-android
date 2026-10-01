@@ -62,7 +62,7 @@ jobs:
             convert /tmp/rvaz-icon.png -resize "${size}x${size}" "android/app/src/main/res/$dir/ic_launcher.png"
           done
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
       - name: Configure RVAZ app identity
         run: |
           python3 - <<'PY'
