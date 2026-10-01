@@ -73,6 +73,14 @@ jobs:
           permission = '<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
           if permission not in m:
               m = m.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">', '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\\n    ' + permission, 1)
+          app_link = '''<intent-filter android:autoVerify="true">
+              <action android:name="android.intent.action.VIEW"/>
+              <category android:name="android.intent.category.DEFAULT"/>
+              <category android:name="android.intent.category.BROWSABLE"/>
+              <data android:scheme="https" android:host="regiovoorneaanzee.nl" android:pathPrefix="/voucher-inwisselen"/>
+          </intent-filter>'''
+          if 'android:pathPrefix="/voucher-inwisselen"' not in m:
+              m = m.replace('</activity>', app_link + '\n        </activity>', 1)
           calendar_query = '<queries><intent><action android:name="android.intent.action.INSERT"/><data android:mimeType="vnd.android.cursor.item/event"/></intent></queries>'
           if 'vnd.android.cursor.item/event' not in m:
               m = m.replace('<application', calendar_query + '\\n    <application', 1)
