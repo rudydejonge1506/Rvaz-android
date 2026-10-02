@@ -132,7 +132,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.0 --build-number=41
+          flutter build ios --release --no-codesign --build-name=1.0 --build-number=42
 
       - name: Archive with Apple Distribution signing
         run: |
