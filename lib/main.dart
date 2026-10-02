@@ -1086,10 +1086,14 @@ class _PlaceNewsPageState extends State<PlaceNewsPage> {
 
 String formatP2000Date(dynamic raw) {
   final value='${raw??''}'.trim();
-  final d=DateTime.tryParse(value)?.toLocal();
-  if(d==null)return value;
+  final parsed=DateTime.tryParse(value)?.toLocal();
+  if(parsed==null)return value;
+  final now=DateTime.now();
+  // Een P2000-melding mag in de app nooit een tijdstip in de toekomst tonen.
+  // Kleine klokafwijkingen in de bron worden daarom begrensd op de toestelklok.
+  final d=parsed.isAfter(now)&&parsed.difference(now)<=const Duration(minutes:10)?now:parsed;
   const months=['','jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-  final now=DateTime.now(),today=DateTime(now.year,now.month,now.day),day=DateTime(d.year,d.month,d.day);
+  final today=DateTime(now.year,now.month,now.day),day=DateTime(d.year,d.month,d.day);
   final diff=today.difference(day).inDays;
   final hh=d.hour.toString().padLeft(2,'0'),mm=d.minute.toString().padLeft(2,'0');
   if(diff==0)return 'Vandaag · $hh:$mm';
