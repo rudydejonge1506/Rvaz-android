@@ -121,7 +121,7 @@ jobs:
           # obfuscation. Keep the release code intact and disable shrinking/minification.
           release_marker = '        release {'
           if release_marker in s:
-              s = s.replace(release_marker, release_marker + '\\n            isMinifyEnabled = false\\n            isShrinkResources = false', 1)
+              s = s.replace(release_marker, release_marker + '\n            isMinifyEnabled = false\n            isShrinkResources = false', 1)
           else:
               raise SystemExit('Release build type not found; refusing broad Gradle changes')
           p.write_text(s)
