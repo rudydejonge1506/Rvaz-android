@@ -46,6 +46,16 @@ class _RvazAdBannerState extends State<RvazAdBanner>{
  @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SafeArea(top:false,child:SizedBox(width:a.size.width.toDouble(),height:a.size.height.toDouble(),child:AdWidget(ad:a)));}
 }
 
+const admobArticleNativeId='ca-app-pub-1599023671130671/2573497830';
+class RvazArticleNativeAd extends StatefulWidget{const RvazArticleNativeAd({super.key});@override State<RvazArticleNativeAd> createState()=>_RvazArticleNativeAdState();}
+class _RvazArticleNativeAdState extends State<RvazArticleNativeAd>{
+ NativeAd? ad;
+ @override void initState(){super.initState();adConsentReady.addListener(_sync);_sync();}
+ void _sync(){if(adConsentReady.value&&ad==null){final a=NativeAd(adUnitId:admobArticleNativeId,request:const AdRequest(),nativeTemplateStyle:NativeTemplateStyle(templateType:TemplateType.medium),listener:NativeAdListener(onAdLoaded:(x){if(mounted)setState(()=>ad=x as NativeAd);},onAdFailedToLoad:(x,_){x.dispose();}));a.load();}}
+ @override void dispose(){adConsentReady.removeListener(_sync);ad?.dispose();super.dispose();}
+ @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SizedBox(width:double.infinity,height:320,child:AdWidget(ad:a));}
+}
+
 class RvazApi {
   static const base = '$site/wp-json/rvaz-app/v1';
   static Future<dynamic> get(String path, {Map<String,String>? query}) async {
@@ -817,6 +827,12 @@ class _ArticlePageState extends State<ArticlePage>{
             for(var i=0;i<blocks.length;i++){
               content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
               final after=i+1;
+              final nativePoints=<int>{(blocks.length/2).ceil(),if(blocks.length>=10)(blocks.length*3/4).ceil()};
+              if(after<blocks.length&&nativePoints.contains(after)){
+                content.add(const SizedBox(height:14));
+                content.add(const RvazArticleNativeAd());
+                content.add(const SizedBox(height:14));
+              }
               final canInsert=ads.isNotEmpty&&after<blocks.length&&after%adEvery==0;
               if(canInsert){
                 content.add(const SizedBox(height:14));
@@ -839,6 +855,10 @@ class _ArticlePageState extends State<ArticlePage>{
                 Text(title,style:const TextStyle(color:navy,fontSize:29,height:1.08,fontWeight:FontWeight.w900)),
                 const SizedBox(height:18),
                 ...content,
+                if(blocks.length<=1)...[
+                  const SizedBox(height:14),
+                  const RvazArticleNativeAd(),
+                ],
                 if(blocks.length<6&&ads.isNotEmpty)...[
                   const SizedBox(height:14),
                   AppAdCard(ad:ads.first),
