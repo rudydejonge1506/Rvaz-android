@@ -14,6 +14,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:flutter_map/flutter_map.dart' as fmap;
 import 'package:latlong2/latlong.dart';
+import 'package:app_links/app_links.dart';
+import 'vouchers_business.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -22,7 +24,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 const site = 'https://regiovoorneaanzee.nl';
 
-const iosAdmobBannerId='ca-app-pub-1599023671130671/9895785784';
+const admobBannerId='ca-app-pub-1599023671130671/9895785784';
 final adConsentReady=ValueNotifier<bool>(false);
 Future<void> initializeAdMob() async {
   await MobileAds.instance.initialize();
@@ -39,7 +41,7 @@ class RvazAdBanner extends StatefulWidget{const RvazAdBanner({super.key});@overr
 class _RvazAdBannerState extends State<RvazAdBanner>{
  BannerAd? ad;
  @override void initState(){super.initState();adConsentReady.addListener(_sync);_sync();}
- void _sync(){if(adConsentReady.value&&ad==null){final a=BannerAd(adUnitId:iosAdmobBannerId,size:AdSize.banner,request:const AdRequest(),listener:BannerAdListener(onAdLoaded:(x){if(mounted)setState(()=>ad=x as BannerAd);},onAdFailedToLoad:(x,_){x.dispose();}));a.load();}}
+ void _sync(){if(adConsentReady.value&&ad==null){final a=BannerAd(adUnitId:admobBannerId,size:AdSize.banner,request:const AdRequest(),listener:BannerAdListener(onAdLoaded:(x){if(mounted)setState(()=>ad=x as BannerAd);},onAdFailedToLoad:(x,_){x.dispose();}));a.load();}}
  @override void dispose(){adConsentReady.removeListener(_sync);ad?.dispose();super.dispose();}
  @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SafeArea(top:false,child:SizedBox(width:a.size.width.toDouble(),height:a.size.height.toDouble(),child:AdWidget(ad:a)));}
 }
@@ -85,6 +87,9 @@ class RvazApi {
 }
 
 final navigatorKey = GlobalKey<NavigatorState>();
+final _voucherLinks=AppLinks();
+void _openVoucherUri(Uri uri){final t=(uri.queryParameters['token']??uri.queryParameters['rvaz_voucher_scan']??'').trim();if(t.isNotEmpty)navigatorKey.currentState?.push(MaterialPageRoute(builder:(_)=>VoucherRedeemPage(token:t)));}
+Future<void> setupVoucherAppLinks() async {try{final u=await _voucherLinks.getInitialLink();if(u!=null)WidgetsBinding.instance.addPostFrameCallback((_)=>_openVoucherUri(u));}catch(_){} _voucherLinks.uriLinkStream.listen(_openVoucherUri,onError:(_){});}
 
 class AppConfig {
   final String logoUrl, homeHeroUrl, homeIntro, breakingBanner, homeTitle, latestTitle, agendaTitle, weekbladTitle, accountTitle;
@@ -177,7 +182,7 @@ Future<void> registerDeviceToken() async {
         }
       }
     }
-    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':Platform.isIOS?'ios':(Platform.isAndroid?'android':Platform.operatingSystem),'topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
+    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
     for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
@@ -273,6 +278,7 @@ Future<void> main() async {
   // Zo blokkeert een cold start niet op config, topic-abonnementen of tokenregistratie.
   runApp(const RvazApp());
   unawaited(initializeAdMob());
+  unawaited(setupVoucherAppLinks());
   FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   if (initialMessage != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
@@ -285,9 +291,6 @@ Future<void> main() async {
 
   unawaited(() async {
     await loadConfig();
-    const screenshotSequence = bool.fromEnvironment('RVAZ_SCREENSHOT_SEQUENCE', defaultValue: false);
-    final screenshotMode = Platform.environment['RVAZ_SCREENSHOT_TAB'] ?? const String.fromEnvironment('RVAZ_SCREENSHOT_TAB', defaultValue: '');
-    if (screenshotSequence || screenshotMode.isNotEmpty) return;
     final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (permission.authorizationStatus != AuthorizationStatus.denied) {
       for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
@@ -357,25 +360,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int index = 0;
-  static const screenshotSequence = bool.fromEnvironment('RVAZ_SCREENSHOT_SEQUENCE', defaultValue: false);
-  static final screenshotTab=Platform.environment['RVAZ_SCREENSHOT_TAB'] ?? const String.fromEnvironment('RVAZ_SCREENSHOT_TAB',defaultValue:'');
-  @override void initState(){
-    super.initState();
-    const screenshotIndexes={'home':0,'news':1,'emergency':2,'agenda':3,'account':4};
-    if (screenshotSequence) {
-      // Deterministic App Store capture: each fresh process advances exactly one tab.
-      // The file lives in this app's simulator sandbox and survives process relaunches.
-      final marker=File('${Directory.systemTemp.path}/rvaz_screenshot_sequence.txt');
-      var step=0;
-      try { step=int.tryParse(marker.readAsStringSync().trim())??0; } catch (_) {}
-      index=step.clamp(0,3);
-      try { marker.writeAsStringSync('${step+1}',flush:true); } catch (_) {}
-      debugPrint('RVAZ_SCREENSHOT_SEQUENCE step=$step index=$index');
-    } else {
-      index=screenshotIndexes[screenshotTab]??0;
-    }
-    if(!screenshotSequence && screenshotTab.isEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
-  }
+  @override void initState(){super.initState();WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));}
   static const pageMap = <String,Widget>{
     'home': HomePage(),
     'news': NewsPage(),
@@ -402,37 +387,12 @@ class _ShellState extends State<Shell> {
           if(appConfig.feature('push') && keys.contains('account')) IconButton(tooltip:'Mijn RVAZ',onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.person_outline)),
         ],
       ),
-      body: LayoutBuilder(builder:(context,constraints){
-        final useIPadLayout=Platform.isIOS && constraints.maxWidth>=900;
-        final page=ColoredBox(
-          color:const Color(0xFFF7F9FB),
-          child:Center(
-            child:ConstrainedBox(
-              constraints:BoxConstraints(maxWidth:useIPadLayout?1100:double.infinity),
-              child:pageMap[keys[index]]!,
-            ),
-          ),
-        );
-        if(!useIPadLayout)return page;
-        return Row(children:[
-          NavigationRail(
-            selectedIndex:index,
-            onDestinationSelected:(v)=>setState(()=>index=v),
-            labelType:NavigationRailLabelType.all,
-            destinations:keys.map((k)=>NavigationRailDestination(icon:Icon(iconMap[k]),label:Text(labelMap[k]??k))).toList(),
-          ),
-          const VerticalDivider(width:1),
-          Expanded(child:page),
-        ]);
-      }),
-      bottomNavigationBar: LayoutBuilder(builder:(context,constraints){
-        if(Platform.isIOS && constraints.maxWidth>=900)return const SizedBox.shrink();
-        return NavigationBar(
-          selectedIndex:index,
-          onDestinationSelected:(v)=>setState(()=>index=v),
-          destinations:keys.map((k)=>NavigationDestination(icon:Icon(iconMap[k]),label:labelMap[k]??k)).toList(),
-        );
-      }),
+      body: ColoredBox(color: const Color(0xFFF7F9FB), child: pageMap[keys[index]]!),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex:index,
+        onDestinationSelected:(v)=>setState(()=>index=v),
+        destinations:keys.map((k)=>NavigationDestination(icon:Icon(iconMap[k]),label:labelMap[k]??k)).toList(),
+      ),
     );
   }
 }
@@ -1619,11 +1579,12 @@ class _WeekbladPageState extends State<WeekbladPage> {
 
 class AccountPage extends StatefulWidget { const AccountPage({super.key}); @override State<AccountPage> createState()=>_AccountPageState(); }
 class _AccountPageState extends State<AccountPage>{
- String? userName; bool busy=false; bool advertiser=false; Map<String,dynamic> userInfo={};
+ String? userName; bool busy=false; bool advertiser=false; bool businessLinked=false; Map<String,dynamic> userInfo={};
  @override void initState(){super.initState();restore();}
- Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});}}catch(_){}}
- Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
- Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;userInfo={};});}
+ Future<bool> _hasLinkedBusiness()async{try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-business/v1/mine'),headers:await authHeaders()).timeout(const Duration(seconds:10));return r.statusCode==200;}catch(_){return false;}}
+ Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});final linked=await _hasLinkedBusiness();if(mounted)setState(()=>businessLinked=linked);}}catch(_){}}
+ Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});final linked=await _hasLinkedBusiness();if(mounted)setState(()=>businessLinked=linked);}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
+ Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;businessLinked=false;userInfo={};});}
   Widget _sectionHeader(IconData icon,String title,String subtitle)=>Container(
     padding:const EdgeInsets.symmetric(horizontal:16,vertical:12),
     decoration:const BoxDecoration(color:Color(0xFFEAF4FF),borderRadius:BorderRadius.vertical(top:Radius.circular(14))),
@@ -1658,6 +1619,14 @@ class _AccountPageState extends State<AccountPage>{
         ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Kies welke pushmeldingen je wilt ontvangen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
+        const Divider(height:1,indent:72),
+        ListTile(leading:_menuIcon(Icons.local_offer_outlined),title:const Text('Mijn vouchers',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Bekijk je persoonlijke QR-codes en status'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
+        if(businessLinked)...[
+          const Divider(height:1,indent:72),
+          ListTile(leading:_menuIcon(Icons.storefront_outlined),title:const Text('Mijn bedrijf',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je bedrijfsprofiel, openingstijden en vouchers'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessManagePage()))),
+          const Divider(height:1,indent:72),
+          ListTile(leading:_menuIcon(Icons.qr_code_scanner),title:const Text('Voucher scannen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Controleer en wissel een voucher in'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessVoucherScannerPage()))),
+        ],
       ])),
       if(userName!=null)const SizedBox(height:14),
       Card(clipBehavior:Clip.antiAlias,child:Column(children:[
@@ -1927,66 +1896,58 @@ class _BusinessesPageState extends State<BusinessesPage>{
    );
  }));
 }
-class _BusinessLinkIcon extends StatelessWidget{
- final IconData? icon;final String? text;final Color color;final String tooltip,url;
- const _BusinessLinkIcon({this.icon,this.text,required this.color,required this.tooltip,required this.url});
- @override Widget build(BuildContext context)=>Tooltip(message:tooltip,child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:Container(width:44,height:44,decoration:BoxDecoration(color:Colors.white,border:Border.all(color:color),shape:BoxShape.circle),alignment:Alignment.center,child:icon!=null?Icon(icon,color:color,size:28):Text(text??'',style:TextStyle(color:color,fontSize:20,fontWeight:FontWeight.w900)))));
-}
 class BusinessDetailPage extends StatelessWidget{
  final dynamic item;const BusinessDetailPage({super.key,required this.item});
  String v(String k)=>item is Map?item[k]?.toString()??'':'';
  dynamic rawValue(List<String> keys){if(item is! Map)return null;for(final k in keys){final x=item[k];if(x!=null&&x.toString().trim().isNotEmpty)return x;}return null;}
+ List<String> listValue(String key){final x=item is Map?item[key]:null;return x is List?x.map((e)=>e.toString()).where((e)=>e.isNotEmpty).toList():const[];}
  Map<dynamic,dynamic> hoursMap(){
   dynamic raw=rawValue(['hours','opening_hours','openingHours','openingstijden']);
   if(raw is String&&raw.trim().isNotEmpty){try{raw=jsonDecode(raw);}catch(_){}}
-  if(raw is Map){
-   for(final k in ['hours','opening_hours','openingHours','days','week']){final nested=raw[k];if(nested is Map)raw=nested;}
-   return raw;
-  }
-  if(raw is List){
-   final out=<dynamic,dynamic>{};
-   for(final row in raw){if(row is Map){final day=(row['day']??row['name']??row['weekday']??'').toString().toLowerCase();if(day.isNotEmpty)out[day]=row;}}
-   return out;
-  }
+  if(raw is Map){for(final k in ['hours','opening_hours','openingHours','days','week']){final nested=raw[k];if(nested is Map)raw=nested;}return raw;}
+  if(raw is List){final out=<dynamic,dynamic>{};for(final row in raw){if(row is Map){final day=(row['day']??row['name']??row['weekday']??'').toString().toLowerCase();if(day.isNotEmpty)out[day]=row;}}return out;}
   return <dynamic,dynamic>{};
  }
+ Widget card(String title,Widget child)=>Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),child])));
  @override Widget build(BuildContext context){
-  final img=v('image'),web=v('website'),phone=v('phone'),content=v('content'),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
-  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
-  final isPro=_businessIsPro(item);
-  final hours=hoursMap();
+  final logo=(rawValue(['logo','image'])??'').toString(),cover=v('cover'),web=v('website'),phone=v('phone'),content=(rawValue(['content','description'])??'').toString(),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
+  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString(),category=v('category').replaceAll('&amp;','&').replaceAll('&#038;','&').replaceAll('&#38;','&'),place=v('place'),address=v('address');
+  final gallery=listValue('gallery'),lat=double.tryParse(v('latitude')),lng=double.tryParse(v('longitude')),isPro=_businessIsPro(item),hours=hoursMap();
   const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};
   final hourRows=<Widget>[];
-  days.forEach((key,label){
-   final aliases=<String,List<String>>{'monday':['maandag','mon'],'tuesday':['dinsdag','tue'],'wednesday':['woensdag','wed'],'thursday':['donderdag','thu'],'friday':['vrijdag','fri'],'saturday':['zaterdag','sat'],'sunday':['zondag','sun']};
-   dynamic d=hours[key]??hours[label.toLowerCase()]??hours[label];
-   for(final a in aliases[key]??const <String>[]){d??=hours[a];}
-   var text='Niet opgegeven';
-   if(d is Map){
-    final closed=d['closed']==1||d['closed']==true||d['closed']=='1';
-    final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();
-    if(closed){text='Gesloten';}else if(open.isNotEmpty||close.isNotEmpty){text=[open,close].where((z)=>z.isNotEmpty).join(' – ');}
-   }else if(d!=null&&d.toString().trim().isNotEmpty){text=d.toString().trim();}
-   hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));
-  });
+  days.forEach((key,label){final aliases=<String,List<String>>{'monday':['maandag','mon'],'tuesday':['dinsdag','tue'],'wednesday':['woensdag','wed'],'thursday':['donderdag','thu'],'friday':['vrijdag','fri'],'saturday':['zaterdag','sat'],'sunday':['zondag','sun']};dynamic d=hours[key]??hours[label.toLowerCase()]??hours[label];for(final a in aliases[key]??const <String>[]){d??=hours[a];}var text='Niet opgegeven';if(d is Map){final closed=d['closed']==1||d['closed']==true||d['closed']=='1';final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();if(closed){text='Gesloten';}else if(open.isNotEmpty||close.isNotEmpty){text=[open,close].where((z)=>z.isNotEmpty).join(' – ');}}else if(d!=null&&d.toString().trim().isNotEmpty){text=d.toString().trim();}hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:4),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));});
+  final contact=<Widget>[
+   if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
+   if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
+   if(isPro&&web.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.language),title:const Text('Website'),subtitle:Text(web),onTap:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication)),
+   if(isPro&&facebook.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.facebook),title:const Text('Facebook'),onTap:()=>launchUrl(Uri.parse(facebook),mode:LaunchMode.externalApplication)),
+   if(isPro&&instagram.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.camera_alt_outlined),title:const Text('Instagram'),onTap:()=>launchUrl(Uri.parse(instagram),mode:LaunchMode.externalApplication)),
+   if(isPro&&linkedin.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.link),title:const Text('LinkedIn'),onTap:()=>launchUrl(Uri.parse(linkedin),mode:LaunchMode.externalApplication)),
+   if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(socials)),
+  ];
   return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(v('title')),actions:[PageFeedbackButton(page:'Bedrijvengids',detail:v('title'))]),body:ListView(children:[
-   if(img.isNotEmpty)Image.network(img,height:220,width:double.infinity,fit:BoxFit.cover),
-   Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[Expanded(child:Text(v('title'),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy))),if(isPro)const Padding(padding:EdgeInsets.only(left:8),child:Text('PRO',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))) ]),
-    if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),
-    if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
-    if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
-    if(isPro&&(web.isNotEmpty||facebook.isNotEmpty||instagram.isNotEmpty||linkedin.isNotEmpty))Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Wrap(spacing:14,runSpacing:10,children:[
-      if(web.isNotEmpty)_BusinessLinkIcon(icon:Icons.language,color:const Color(0xFF0A66C2),tooltip:'Website',url:web),
-      if(facebook.isNotEmpty)_BusinessLinkIcon(icon:Icons.facebook,color:const Color(0xFF1877F2),tooltip:'Facebook',url:facebook),
-      if(instagram.isNotEmpty)_BusinessLinkIcon(icon:Icons.camera_alt_outlined,color:const Color(0xFFE4405F),tooltip:'Instagram',url:instagram),
-      if(linkedin.isNotEmpty)_BusinessLinkIcon(text:'in',color:const Color(0xFF0A66C2),tooltip:'LinkedIn',url:linkedin),
+   SizedBox(height:245,child:Stack(fit:StackFit.expand,children:[
+    if(cover.isNotEmpty)Image.network(cover,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]))))else Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]))),
+    Container(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Colors.black.withValues(alpha:.58)]))),
+    Positioned(left:18,right:18,bottom:18,child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
+     Container(width:78,height:78,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(39),border:Border.all(color:Colors.white,width:3)),clipBehavior:Clip.antiAlias,child:logo.isEmpty?const Icon(Icons.storefront,size:38,color:navy):Image.network(logo,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.storefront,size:38,color:navy))),
+     const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Wrap(spacing:6,runSpacing:5,children:[if(isPro)Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(color:const Color(0xFFFFD54F),borderRadius:BorderRadius.circular(5)),child:const Text('PRO',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:navy))),if(category.isNotEmpty)Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.92),borderRadius:BorderRadius.circular(5)),child:Text(category,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy)))]),
+      const SizedBox(height:6),Text(v('title'),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w900)),if(place.isNotEmpty)Text(place,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w600))
+     ]))
+    ]))
+   ])),
+   Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    if(content.isNotEmpty)card('Over ${v('title')}',Html(data:cleanArticleHtml(content))),
+    if(contact.isNotEmpty)card('Contact',Column(children:contact)),
+    if(isPro&&int.tryParse(v('id'))!=null)Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:BusinessVoucherSection(businessId:int.parse(v('id'))))),
+    if(address.isNotEmpty||lat!=null&&lng!=null)card('Locatie',Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     if(address.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.location_on_outlined),const SizedBox(width:8),Expanded(child:Text(address))])),
+     if(lat!=null&&lng!=null)ClipRRect(borderRadius:BorderRadius.circular(12),child:SizedBox(height:220,child:fmap.FlutterMap(options:fmap.MapOptions(initialCenter:LatLng(lat,lng),initialZoom:15),children:[fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),fmap.MarkerLayer(markers:[fmap.Marker(point:LatLng(lat,lng),width:44,height:44,child:const Icon(Icons.location_pin,color:navy,size:42))])])))
     ])),
-    if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4,bottom:8),child:Text(socials)),
-    const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows,
-    if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],
-    if(isPro&&additional.isNotEmpty)...[const SizedBox(height:18),const Text('Aanvullende informatie',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),Html(data:cleanArticleHtml(additional))],
-    
+    card('Openingstijden',Column(children:hourRows)),
+    if(gallery.isNotEmpty)card("Foto's",Wrap(spacing:8,runSpacing:8,children:gallery.take(3).map((url)=>ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,width:(MediaQuery.sizeOf(context).width-64)/2,height:125,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()))).toList())),
+    if(isPro&&additional.isNotEmpty)card('Extra informatie',Html(data:cleanArticleHtml(additional))),
    ]))
   ]));
  }
