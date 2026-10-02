@@ -1880,58 +1880,54 @@ class BusinessDetailPage extends StatelessWidget{
  final dynamic item;const BusinessDetailPage({super.key,required this.item});
  String v(String k)=>item is Map?item[k]?.toString()??'':'';
  dynamic rawValue(List<String> keys){if(item is! Map)return null;for(final k in keys){final x=item[k];if(x!=null&&x.toString().trim().isNotEmpty)return x;}return null;}
+ List<String> listValue(String key){final x=item is Map?item[key]:null;return x is List?x.map((e)=>e.toString()).where((e)=>e.isNotEmpty).toList():const[];}
  Map<dynamic,dynamic> hoursMap(){
   dynamic raw=rawValue(['hours','opening_hours','openingHours','openingstijden']);
   if(raw is String&&raw.trim().isNotEmpty){try{raw=jsonDecode(raw);}catch(_){}}
-  if(raw is Map){
-   for(final k in ['hours','opening_hours','openingHours','days','week']){final nested=raw[k];if(nested is Map)raw=nested;}
-   return raw;
-  }
-  if(raw is List){
-   final out=<dynamic,dynamic>{};
-   for(final row in raw){if(row is Map){final day=(row['day']??row['name']??row['weekday']??'').toString().toLowerCase();if(day.isNotEmpty)out[day]=row;}}
-   return out;
-  }
+  if(raw is Map){for(final k in ['hours','opening_hours','openingHours','days','week']){final nested=raw[k];if(nested is Map)raw=nested;}return raw;}
+  if(raw is List){final out=<dynamic,dynamic>{};for(final row in raw){if(row is Map){final day=(row['day']??row['name']??row['weekday']??'').toString().toLowerCase();if(day.isNotEmpty)out[day]=row;}}return out;}
   return <dynamic,dynamic>{};
  }
+ Widget card(String title,Widget child)=>Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),child])));
  @override Widget build(BuildContext context){
-  final img=v('image'),web=v('website'),phone=v('phone'),content=v('content'),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
-  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString();
-  final isPro=_businessIsPro(item);
-  final hours=hoursMap();
+  final logo=(rawValue(['logo','image'])??'').toString(),cover=v('cover'),web=v('website'),phone=v('phone'),content=(rawValue(['content','description'])??'').toString(),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
+  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString(),category=v('category'),place=v('place'),address=v('address');
+  final gallery=listValue('gallery'),lat=double.tryParse(v('latitude')),lng=double.tryParse(v('longitude')),isPro=_businessIsPro(item),hours=hoursMap();
   const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};
   final hourRows=<Widget>[];
-  days.forEach((key,label){
-   final aliases=<String,List<String>>{'monday':['maandag','mon'],'tuesday':['dinsdag','tue'],'wednesday':['woensdag','wed'],'thursday':['donderdag','thu'],'friday':['vrijdag','fri'],'saturday':['zaterdag','sat'],'sunday':['zondag','sun']};
-   dynamic d=hours[key]??hours[label.toLowerCase()]??hours[label];
-   for(final a in aliases[key]??const <String>[]){d??=hours[a];}
-   var text='Niet opgegeven';
-   if(d is Map){
-    final closed=d['closed']==1||d['closed']==true||d['closed']=='1';
-    final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();
-    if(closed){text='Gesloten';}else if(open.isNotEmpty||close.isNotEmpty){text=[open,close].where((z)=>z.isNotEmpty).join(' – ');}
-   }else if(d!=null&&d.toString().trim().isNotEmpty){text=d.toString().trim();}
-   hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));
-  });
+  days.forEach((key,label){final aliases=<String,List<String>>{'monday':['maandag','mon'],'tuesday':['dinsdag','tue'],'wednesday':['woensdag','wed'],'thursday':['donderdag','thu'],'friday':['vrijdag','fri'],'saturday':['zaterdag','sat'],'sunday':['zondag','sun']};dynamic d=hours[key]??hours[label.toLowerCase()]??hours[label];for(final a in aliases[key]??const <String>[]){d??=hours[a];}var text='Niet opgegeven';if(d is Map){final closed=d['closed']==1||d['closed']==true||d['closed']=='1';final open=(d['open']??d['from']??d['start']??d['opens']??'').toString().trim(),close=(d['close']??d['to']??d['end']??d['closes']??'').toString().trim();if(closed){text='Gesloten';}else if(open.isNotEmpty||close.isNotEmpty){text=[open,close].where((z)=>z.isNotEmpty).join(' – ');}}else if(d!=null&&d.toString().trim().isNotEmpty){text=d.toString().trim();}hourRows.add(Padding(padding:const EdgeInsets.symmetric(vertical:4),child:Row(children:[SizedBox(width:105,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w700))),Expanded(child:Text(text))])));});
+  final contact=<Widget>[
+   if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
+   if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
+   if(isPro&&web.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.language),title:const Text('Website'),subtitle:Text(web),onTap:()=>launchUrl(Uri.parse(web),mode:LaunchMode.externalApplication)),
+   if(isPro&&facebook.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.facebook),title:const Text('Facebook'),onTap:()=>launchUrl(Uri.parse(facebook),mode:LaunchMode.externalApplication)),
+   if(isPro&&instagram.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.camera_alt_outlined),title:const Text('Instagram'),onTap:()=>launchUrl(Uri.parse(instagram),mode:LaunchMode.externalApplication)),
+   if(isPro&&linkedin.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.link),title:const Text('LinkedIn'),onTap:()=>launchUrl(Uri.parse(linkedin),mode:LaunchMode.externalApplication)),
+   if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(socials)),
+  ];
   return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(v('title')),actions:[PageFeedbackButton(page:'Bedrijvengids',detail:v('title'))]),body:ListView(children:[
-   if(img.isNotEmpty)Image.network(img,height:220,width:double.infinity,fit:BoxFit.cover),
-   Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[Expanded(child:Text(v('title'),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy))),if(isPro)const Padding(padding:EdgeInsets.only(left:8),child:Text('PRO',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))) ]),
-    if(v('address').isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.location_on_outlined),title:Text(v('address'))),
-    if(phone.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.phone_outlined),title:Text(phone),onTap:()=>launchUrl(Uri(scheme:'tel',path:phone))),
-    if(isPro&&email.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.email_outlined),title:Text(email),onTap:()=>launchUrl(Uri(scheme:'mailto',path:email))),
-    if(isPro&&(web.isNotEmpty||facebook.isNotEmpty||instagram.isNotEmpty||linkedin.isNotEmpty))Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Wrap(spacing:14,runSpacing:10,children:[
-      if(web.isNotEmpty)_BusinessLinkIcon(icon:Icons.language,color:const Color(0xFF0A66C2),tooltip:'Website',url:web),
-      if(facebook.isNotEmpty)_BusinessLinkIcon(icon:Icons.facebook,color:const Color(0xFF1877F2),tooltip:'Facebook',url:facebook),
-      if(instagram.isNotEmpty)_BusinessLinkIcon(icon:Icons.camera_alt_outlined,color:const Color(0xFFE4405F),tooltip:'Instagram',url:instagram),
-      if(linkedin.isNotEmpty)_BusinessLinkIcon(text:'in',color:const Color(0xFF0A66C2),tooltip:'LinkedIn',url:linkedin),
+   SizedBox(height:245,child:Stack(fit:StackFit.expand,children:[
+    if(cover.isNotEmpty)Image.network(cover,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]))))else Container(decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]))),
+    Container(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Colors.black.withValues(alpha:.58)]))),
+    Positioned(left:18,right:18,bottom:18,child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
+     Container(width:78,height:78,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(39),border:Border.all(color:Colors.white,width:3)),clipBehavior:Clip.antiAlias,child:logo.isEmpty?const Icon(Icons.storefront,size:38,color:navy):Image.network(logo,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.storefront,size:38,color:navy))),
+     const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Wrap(spacing:6,runSpacing:5,children:[if(isPro)Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(color:const Color(0xFFFFD54F),borderRadius:BorderRadius.circular(5)),child:const Text('PRO',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:navy))),if(category.isNotEmpty)Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.92),borderRadius:BorderRadius.circular(5)),child:Text(category,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy)))]),
+      const SizedBox(height:6),Text(v('title'),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w900)),if(place.isNotEmpty)Text(place,style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w600))
+     ]))
+    ]))
+   ])),
+   Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    if(content.isNotEmpty)card('Over '+v('title'),Html(data:cleanArticleHtml(content))),
+    if(contact.isNotEmpty)card('Contact',Column(children:contact)),
+    if(isPro&&int.tryParse(v('id'))!=null)Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:BusinessVoucherSection(businessId:int.parse(v('id'))))),
+    if(address.isNotEmpty||lat!=null&&lng!=null)card('Locatie',Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     if(address.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.location_on_outlined),const SizedBox(width:8),Expanded(child:Text(address))])),
+     if(lat!=null&&lng!=null)ClipRRect(borderRadius:BorderRadius.circular(12),child:SizedBox(height:220,child:fmap.FlutterMap(options:fmap.MapOptions(initialCenter:LatLng(lat,lng),initialZoom:15),children:[fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),fmap.MarkerLayer(markers:[fmap.Marker(point:LatLng(lat,lng),width:44,height:44,child:const Icon(Icons.location_pin,color:navy,size:42))])])))
     ])),
-    if(isPro&&socials.isNotEmpty)Padding(padding:const EdgeInsets.only(top:4,bottom:8),child:Text(socials)),
-    const SizedBox(height:12),const Text('Openingstijden',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),...hourRows,
-    if(content.isNotEmpty)...[const SizedBox(height:18),Html(data:cleanArticleHtml(content))],
-    if(isPro&&additional.isNotEmpty)...[const SizedBox(height:18),const Text('Aanvullende informatie',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:6),Html(data:cleanArticleHtml(additional))],
-    if(isPro&&int.tryParse(v('id'))!=null)BusinessVoucherSection(businessId:int.parse(v('id'))),
-    
+    card('Openingstijden',Column(children:hourRows)),
+    if(gallery.isNotEmpty)card("Foto's",Wrap(spacing:8,runSpacing:8,children:gallery.take(3).map((url)=>ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,width:(MediaQuery.sizeOf(context).width-64)/2,height:125,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()))).toList())),
+    if(isPro&&additional.isNotEmpty)card('Extra informatie',Html(data:cleanArticleHtml(additional))),
    ]))
   ]));
  }
