@@ -117,6 +117,13 @@ jobs:
               signing = '    signingConfigs {\n        create("release") {\n            keyAlias = keystoreProperties["keyAlias"] as String\n            keyPassword = keystoreProperties["keyPassword"] as String\n            storeFile = file(keystoreProperties["storeFile"] as String)\n            storePassword = keystoreProperties["storePassword"] as String\n        }\n    }\n'
               s = s.replace('    buildTypes {', signing + '    buildTypes {', 1)
           s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+          # Release build 42 crashes before Flutter starts in WorkManager/Room after R8
+          # obfuscation. Keep the release code intact and disable shrinking/minification.
+          release_marker = '    buildTypes {\\n        release {'
+          if release_marker in s:
+              s = s.replace(release_marker, release_marker + '\\n            isMinifyEnabled = false\\n            isShrinkResources = false', 1)
+          else:
+              raise SystemExit('Release build type not found; refusing broad Gradle changes')
           p.write_text(s)
           PY
       - name: Build signed release APKs per architecture
