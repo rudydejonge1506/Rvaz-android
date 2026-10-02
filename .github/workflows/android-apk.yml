@@ -119,7 +119,7 @@ jobs:
           s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
           # Release build 42 crashes before Flutter starts in WorkManager/Room after R8
           # obfuscation. Keep the release code intact and disable shrinking/minification.
-          release_marker = '    buildTypes {\\n        release {'
+          release_marker = '        release {'
           if release_marker in s:
               s = s.replace(release_marker, release_marker + '\\n            isMinifyEnabled = false\\n            isShrinkResources = false', 1)
           else:
