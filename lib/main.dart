@@ -1886,7 +1886,7 @@ class BusinessDetailPage extends StatelessWidget{
  Widget card(String title,Widget child)=>Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),child])));
  @override Widget build(BuildContext context){
   final logo=(rawValue(['logo','image'])??'').toString(),cover=v('cover'),web=v('website'),phone=v('phone'),content=(rawValue(['content','description'])??'').toString(),email=v('email'),facebook=v('facebook'),instagram=v('instagram'),linkedin=v('linkedin'),socials=v('socials');
-  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString(),category=v('category'),place=v('place'),address=v('address');
+  final additional=(rawValue(['additional_info','additionalInfo','extra_info','pro_info'])??'').toString(),category=v('category').replaceAll('&amp;','&').replaceAll('&#038;','&').replaceAll('&#38;','&'),place=v('place'),address=v('address');
   final gallery=listValue('gallery'),lat=double.tryParse(v('latitude')),lng=double.tryParse(v('longitude')),isPro=_businessIsPro(item),hours=hoursMap();
   const days={'monday':'Maandag','tuesday':'Dinsdag','wednesday':'Woensdag','thursday':'Donderdag','friday':'Vrijdag','saturday':'Zaterdag','sunday':'Zondag'};
   final hourRows=<Widget>[];
