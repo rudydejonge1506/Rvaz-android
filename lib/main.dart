@@ -1871,11 +1871,6 @@ class _BusinessesPageState extends State<BusinessesPage>{
    );
  }));
 }
-class _BusinessLinkIcon extends StatelessWidget{
- final IconData? icon;final String? text;final Color color;final String tooltip,url;
- const _BusinessLinkIcon({this.icon,this.text,required this.color,required this.tooltip,required this.url});
- @override Widget build(BuildContext context)=>Tooltip(message:tooltip,child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:Container(width:44,height:44,decoration:BoxDecoration(color:Colors.white,border:Border.all(color:color),shape:BoxShape.circle),alignment:Alignment.center,child:icon!=null?Icon(icon,color:color,size:28):Text(text??'',style:TextStyle(color:color,fontSize:20,fontWeight:FontWeight.w900)))));
-}
 class BusinessDetailPage extends StatelessWidget{
  final dynamic item;const BusinessDetailPage({super.key,required this.item});
  String v(String k)=>item is Map?item[k]?.toString()??'':'';
@@ -1918,7 +1913,7 @@ class BusinessDetailPage extends StatelessWidget{
     ]))
    ])),
    Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    if(content.isNotEmpty)card('Over '+v('title'),Html(data:cleanArticleHtml(content))),
+    if(content.isNotEmpty)card('Over ${v('title')}',Html(data:cleanArticleHtml(content))),
     if(contact.isNotEmpty)card('Contact',Column(children:contact)),
     if(isPro&&int.tryParse(v('id'))!=null)Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:BusinessVoucherSection(businessId:int.parse(v('id'))))),
     if(address.isNotEmpty||lat!=null&&lng!=null)card('Locatie',Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
