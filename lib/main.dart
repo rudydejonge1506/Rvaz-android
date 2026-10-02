@@ -1085,19 +1085,11 @@ String p2000DisplayTitle(dynamic item) {
     'p2000_message','p2000Message','text','body','details','description','message'
   ]){
     final value=text(item[key]);
-    if(value.isNotEmpty)return _cleanP2000DisplayText(value);
+    if(value.isNotEmpty)return value;
   }
 
   final title=text(item['title']);
-  return title.isEmpty?'Melding':_cleanP2000DisplayText(title);
-}
-
-String _cleanP2000DisplayText(String raw) {
-  var value=raw.replaceAll(RegExp(r'\\s+'),' ').trim();
-  value=value.replaceFirst(RegExp(r'^Melding:\\s*',caseSensitive:false),'').trim();
-  final metadata=RegExp(r'\\s+(?:Melding|Korps/Voertuig|Capcode):\\s*',caseSensitive:false).firstMatch(value);
-  if(metadata!=null)value=value.substring(0,metadata.start).trim();
-  return value;
+  return title.isEmpty?'Melding':title;
 }
 
 Widget p2000ServiceIcon(dynamic item,{double size=24}) {
