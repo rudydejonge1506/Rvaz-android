@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -20,6 +21,28 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 const site = 'https://regiovoorneaanzee.nl';
+
+const iosAdmobBannerId='ca-app-pub-1599023671130671/9895785784';
+final adConsentReady=ValueNotifier<bool>(false);
+Future<void> initializeAdMob() async {
+  await MobileAds.instance.initialize();
+  final params=ConsentRequestParameters();
+  ConsentInformation.instance.requestConsentInfoUpdate(params,() {
+    ConsentForm.loadAndShowConsentFormIfRequired((_) async {
+      adConsentReady.value=await ConsentInformation.instance.canRequestAds();
+    });
+  },(_) async {
+    adConsentReady.value=await ConsentInformation.instance.canRequestAds();
+  });
+}
+class RvazAdBanner extends StatefulWidget{const RvazAdBanner({super.key});@override State<RvazAdBanner> createState()=>_RvazAdBannerState();}
+class _RvazAdBannerState extends State<RvazAdBanner>{
+ BannerAd? ad;
+ @override void initState(){super.initState();adConsentReady.addListener(_sync);_sync();}
+ void _sync(){if(adConsentReady.value&&ad==null){final a=BannerAd(adUnitId:iosAdmobBannerId,size:AdSize.banner,request:const AdRequest(),listener:BannerAdListener(onAdLoaded:(x){if(mounted)setState(()=>ad=x as BannerAd);},onAdFailedToLoad:(x,_){x.dispose();}));a.load();}}
+ @override void dispose(){adConsentReady.removeListener(_sync);ad?.dispose();super.dispose();}
+ @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SafeArea(top:false,child:SizedBox(width:a.size.width.toDouble(),height:a.size.height.toDouble(),child:AdWidget(ad:a)));}
+}
 
 class RvazApi {
   static const base = '$site/wp-json/rvaz-app/v1';
@@ -249,6 +272,7 @@ Future<void> main() async {
   // Render eerst de app (en een eventuele P2000-push) en doe netwerk/configuratie daarna.
   // Zo blokkeert een cold start niet op config, topic-abonnementen of tokenregistratie.
   runApp(const RvazApp());
+  unawaited(initializeAdMob());
   FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
   if (initialMessage != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
@@ -320,6 +344,7 @@ class RvazApp extends StatelessWidget {
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
           ),
         ),
+        builder:(context,child)=>Column(children:[Expanded(child:child??const SizedBox.shrink()),const Center(child:RvazAdBanner())]),
         home: const Shell(),
       );
 }
