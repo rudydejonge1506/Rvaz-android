@@ -581,7 +581,7 @@ String cleanArticleHtml(String html) {
   out = out.replaceAll(RegExp(r'<(?:script|style|iframe|form)[^>]*>.*?</(?:script|style|iframe|form)>', caseSensitive: false, dotAll: true), '');
   out = out.replaceAll(RegExp(r'''\s(?:width|height|align|cellpadding|cellspacing)=("[^"]*"|'[^']*'|[^\s>]+)''', caseSensitive:false), '');
   out = out.replaceAll(RegExp(r'<\/?(?:main|article|section)[^>]*>',caseSensitive:false),'');
-
+  out = out.replaceAll(RegExp(r'<img\\b',caseSensitive:false),'<img width="600"');
   return out;
 }
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
