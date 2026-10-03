@@ -353,7 +353,7 @@ class RvazApp extends StatelessWidget {
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
           ),
         ),
-        builder:(context,child)=>Column(children:[Expanded(child:child??const SizedBox.shrink()),const Center(child:RvazAdBanner())]),
+        builder:(context,child)=>SafeArea(top:false,child:Column(children:[Expanded(child:child??const SizedBox.shrink()),const Center(child:RvazAdBanner())])),
         home: const Shell(),
       );
 }
@@ -1562,7 +1562,7 @@ class _AgendaPageState extends State<AgendaPage>{
    return collected;
  }
  String val(dynamic p,List<String> k){for(final x in k){final z=p[x];if(z!=null&&'$z'.trim().isNotEmpty)return '$z';}return'';}
- String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+ String clean(dynamic v)=>decodeHtmlEntities('$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&#8211;','–'));
  String title(dynamic p){final t=p['title'];return clean(t is Map?t['rendered']:t??'');}
  String placeOf(dynamic p)=>val(p,['place','city','town','plaats','event_place']);
  DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','event_start_date','event_date','start','date','datum','datetime']));
