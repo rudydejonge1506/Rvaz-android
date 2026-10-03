@@ -815,14 +815,14 @@ class _ArticlePageState extends State<ArticlePage>{
           final ads=adSnapshot.data??[];
           final content=<Widget>[];
           if(blocks.isEmpty){
-            content.add(SizedBox(width:double.infinity,child:Html(data:bodyHtml,style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
+            content.add(SizedBox(width:double.infinity,child:Html(data:bodyHtml,style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
           }else{
             // Korte artikelen: maximaal één advertentie. Langere artikelen krijgen
             // advertenties verspreid door de tekst, met minimaal drie tekstblokken ertussen.
             final adEvery=blocks.length>=10?4:(blocks.length>=6?3:blocks.length);
             var adIndex=0;
             for(var i=0;i<blocks.length;i++){
-              content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
+              content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
               final after=i+1;
               final nativePoints=<int>{(blocks.length/2).ceil(),if(blocks.length>=10)(blocks.length*3/4).ceil()};
               if(after<blocks.length&&nativePoints.contains(after)){
