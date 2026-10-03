@@ -43,7 +43,7 @@ class _RvazAdBannerState extends State<RvazAdBanner>{
  @override void initState(){super.initState();adConsentReady.addListener(_sync);_sync();}
  void _sync(){if(adConsentReady.value&&ad==null){final a=BannerAd(adUnitId:admobBannerId,size:AdSize.banner,request:const AdRequest(),listener:BannerAdListener(onAdLoaded:(x){if(mounted)setState(()=>ad=x as BannerAd);},onAdFailedToLoad:(x,_){x.dispose();}));a.load();}}
  @override void dispose(){adConsentReady.removeListener(_sync);ad?.dispose();super.dispose();}
- @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SafeArea(top:false,child:SizedBox(width:a.size.width.toDouble(),height:a.size.height.toDouble(),child:AdWidget(ad:a)));}
+ @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SizedBox(width:a.size.width.toDouble(),height:a.size.height.toDouble(),child:AdWidget(ad:a));}
 }
 
 const admobArticleNativeId='ca-app-pub-1599023671130671/4325473914';
@@ -293,10 +293,6 @@ Future<void> main() async {
   if (initialMessage != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
   }
-  FirebaseMessaging.onMessage.listen((m) {
-    final ctx = navigatorKey.currentContext;
-    if (ctx != null && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(m.notification?.title ?? 'Nieuwe RVAZ-melding')));
-  });
   messaging.onTokenRefresh.listen((_) { unawaited(registerDeviceToken()); });
 
   unawaited(() async {
@@ -585,6 +581,7 @@ String cleanArticleHtml(String html) {
   out = out.replaceAll(RegExp(r'<(?:script|style|iframe|form)[^>]*>.*?</(?:script|style|iframe|form)>', caseSensitive: false, dotAll: true), '');
   out = out.replaceAll(RegExp(r'''\s(?:width|height|align|cellpadding|cellspacing)=("[^"]*"|'[^']*'|[^\s>]+)''', caseSensitive:false), '');
   out = out.replaceAll(RegExp(r'<\/?(?:main|article|section)[^>]*>',caseSensitive:false),'');
+  out = out.replaceAll(RegExp(r'<img\b',caseSensitive:false),'<img style="width:100%;height:auto;display:block;"');
   return out;
 }
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
@@ -1994,7 +1991,18 @@ Future<void>send()async{if(title.text.trim().isEmpty||content.text.trim().isEmpt
 class InAppWebPage extends StatelessWidget{final String title,url;const InAppWebPage({super.key,required this.title,required this.url});@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(title)),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.ads_click,size:44,color:navy),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:10),const Text('Advertentielink. Je verlaat de app alleen wanneer je hieronder kiest om de bestemming te openen.'),const SizedBox(height:16),FilledButton(onPressed:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:const Text('Open bestemming'))]))));}
 
 
-class EventDetailPage extends StatelessWidget{final dynamic event;const EventDetailPage({super.key,required this.event});String v(List<String> keys){for(final k in keys){final x=event[k];if(x!=null&&'$x'.trim().isNotEmpty)return '$x';}return'';}String title(){final x=event['title'];return x is Map?'${x['rendered']??''}':'${x??''}';}String category(){final x=event['category']??event['categories']??event['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}String address(){final full=v(['full_address','address']);if(full.isNotEmpty)return full;final street=v(['street','straat','location']),nr=v(['house_number','number','huisnummer']),zip=v(['postcode','postal_code']),city=v(['place','city','town','plaats']);final first=[street,nr].where((x)=>x.isNotEmpty).join(' '),second=[zip,city].where((x)=>x.isNotEmpty).join(' ');return[first,second].where((x)=>x.isNotEmpty).join('\n');}
+String decodeHtmlEntities(String value) {
+  var out=value.replaceAllMapped(RegExp(r'&#(x[0-9a-fA-F]+|[0-9]+);'),(m){
+    final raw=m.group(1)!;
+    final code=raw.toLowerCase().startsWith('x')?int.tryParse(raw.substring(1),radix:16):int.tryParse(raw);
+    return code==null?m.group(0)!:String.fromCharCode(code);
+  });
+  const named={'&amp;':'&','&quot;':'"','&apos;':"'",'&#39;':"'",'&lt;':'<','&gt;':'>'};
+  named.forEach((k,v)=>out=out.replaceAll(k,v));
+  return out;
+}
+
+class EventDetailPage extends StatelessWidget{final dynamic event;const EventDetailPage({super.key,required this.event});String v(List<String> keys){for(final k in keys){final x=event[k];if(x!=null&&'$x'.trim().isNotEmpty)return '$x';}return'';}String title(){final x=event['title'];return decodeHtmlEntities(x is Map?'${x['rendered']??''}':'${x??''}');}String category(){final x=event['category']??event['categories']??event['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}String address(){final full=v(['full_address','address']);if(full.isNotEmpty)return full;final street=v(['street','straat','location']),nr=v(['house_number','number','huisnummer']),zip=v(['postcode','postal_code']),city=v(['place','city','town','plaats']);final first=[street,nr].where((x)=>x.isNotEmpty).join(' '),second=[zip,city].where((x)=>x.isNotEmpty).join(' ');return[first,second].where((x)=>x.isNotEmpty).join('\n');}
 DateTime? eventStart(){final raw=v(['start_date','event_start_date','event_date','start','date','datum','datetime']);return DateTime.tryParse(raw);}
 DateTime? eventEnd(){final raw=v(['end_date','event_end_date','end']);return DateTime.tryParse(raw);}
 Future<void> addToCalendar(BuildContext context)async{final start=eventStart();if(start==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Voor dit evenement ontbreekt een geldige datum.')));return;}final end=eventEnd()??start.add(const Duration(hours:2));final event=Event(title:title(),description:v(['excerpt','description']),location:[v(['venue','location_name']),address()].where((x)=>x.isNotEmpty).join(', '),startDate:start,endDate:end);await Add2Calendar.addEvent2Cal(event);}
