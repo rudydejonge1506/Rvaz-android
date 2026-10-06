@@ -109,7 +109,7 @@ jobs:
           sips -s format png /tmp/rvaz-app-icon-rgb.jpg --out /tmp/rvaz-app-icon.png >/dev/null
           ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
           while IFS='|' read -r file pixels; do
-            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
+            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "/tmp/$file" >/dev/null\n            cp "/tmp/$file" "$ICON_DIR/$file"
           done <<'ICONS'
           Icon-App-20x20@1x.png|20
           Icon-App-20x20@2x.png|40
