@@ -994,7 +994,7 @@ class _HomePageState extends State<HomePage>{
         borderRadius:BorderRadius.circular(14),
         child:InkWell(
           borderRadius:BorderRadius.circular(14),
-          onPressed:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
+          onTap:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
       const ListTile(title:Text('Meer functies',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy))),
       ListTile(leading:const Icon(Icons.directions_car,color:Colors.orange),title:const Text('112 & Verkeer'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()));}),
       ListTile(leading:const Icon(Icons.calendar_today,color:Color(0xFF19A84A)),title:const Text('Afvalkalender'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));}),
