@@ -1071,7 +1071,34 @@ class RecreationAreaPage extends StatelessWidget {
  };
  @override Widget build(BuildContext context){final items=data[place]??const <List<String>>[];return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text('Natuur in $place'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(16),children:[
   Text(place,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:5),const Text('Natuurgebieden en routes. Open Maps alleen wanneer je erheen wilt.'),const SizedBox(height:12),
-  ...items.map((e)=>Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const Icon(Icons.park_outlined,color:navy),const SizedBox(width:10),Expanded(child:Text(e[0],style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)))]),const SizedBox(height:6),Text(e[1],style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:4),Text(e[2]),const SizedBox(height:10),Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(onPressed:()=>_mapSearch('${e[0]}, ${place}, Nederland'),icon:const Icon(Icons.directions),label:const Text('Route')))]))),
+  ...items.map((e)=>Card(
+    child:Padding(
+      padding:const EdgeInsets.all(14),
+      child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
+          Row(children:[
+            const Icon(Icons.park_outlined,color:navy),
+            const SizedBox(width:10),
+            Expanded(child:Text(e[0],style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy))),
+          ]),
+          const SizedBox(height:6),
+          Text(e[1],style:const TextStyle(fontWeight:FontWeight.w700)),
+          const SizedBox(height:4),
+          Text(e[2]),
+          const SizedBox(height:10),
+          Align(
+            alignment:Alignment.centerRight,
+            child:OutlinedButton.icon(
+              onPressed:()=>_mapSearch('${e[0]}, ${place}, Nederland'),
+              icon:const Icon(Icons.directions),
+              label:const Text('Route'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  )),
  ]));}
 }
 class CoastPage extends StatefulWidget {const CoastPage({super.key});@override State<CoastPage> createState()=>_CoastPageState();}
