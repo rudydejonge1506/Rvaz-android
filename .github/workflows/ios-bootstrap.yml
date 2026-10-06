@@ -109,6 +109,23 @@ jobs:
             remove_alpha_ios: true
             background_color_ios: "#FFFFFF"
           YAML
+          # Re-encode the existing artwork losslessly for the iOS icon generator only.
+          # Keep the repository image and all Android icon settings untouched.
+          swift - "$PWD/assets/rvaz-logo.png" "$RUNNER_TEMP/rvaz-ios-icon.png" <<'SWIFT'
+          import AppKit
+          import Foundation
+          let source = CommandLine.arguments[1]
+          let destination = CommandLine.arguments[2]
+          guard let image = NSImage(contentsOfFile: source),
+                let tiff = image.tiffRepresentation,
+                let bitmap = NSBitmapImageRep(data: tiff),
+                let png = bitmap.representation(using: .png, properties: [:]) else {
+            fatalError("Cannot decode RVAZ source logo")
+          }
+          try png.write(to: URL(fileURLWithPath: destination))
+          SWIFT
+          sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP/rvaz-ios-icon.png"
+          sed -i '' "s|image_path: assets/rvaz-logo.png|image_path: $RUNNER_TEMP/rvaz-ios-icon.png|" "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml"
           dart run flutter_launcher_icons -f "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml"
           test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
           test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
