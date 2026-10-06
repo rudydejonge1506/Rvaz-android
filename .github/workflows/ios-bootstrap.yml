@@ -98,10 +98,20 @@ jobs:
             flutter create --platforms=ios .
           fi
 
-      - name: Keep generated iOS app icons
+      - name: Generate RVAZ iOS app icons
         run: |
           set -euo pipefail
+          cat > "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml" <<'YAML'
+          flutter_launcher_icons:
+            android: false
+            ios: true
+            image_path: assets/rvaz-logo.png
+            remove_alpha_ios: true
+            background_color_ios: "#FFFFFF"
+          YAML
+          dart run flutter_launcher_icons -f "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml"
           test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png
 
       - name: Build Flutter iOS release without signing
         run: |
