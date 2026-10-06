@@ -900,7 +900,7 @@ class _ArticlePageState extends State<ArticlePage>{
 }
 
 class RvazYoutubePlayer extends StatefulWidget{final String videoId;const RvazYoutubePlayer({super.key,required this.videoId});@override State<RvazYoutubePlayer> createState()=>_RvazYoutubePlayerState();}
-class _RvazYoutubePlayerState extends State<RvazYoutubePlayer>{late final YoutubePlayerController controller;@override void initState(){super.initState();controller=YoutubePlayerController.fromVideoId(videoId:widget.videoId,autoPlay:false,params:const YoutubePlayerParams(showControls:true,showFullscreenButton:true));}@override void dispose(){controller.close();super.dispose();}@override Widget build(BuildContext context)=>ClipRRect(borderRadius:BorderRadius.circular(8),child:AspectRatio(aspectRatio:16/9,child:YoutubePlayer(controller:controller)));}
+class _RvazYoutubePlayerState extends State<RvazYoutubePlayer>{late final YoutubePlayerController controller;@override void initState(){super.initState();controller=YoutubePlayerController.fromVideoId(videoId:widget.videoId,autoPlay:false,params:const YoutubePlayerParams(showControls:true,showFullscreenButton:true,origin:'https://www.youtube-nocookie.com'));}@override void dispose(){controller.close();super.dispose();}@override Widget build(BuildContext context)=>ClipRRect(borderRadius:BorderRadius.circular(8),child:AspectRatio(aspectRatio:16/9,child:YoutubePlayer(controller:controller)));}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
