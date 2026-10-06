@@ -591,7 +591,7 @@ String cleanArticleHtml(String html) {
   // Strip inline desktop layout styles so WordPress content always fits mobile width.
   out = out.replaceAll(RegExp(r'''\sstyle=("[^"]*"|'[^']*')''', caseSensitive: false), '');
   // Preserve YouTube position as an app marker; ArticlePage renders a real inline player.
-  out = out.replaceAllMapped(RegExp(r'''<iframe[^>]+src=["']([^"']*(?:youtube\\.com/embed/|youtube-nocookie\\.com/embed/)[^"']+)["'][^>]*>\\s*</iframe>''',caseSensitive:false,dotAll:true),(m){
+  out = out.replaceAllMapped(RegExp(r'''<iframe[^>]+src=["']([^"']*(?:youtube\.com/embed/|youtube-nocookie\.com/embed/)[^"']+)["'][^>]*>\\s*</iframe>''',caseSensitive:false,dotAll:true),(m){
     final src=decodeHtmlEntities(m.group(1)??'');
     final uri=Uri.tryParse(src.startsWith('//')?'https:$src':src);
     final parts=uri?.pathSegments??const <String>[];
@@ -602,7 +602,7 @@ String cleanArticleHtml(String html) {
   out = out.replaceAll(RegExp(r'<(?:script|style|iframe|form)[^>]*>.*?</(?:script|style|iframe|form)>', caseSensitive: false, dotAll: true), '');
   out = out.replaceAll(RegExp(r'''\s(?:width|height|align|cellpadding|cellspacing)=("[^"]*"|'[^']*'|[^\s>]+)''', caseSensitive:false), '');
   out = out.replaceAll(RegExp(r'<\/?(?:main|article|section)[^>]*>',caseSensitive:false),'');
-  out = out.replaceAll(RegExp(r'<img\\b',caseSensitive:false),'<img width="600"');
+  out = out.replaceAll(RegExp(r'<img\b',caseSensitive:false),'<img width="600"');
   return out;
 }
 Future<void> sendPageFeedback(BuildContext context, String page, {String? detail}) async {
@@ -844,7 +844,7 @@ class _ArticlePageState extends State<ArticlePage>{
             final adEvery=blocks.length>=10?4:(blocks.length>=6?3:blocks.length);
             var adIndex=0;
             for(var i=0;i<blocks.length;i++){
-              final ym=RegExp(r'\\[\\[RVAZ_YOUTUBE:([A-Za-z0-9_-]+)\\]\\]').firstMatch(blocks[i]);
+              final ym=RegExp(r'\[\[RVAZ_YOUTUBE:([A-Za-z0-9_-]+)\]\]').firstMatch(blocks[i]);
               if(ym!=null){content.add(Padding(padding:const EdgeInsets.symmetric(vertical:10),child:RvazYoutubePlayer(videoId:ym.group(1)!)));}
               else{content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));}
               final after=i+1;
@@ -943,7 +943,11 @@ class _HomePageState extends State<HomePage>{
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses,weather]);},child:ListView(padding:EdgeInsets.zero,children:[
     if(appConfig.breakingBanner.trim().isNotEmpty)Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[const Icon(Icons.flash_on,size:18,color:Colors.red),const SizedBox(width:7),const Text('BREAKING',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Colors.red)),const SizedBox(width:8),Expanded(child:Text(appConfig.breakingBanner,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)))])),
     FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Container(margin:const EdgeInsets.fromLTRB(16,12,16,0),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,2))]),child:Row(children:[Icon(_weatherIcon(code),size:28,color:Colors.orange),const SizedBox(width:9),Text('$temp°',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(width:8),Expanded(child:Text(_weatherLabel(code),style:const TextStyle(fontSize:12,color:Colors.black54))),const VerticalDivider(),const Icon(Icons.location_on_outlined,size:17,color:cyan),const SizedBox(width:4),const Text('Voorne aan Zee',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))]));}),
-    InkWell(
+    Transform.translate(
+      offset:const Offset(-16,0),
+      child:SizedBox(
+        width:MediaQuery.sizeOf(context).width,
+        child:InkWell(
       onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),
       child:Container(
         width:double.infinity,
@@ -980,6 +984,8 @@ class _HomePageState extends State<HomePage>{
           ),
         ),
       ),
+        ),
+      ),
     ),
     Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:4,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:4,crossAxisSpacing:6,childAspectRatio:.90,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage())))),
@@ -998,7 +1004,7 @@ class _HomePageState extends State<HomePage>{
       ListTile(leading:const Icon(Icons.star,color:Colors.amber),title:const Text('Favorieten'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()));}),
       ListTile(leading:const Icon(Icons.storefront,color:Colors.deepPurple),title:const Text('Bedrijven'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()));}),
       ListTile(leading:const Icon(Icons.percent,color:Colors.red),title:const Text('Vouchers'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()));}),
-      ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn RVAZ'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
+      ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn Voorne'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
       ListTile(leading:const Icon(Icons.campaign,color:Colors.blue),title:const Text('Tip de redactie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()));}),
     ]))),icon:const Icon(Icons.apps),label:const Text('Meer functies')))),
     const Center(child:RvazAdBanner()),
@@ -1048,27 +1054,25 @@ class ParkingAreaPage extends StatelessWidget {
  ]));}
 }
 class RecreationPage extends StatelessWidget {
-  const RecreationPage({super.key});
-  static const items=<List<String>>[
-    ['Voornes Duin','Duinen, bos en wandelroutes.','Voornes Duin'],
-    ['Quackjeswater','Natuurgebied bij Hellevoetsluis.','Quackjeswater'],
-    ['Tenellaplas','Natuur en wandelroutes bij Rockanje.','Tenellaplas Rockanje'],
-    ['Strand Rockanje','Strand, duinen en recreatie.','Strand Rockanje'],
-    ['Oostvoornse Meer','Wandelen, fietsen en watersport.','Oostvoornse Meer'],
-    ['Brielse Meer','Recreatie, fietsen en watersport.','Brielse Meer'],
-  ];
-  @override Widget build(BuildContext context)=>Scaffold(
-    backgroundColor:const Color(0xFFF7F9FB),
-    appBar:AppBar(title:const Text('Natuur & recreatie'),backgroundColor:Colors.white,foregroundColor:navy,actions:const [PageFeedbackButton(page:'Natuur & recreatie')]),
-    body:ListView(padding:const EdgeInsets.all(16),children:[
-      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xFFEAF4FF),borderRadius:BorderRadius.circular(18)),child:const Row(children:[
-        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Naar buiten',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:navy)),SizedBox(height:5),Text('Natuur, strand en recreatie op Voorne.',style:TextStyle(color:Colors.black54))])),
-        Icon(Icons.park_outlined,color:navy,size:42),
-      ])),
-      const SizedBox(height:12),
-      ...items.map((s)=>Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.park_outlined)),title:Text(s[0],style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(s[1]),trailing:const Icon(Icons.chevron_right),onTap:()=>_mapSearch(s[2])))),
-    ]),
-  );
+ const RecreationPage({super.key});
+ static const places=<List<String>>[['Rockanje','Duinen, strand en wandelroutes'],['Oostvoorne','Duinen, meer en natuur'],['Hellevoetsluis','Natuur, kust en recreatie'],['Brielle','Meer, groen en fietsroutes']];
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Natuur & recreatie'),backgroundColor:Colors.white,foregroundColor:navy,actions:const [PageFeedbackButton(page:'Natuur & recreatie')]),body:ListView(padding:const EdgeInsets.all(16),children:[
+  Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xFFEAF4FF),borderRadius:BorderRadius.circular(18)),child:const Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Natuur & routes',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:navy)),SizedBox(height:5),Text('Kies eerst een plaats en ontdek wat er te doen is.',style:TextStyle(color:Colors.black54))])),Icon(Icons.park_outlined,color:navy,size:42)])),const SizedBox(height:12),
+  ...places.map((p)=>Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.park_outlined)),title:Text(p[0],style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:Text(p[1]),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>RecreationAreaPage(place:p[0])))))),
+ ]));
+}
+class RecreationAreaPage extends StatelessWidget {
+ final String place; const RecreationAreaPage({super.key,required this.place});
+ static const data=<String,List<List<String>>>{
+  'Rockanje':[['Voornes Duin','Natuurgebied','Duinen, bos en wandelpaden.'],['Tenellaplas','Natuurgebied','Wandelen rond duinmeer en bezoekerscentrum.'],['De Pan','Wandelroute · ca. 2,9 km','Wandelroute door Voornes Duin.'],['Breede Water','Wandelroute · ca. 3 km','Route door duinlandschap rond het Breede Water.'],['Strypemonde','Wandelroute · ca. 5 km','Bos- en duinroute bij Rockanje.']],
+  'Oostvoorne':[['Voornes Duin','Natuurgebied','Duinen, bos en kustnatuur.'],['Oostvoornse Meer','Recreatiegebied','Wandelen, fietsen en watersport rond het meer.'],['Groene Strand','Natuurgebied','Bijzonder kust- en natuurgebied.']],
+  'Hellevoetsluis':[['Quackjeswater','Natuurgebied','Bos en water met wandelmogelijkheden.'],['Quackjeswaterroute','Wandelroute · ca. 3 km','Wandeling door het natuurgebied.'],['Haringvliet','Kust & recreatie','Wandelen en fietsen langs het water.']],
+  'Brielle':[['Brielse Meer','Recreatiegebied','Fietsen en wandelen langs het meer.'],['Vestingroute','Wandel- en fietsgebied','Routes rond de vesting en het buitengebied.']],
+ };
+ @override Widget build(BuildContext context){final items=data[place]??const <List<String>>[];return Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text('Natuur in $place'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(16),children:[
+  Text(place,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:5),const Text('Natuurgebieden en routes. Open Maps alleen wanneer je erheen wilt.'),const SizedBox(height:12),
+  ...items.map((e)=>Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const Icon(Icons.park_outlined,color:navy),const SizedBox(width:10),Expanded(child:Text(e[0],style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)))]),const SizedBox(height:6),Text(e[1],style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:4),Text(e[2]),const SizedBox(height:10),Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(onPressed:()=>_mapSearch('${e[0]}, ${place}, Nederland'),icon:const Icon(Icons.directions),label:const Text('Route')))]))),
+ ]));}
 }
 class CoastPage extends StatefulWidget {const CoastPage({super.key});@override State<CoastPage> createState()=>_CoastPageState();}
 class _CoastPageState extends State<CoastPage> {
@@ -1788,6 +1792,8 @@ class _AccountPageState extends State<AccountPage>{
       const SizedBox(height:14),
       if(userName!=null)Card(clipBehavior:Clip.antiAlias,child:Column(children:[
         _sectionHeader(Icons.person,'Mijn Voorne','Jouw instellingen en voorkeuren'),
+        ListTile(leading:_menuIcon(Icons.home_outlined),title:const Text('Mijn Voorne',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Jouw adres, lokaal nieuws, agenda en afval'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVoornePage()))),
+        const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Kies welke pushmeldingen je wilt ontvangen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
