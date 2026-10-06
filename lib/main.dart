@@ -8,6 +8,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -589,18 +590,14 @@ String cleanArticleHtml(String html) {
   }
   // Strip inline desktop layout styles so WordPress content always fits mobile width.
   out = out.replaceAll(RegExp(r'''\sstyle=("[^"]*"|'[^']*')''', caseSensitive: false), '');
-  // Keep YouTube embeds visible in the app. flutter_html does not render iframe
-  // video players itself, so turn the embed into a large clickable YouTube preview.
-  out = out.replaceAllMapped(RegExp(r'''<iframe[^>]+src=["']([^"']*(?:youtube\.com/embed/|youtube-nocookie\.com/embed/)[^"']+)["'][^>]*>\s*</iframe>''',caseSensitive:false,dotAll:true),(m){
+  // Preserve YouTube position as an app marker; ArticlePage renders a real inline player.
+  out = out.replaceAllMapped(RegExp(r'''<iframe[^>]+src=["']([^"']*(?:youtube\\.com/embed/|youtube-nocookie\\.com/embed/)[^"']+)["'][^>]*>\\s*</iframe>''',caseSensitive:false,dotAll:true),(m){
     final src=decodeHtmlEntities(m.group(1)??'');
     final uri=Uri.tryParse(src.startsWith('//')?'https:$src':src);
     final parts=uri?.pathSegments??const <String>[];
     final idx=parts.indexOf('embed');
     final id=(idx>=0&&idx+1<parts.length)?parts[idx+1].split('?').first:'';
-    if(id.isEmpty)return '';
-    final watch='https://www.youtube.com/watch?v=$id';
-    final thumb='https://img.youtube.com/vi/$id/hqdefault.jpg';
-    return '<p><a href="$watch"><img src="$thumb" alt="YouTube-video"></a></p><p><a href="$watch">▶ Bekijk de video</a></p>';
+    return id.isEmpty?'':'<p>[[RVAZ_YOUTUBE:$id]]</p>';
   });
   out = out.replaceAll(RegExp(r'<(?:script|style|iframe|form)[^>]*>.*?</(?:script|style|iframe|form)>', caseSensitive: false, dotAll: true), '');
   out = out.replaceAll(RegExp(r'''\s(?:width|height|align|cellpadding|cellspacing)=("[^"]*"|'[^']*'|[^\s>]+)''', caseSensitive:false), '');
@@ -846,7 +843,9 @@ class _ArticlePageState extends State<ArticlePage>{
             final adEvery=blocks.length>=10?4:(blocks.length>=6?3:blocks.length);
             var adIndex=0;
             for(var i=0;i<blocks.length;i++){
-              content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
+              final ym=RegExp(r'\\[\\[RVAZ_YOUTUBE:([A-Za-z0-9_-]+)\\]\\]').firstMatch(blocks[i]);
+              if(ym!=null){content.add(Padding(padding:const EdgeInsets.symmetric(vertical:10),child:RvazYoutubePlayer(videoId:ym.group(1)!)));}
+              else{content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));}
               final after=i+1;
               final nativePoints=<int>{(blocks.length/2).ceil(),if(blocks.length>=10)(blocks.length*3/4).ceil()};
               if(after<blocks.length&&nativePoints.contains(after)){
@@ -899,6 +898,9 @@ class _ArticlePageState extends State<ArticlePage>{
   }
 }
 
+class RvazYoutubePlayer extends StatefulWidget{final String videoId;const RvazYoutubePlayer({super.key,required this.videoId});@override State<RvazYoutubePlayer> createState()=>_RvazYoutubePlayerState();}
+class _RvazYoutubePlayerState extends State<RvazYoutubePlayer>{late final YoutubePlayerController controller;@override void initState(){super.initState();controller=YoutubePlayerController.fromVideoId(videoId:widget.videoId,autoPlay:false,params:const YoutubePlayerParams(showControls:true,showFullscreenButton:true));}@override void dispose(){controller.close();super.dispose();}@override Widget build(BuildContext context)=>ClipRRect(borderRadius:BorderRadius.circular(8),child:AspectRatio(aspectRatio:16/9,child:YoutubePlayer(controller:controller)));}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override State<HomePage> createState()=>_HomePageState();
@@ -940,7 +942,7 @@ class _HomePageState extends State<HomePage>{
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses,weather]);},child:ListView(padding:EdgeInsets.zero,children:[
     if(appConfig.breakingBanner.trim().isNotEmpty)Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[const Icon(Icons.flash_on,size:18,color:Colors.red),const SizedBox(width:7),const Text('BREAKING',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Colors.red)),const SizedBox(width:8),Expanded(child:Text(appConfig.breakingBanner,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)))])),
     FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Container(margin:const EdgeInsets.fromLTRB(16,12,16,0),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,2))]),child:Row(children:[Icon(_weatherIcon(code),size:28,color:Colors.orange),const SizedBox(width:9),Text('$temp°',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(width:8),Expanded(child:Text(_weatherLabel(code),style:const TextStyle(fontSize:12,color:Colors.black54))),const VerticalDivider(),const Icon(Icons.location_on_outlined,size:17,color:cyan),const SizedBox(width:4),const Text('Voorne aan Zee',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))]));}),
-    Padding(padding:const EdgeInsets.fromLTRB(16,8,16,4),child:InkWell(borderRadius:BorderRadius.circular(12),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),child:Container(height:108,clipBehavior:Clip.antiAlias,decoration:BoxDecoration(color:const Color(0xFF073B63),borderRadius:BorderRadius.circular(12),image:DecorationImage(image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl.trim()),fit:BoxFit.cover,colorFilter:const ColorFilter.mode(Color(0x66000000),BlendMode.darken))),child:Padding(padding:const EdgeInsets.fromLTRB(18,12,14,12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),const SizedBox(height:2),const Text('Het laatste nieuws uit de regio',style:TextStyle(color:Colors.white,fontSize:13)),const SizedBox(height:8),Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(16)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Bekijk al het nieuws',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),SizedBox(width:3),Icon(Icons.chevron_right,color:Colors.white,size:15)]))]))))),
+    Padding(padding:const EdgeInsets.fromLTRB(0,8,0,4),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),child:Container(height:108,clipBehavior:Clip.antiAlias,decoration:BoxDecoration(color:const Color(0xFF073B63),image:DecorationImage(image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl.trim()),fit:BoxFit.cover,colorFilter:const ColorFilter.mode(Color(0x66000000),BlendMode.darken))),child:Padding(padding:const EdgeInsets.fromLTRB(18,12,14,12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),const SizedBox(height:2),const Text('Het laatste nieuws uit de regio',style:TextStyle(color:Colors.white,fontSize:13)),const SizedBox(height:8),Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(16)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Bekijk al het nieuws',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),SizedBox(width:3),Icon(Icons.chevron_right,color:Colors.white,size:15)]))]))))),
     Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:4,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:4,crossAxisSpacing:6,childAspectRatio:.90,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage())))),
       _HomeShortcut(icon:Icons.today,color:const Color(0xFF19A84A),label:'Voorne Vandaag',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage()))),
@@ -1516,7 +1518,17 @@ class _TodayPageState extends State<TodayPage>{
    final savedStreet=(await st.read(key:'rvaz_neighborhood_street')??'').trim();
    final pushStreet=(await st.read(key:'rvaz_p2000_street_name')??'').trim();
    place=saved.isEmpty?'Voorne aan Zee':saved;street=savedStreet.isNotEmpty?savedStreet:pushStreet;
-   try{final d=await RvazApi.get('today',query:{'place':place});if(d is Map)return Map<String,dynamic>.from(d);}catch(_){}
+   try{
+     final d=await RvazApi.get('today',query:{'place':place});
+     if(d is Map){
+       final out=Map<String,dynamic>.from(d);
+       if(RvazApi.list(out['agenda']).isEmpty&&place!='Voorne aan Zee'){
+         final all=await RvazApi.firstList(['agenda?per_page=250','events?per_page=250'],keys:const ['events','agenda']);
+         out['agenda']=all.where((e){if(e is! Map)return false;final p='${e['place']??e['city']??e['town']??e['plaats']??e['event_place']??''}'.trim().toLowerCase();return p==place.toLowerCase();}).toList();
+       }
+       return out;
+     }
+   }catch(_){}
    return{};
  }
  Future<void> openAddress()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));setState(()=>future=load());}
