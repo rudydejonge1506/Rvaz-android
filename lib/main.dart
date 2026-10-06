@@ -354,7 +354,7 @@ class RvazApp extends StatelessWidget {
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
           ),
         ),
-        builder:(context,child)=>SafeArea(top:false,child:Column(children:[Expanded(child:child??const SizedBox.shrink()),const Center(child:RvazAdBanner())])),
+        builder:(context,child)=>SafeArea(top:false,child:child??const SizedBox.shrink()),
         home: const Shell(),
       );
 }
@@ -960,6 +960,7 @@ class _HomePageState extends State<HomePage>{
       ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn RVAZ'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
       ListTile(leading:const Icon(Icons.campaign,color:Colors.blue),title:const Text('Tip de redactie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()));}),
     ]))),icon:const Icon(Icons.apps),label:const Text('Meer functies')))),
+    const Center(child:RvazAdBanner()),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[const Expanded(child:Text('Laatste nieuws uit Voorne aan Zee',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy))),TextButton(style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:4),minimumSize:Size.zero,tapTargetSize:MaterialTapTargetSize.shrinkWrap),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Meer laden',style:TextStyle(fontSize:11)),Icon(Icons.chevron_right,size:15)]))]),
