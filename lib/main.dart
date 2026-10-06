@@ -922,18 +922,14 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.home_work_outlined,color:Colors.green,label:'Mijn Buurt',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage()))),
       _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'P2000',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false)))),
       _HomeShortcut(icon:Icons.calendar_month,color:Colors.deepPurple,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
-      _HomeShortcut(icon:Icons.traffic,color:Colors.orange,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
       _HomeShortcut(icon:Icons.recycling,color:const Color(0xFF16834B),label:'Afvalkalender',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()))),
-      _HomeShortcut(icon:Icons.location_on,color:Colors.blue,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()))),
-      _HomeShortcut(icon:Icons.favorite,color:Colors.amber,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
       _HomeShortcut(icon:Icons.local_offer_outlined,color:Colors.redAccent,label:'Vouchers',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
-      _HomeShortcut(icon:Icons.person_outline,color:Colors.blueGrey,label:'Mijn RVAZ',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
-      _HomeShortcut(icon:Icons.campaign_outlined,color:Colors.blue,label:'Tip de redactie',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),
+      _HomeShortcut(icon:Icons.person_outline,color:Colors.blueGrey,label:'Mijn RVAZ',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn RVAZ'),backgroundColor:Colors.white,foregroundColor:navy),body:const AccountPage())))),
     ])),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Laatste nieuws uit Voorne aan Zee',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Text('Meer laden →'))]),
+      Row(children:[const Expanded(child:Text('Laatste nieuws uit Voorne aan Zee',maxLines:2,style:TextStyle(fontSize:19,height:1.08,fontWeight:FontWeight.w900,color:navy))),const SizedBox(width:6),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Text('Bekijk alles'))]),
       FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final all=s.data??[];if(all.isEmpty)return const SizedBox.shrink();final x=all.take(visibleNews).toList();final p=x.first;return Column(children:[
         Card(clipBehavior:Clip.antiAlias,margin:EdgeInsets.zero,child:InkWell(onTap:()=>openArticle(context,p),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[if(postImage(p).isNotEmpty)Image.network(postImage(p),height:150,width:double.infinity,fit:BoxFit.cover),Padding(padding:const EdgeInsets.all(11),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),style:const TextStyle(color:navy,fontSize:17,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
         const SizedBox(height:8),...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:7),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:3),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(postImage(p),width:76,height:56,fit:BoxFit.cover)),title:Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),subtitle:Text(formatPostDate(p),style:const TextStyle(fontSize:10)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
@@ -1492,12 +1488,13 @@ class _TodayPageState extends State<TodayPage>{
  List<dynamic> section(Map<String,dynamic>d,String key)=>RvazApi.list(d[key]);
  String text(dynamic e,String key){if(e is! Map)return'';final v=e[key];if(v is Map)return decodeHtmlEntities('${v['rendered']??''}'.replaceAll(RegExp(r'<[^>]*>'),''));return decodeHtmlEntities('${v??''}'.replaceAll(RegExp(r'<[^>]*>'),''));}
  String greeting(){final h=DateTime.now().hour;if(h<12)return'Goedemorgen 👋';if(h<18)return'Goedemiddag 👋';return'Goedenavond 👋';}
- Widget sectionCard(String title,IconData icon,Color color,List<dynamic> items){
+ void openItem(String kind,dynamic e){if(kind=='news'){openArticle(context,e);return;}if(kind=='agenda'){Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:e)));return;}Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:kind=='traffic',initialPlace:place)));}
+ Widget sectionCard(String kind,String title,IconData icon,Color color,List<dynamic> items){
    if(items.isEmpty)return const SizedBox.shrink();
    return Card(margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.fromLTRB(14,14,14,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Row(children:[CircleAvatar(radius:18,backgroundColor:color.withValues(alpha:.10),child:Icon(icon,color:color,size:20)),const SizedBox(width:10),Expanded(child:Text(title,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)))]),
      const SizedBox(height:8),
-     ...items.take(5).map((e)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place'))))
+     ...items.take(5).map((e)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place')),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openItem(kind,e)))
    ])));
  }
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Voorne Vandaag')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){
@@ -1511,10 +1508,10 @@ class _TodayPageState extends State<TodayPage>{
      ])),
      const SizedBox(height:14),
      if(d.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Het dagoverzicht is momenteel niet beschikbaar.'))),
-     sectionCard('Vandaag in het nieuws',Icons.article_outlined,cyan,news),
-     sectionCard('112 / P2000 in $place',Icons.warning_amber_rounded,Colors.red,p2000),
-     sectionCard('Vandaag te doen',Icons.event_outlined,const Color(0xFF16834B),agenda),
-     sectionCard('Verkeer in de regio',Icons.traffic,Colors.deepOrange,traffic),
+     sectionCard('news','Vandaag in het nieuws',Icons.article_outlined,cyan,news),
+     sectionCard('p2000','112 / P2000 in $place',Icons.warning_amber_rounded,Colors.red,p2000),
+     sectionCard('agenda','Vandaag te doen',Icons.event_outlined,const Color(0xFF16834B),agenda),
+     sectionCard('traffic','Verkeer in de regio',Icons.traffic,Colors.deepOrange,traffic),
    ]));
  }));
 }
@@ -1684,8 +1681,7 @@ class _MyNeighborhoodPageState extends State<MyNeighborhoodPage> {
           const Icon(Icons.home_work_outlined,color:Colors.white,size:46)
         ])),
         const SizedBox(height:12),
-        Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          shortcut(Icons.near_me_outlined,'Rond mijn straat',const Color(0xFF7C4DFF),(){}),const SizedBox(width:7),
+        Row(children:[
           shortcut(Icons.traffic,'Verkeer',Colors.deepOrange,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place)))),const SizedBox(width:7),
           shortcut(Icons.warning_amber_rounded,'112 / P2000',Colors.red,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:false,initialPlace:place)))),const SizedBox(width:7),
           shortcut(Icons.notifications_active_outlined,'Buurtmeldingen',const Color(0xFF16834B),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())))
