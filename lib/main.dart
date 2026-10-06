@@ -1715,7 +1715,7 @@ class _TodayPageState extends State<TodayPage>{
        final now=DateTime.now(),today=DateTime(now.year,now.month,now.day);Map? best;DateTime? bestDate;
        for(final md in [DateTime(now.year,now.month,1),DateTime(now.year,now.month+1,1)]){
          final rr=await http.get(Uri.parse('https://reinis.nl/rest/waste-calendar/dates?bagId=${Uri.encodeQueryComponent(bag)}&month=${md.month}&year=${md.year}')).timeout(const Duration(seconds:8));
-         if(rr.statusCode==200){final x=jsonDecode(rr.body);if(x is List)for(final e in x){if(e is Map){final dt=DateTime.tryParse('${e['ophaaldatum']??''}');if(dt!=null&&!dt.isBefore(today)&&(bestDate==null||dt.isBefore(bestDate!))){best=e;bestDate=dt;}}}}
+         if(rr.statusCode==200){final x=jsonDecode(rr.body);if(x is List)for(final e in x){if(e is Map){final dt=DateTime.tryParse('${e['ophaaldatum']??''}');if(dt!=null&&!dt.isBefore(today)&&(bestDate==null||dt.isBefore(bestDate))){best=e;bestDate=dt;}}}}
        }
        if(best!=null&&bestDate!=null)result['waste']={'item':best,'date':bestDate.toIso8601String()};
      }catch(_){}
