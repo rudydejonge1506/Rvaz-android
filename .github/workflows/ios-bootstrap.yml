@@ -94,6 +94,12 @@ jobs:
           </plist>
           PLIST
 
+      - name: Ensure iOS project exists
+        run: |
+          if [ ! -f ios/Runner.xcodeproj/project.pbxproj ]; then
+            flutter create --platforms=ios .
+          fi
+
       - name: Restore RVAZ iOS app icons
         shell: bash
         run: |
