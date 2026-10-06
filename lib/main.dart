@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -158,19 +157,8 @@ Future<void> registerDeviceToken() async {
   try {
     final settings = await m.getNotificationSettings();
     if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-    if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
-      // On Apple platforms APNs must be ready before asking FCM for a token.
-      // Give APNs a short window after permission/startup instead of silently
-      // registering an unusable token.
-      String? apns;
-      for (var i=0;i<10&&apns==null;i++) {
-        try { apns=await m.getAPNSToken(); } catch (e) { debugPrint('RVAZ push: APNs token check failed: $e'); }
-        if(apns==null) await Future<void>.delayed(const Duration(milliseconds:500));
-      }
-      if(apns==null){debugPrint('RVAZ push: APNs token not available; registration postponed.');return;}
-    }
     final token = await m.getToken();
-    if (token == null || token.isEmpty){debugPrint('RVAZ push: FCM token unavailable.');return;}
+    if (token == null || token.isEmpty) return;
     final headers = <String,String>{'Content-Type':'application/json','Accept':'application/json'};
     try {
       final auth = await authHeaders();
@@ -204,14 +192,14 @@ Future<void> registerDeviceToken() async {
         }
       }
     }
-    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':defaultTargetPlatform==TargetPlatform.iOS?'ios':defaultTargetPlatform==TargetPlatform.macOS?'macos':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
+    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
     for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
         if (r.statusCode >= 200 && r.statusCode < 300) return;
       } catch (_) {}
     }
-  } catch (e,st) {debugPrint('RVAZ push registration failed: $e\n$st');}
+  } catch (_) {}
 }
 
 
