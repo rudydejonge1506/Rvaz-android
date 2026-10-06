@@ -1702,6 +1702,29 @@ class _TodayPageState extends State<TodayPage>{
  }
  Future<void> openAddress()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));setState(()=>future=load());}
  List<dynamic> section(Map<String,dynamic>d,String key)=>RvazApi.list(d[key]);
+ Future<Map<String,dynamic>> todayExtras()async{
+   const st=FlutterSecureStorage();
+   final result=<String,dynamic>{};
+   try{
+     final wr=await http.get(Uri.parse('https://api.open-meteo.com/v1/forecast?latitude=51.8333&longitude=4.1333&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Europe%2FAmsterdam')).timeout(const Duration(seconds:8));
+     if(wr.statusCode==200){final wd=jsonDecode(wr.body);if(wd is Map&&wd['current'] is Map)result['weather']=Map<String,dynamic>.from(wd['current']);}
+   }catch(_){}
+   final bag=(await st.read(key:'rvaz_waste_bagid')??'').trim();
+   if(bag.isNotEmpty){
+     try{
+       final now=DateTime.now(),today=DateTime(now.year,now.month,now.day);Map? best;DateTime? bestDate;
+       for(final md in [DateTime(now.year,now.month,1),DateTime(now.year,now.month+1,1)]){
+         final rr=await http.get(Uri.parse('https://reinis.nl/rest/waste-calendar/dates?bagId=${Uri.encodeQueryComponent(bag)}&month=${md.month}&year=${md.year}')).timeout(const Duration(seconds:8));
+         if(rr.statusCode==200){final x=jsonDecode(rr.body);if(x is List)for(final e in x){if(e is Map){final dt=DateTime.tryParse('${e['ophaaldatum']??''}');if(dt!=null&&!dt.isBefore(today)&&(bestDate==null||dt.isBefore(bestDate!))){best=e;bestDate=dt;}}}}
+       }
+       if(best!=null&&bestDate!=null)result['waste']={'item':best,'date':bestDate.toIso8601String()};
+     }catch(_){}
+   }
+   return result;
+ }
+ String weatherLabel(int code){if(code==0)return'Helder';if(code<=3)return'Bewolkt';if(code<=48)return'Mist';if(code<=67)return'Regen';if(code<=77)return'Sneeuw';if(code<=82)return'Buien';if(code<=99)return'Onweer';return'Weer';}
+ String wasteLabel(Map item){const names=<int,String>{2:'GFT+e',3:'PMD',4:'Oud papier en karton',25:'Restafval'};final id=int.tryParse('${item['afvalstroom_id']??item['afvalstroomId']??item['id']??''}');return names[id]??'${item['afvalstroom']??item['name']??'Afval'}';}
+
  DateTime? eventDate(dynamic e){if(e is! Map)return null;for(final k in ['start_date','event_start_date','event_date','start','date','datum','datetime']){final raw='${e[k]??''}'.trim();if(raw.isEmpty)continue;final parsed=DateTime.tryParse(raw);if(parsed!=null)return parsed.toLocal();final m=RegExp(r'^(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})').firstMatch(raw);if(m!=null)return DateTime(int.parse(m.group(3)!),int.parse(m.group(2)!),int.parse(m.group(1)!));}return null;}
  bool isTodayEvent(dynamic e){final d=eventDate(e);if(d==null)return false;final now=DateTime.now();return d.year==now.year&&d.month==now.month&&d.day==now.day;}
  String text(dynamic e,String key){if(e is! Map)return'';final v=e[key];if(v is Map)return decodeHtmlEntities('${v['rendered']??''}'.replaceAll(RegExp(r'<[^>]*>'),''));return decodeHtmlEntities('${v??''}'.replaceAll(RegExp(r'<[^>]*>'),''));}
@@ -1724,12 +1747,22 @@ class _TodayPageState extends State<TodayPage>{
      ])),
      const SizedBox(height:10),
      Card(child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.edit_location_alt_outlined,color:navy)),title:const Text('Adres wijzigen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(street.isEmpty?(place=='Voorne aan Zee'?'Postcode, huisnummer en toevoeging instellen':'Adres voor $place instellen'):'$street · $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:openAddress)),
+     FutureBuilder<Map<String,dynamic>>(future:todayExtras(),builder:(context,x){final ex=x.data??{},w=ex['weather'] is Map?Map<String,dynamic>.from(ex['weather']):<String,dynamic>{},wa=ex['waste'] is Map?Map<String,dynamic>.from(ex['waste']):<String,dynamic>{};final temp=(w['temperature_2m'] as num?)?.round(),feels=(w['apparent_temperature'] as num?)?.round(),wind=(w['wind_speed_10m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;final wi=wa['item'] is Map?Map<String,dynamic>.from(wa['item']):<String,dynamic>{};final wd=DateTime.tryParse('${wa['date']??''}');String when='';if(wd!=null){final now=DateTime.now(),today=DateTime(now.year,now.month,now.day),diff=DateTime(wd.year,wd.month,wd.day).difference(today).inDays;when=diff==0?'Vandaag':diff==1?'Morgen':'Over $diff dagen';}return Column(children:[
+       Row(children:[
+         Expanded(child:Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Row(children:[Icon(Icons.cloud_outlined,color:cyan),SizedBox(width:7),Text('Weer vandaag',style:TextStyle(fontWeight:FontWeight.w900,color:navy))]),const SizedBox(height:8),Text(temp==null?'Niet beschikbaar':'$temp° · ${weatherLabel(code)}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),if(feels!=null||wind!=null)Text([if(feels!=null)'Voelt als $feels°',if(wind!=null)'Wind $wind km/u'].join(' · '),style:const TextStyle(fontSize:11,color:Colors.black54))])))),
+         const SizedBox(width:8),
+         Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Row(children:[Icon(Icons.recycling,color:Color(0xFF16834B)),SizedBox(width:7),Expanded(child:Text('Volgende inzameling',style:TextStyle(fontWeight:FontWeight.w900,color:navy)))]),const SizedBox(height:8),Text(wi.isEmpty?'Stel je adres in':wasteLabel(wi),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy)),if(when.isNotEmpty)Text(when,style:const TextStyle(fontSize:12,color:Colors.black54))]))))),
+       ]),
+       const SizedBox(height:4),
+     ]);}),
      Row(children:[
        Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())),child:const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Column(children:[Icon(Icons.recycling,color:Color(0xFF16834B)),SizedBox(height:5),Text('Afval',style:TextStyle(fontWeight:FontWeight.w800))]))))),const SizedBox(width:6),
        Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place))),child:const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Column(children:[Icon(Icons.traffic,color:Colors.deepOrange),SizedBox(height:5),Text('Verkeer',style:TextStyle(fontWeight:FontWeight.w800))]))))),const SizedBox(width:6),
        Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())),child:const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Column(children:[Icon(Icons.notifications_active_outlined,color:Color(0xFF16834B)),SizedBox(height:5),Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w800))])))))
      ]),
      const SizedBox(height:8),
+     Card(child:Padding(padding:const EdgeInsets.all(14),child:Row(children:[const Icon(Icons.today_outlined,color:navy),const SizedBox(width:10),Expanded(child:Text(place=='Voorne aan Zee'?'Dit speelt er vandaag op Voorne':'Dit speelt er vandaag in $place',style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy))),Text('${news.length} nieuws · ${agenda.length} agenda',style:const TextStyle(fontSize:11,color:Colors.black54))]))),
+     const SizedBox(height:4),
      if(d.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Het dagoverzicht is momenteel niet beschikbaar.'))),
      sectionCard('news',place=='Voorne aan Zee'?'Vandaag in het nieuws':'Nieuws uit $place',Icons.article_outlined,cyan,news),
      sectionCard('p2000',place=='Voorne aan Zee'?'112 / P2000':'112 / P2000 in $place',Icons.warning_amber_rounded,Colors.red,p2000),
