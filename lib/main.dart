@@ -987,7 +987,14 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'P2000',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false)))),
       _HomeShortcut(icon:Icons.calendar_month,color:Colors.deepPurple,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
     ])),
-    Padding(padding:const EdgeInsets.fromLTRB(16,0,16,2),child:Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
+    Padding(
+      padding:const EdgeInsets.fromLTRB(16,4,16,8),
+      child:Material(
+        color:const Color(0xFFEAF4FF),
+        borderRadius:BorderRadius.circular(14),
+        child:InkWell(
+          borderRadius:BorderRadius.circular(14),
+          onPressed:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
       const ListTile(title:Text('Meer functies',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy))),
       ListTile(leading:const Icon(Icons.directions_car,color:Colors.orange),title:const Text('112 & Verkeer'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()));}),
       ListTile(leading:const Icon(Icons.calendar_today,color:Color(0xFF19A84A)),title:const Text('Afvalkalender'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));}),
@@ -1000,7 +1007,20 @@ class _HomePageState extends State<HomePage>{
       ListTile(leading:const Icon(Icons.percent,color:Colors.red),title:const Text('Vouchers'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()));}),
       ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn Voorne'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
       ListTile(leading:const Icon(Icons.campaign,color:Colors.blue),title:const Text('Tip de redactie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()));}),
-    ]))),icon:const Icon(Icons.apps),label:const Text('Meer functies')))),
+    ])))
+          ,
+          child:const Padding(
+            padding:EdgeInsets.symmetric(horizontal:16,vertical:13),
+            child:Row(children:[
+              Icon(Icons.apps,color:navy),
+              SizedBox(width:10),
+              Expanded(child:Text('Meer functies',style:TextStyle(color:navy,fontSize:16,fontWeight:FontWeight.w900))),
+              Icon(Icons.chevron_right,color:navy),
+            ]),
+          ),
+        ),
+      ),
+    ),
     const Center(child:RvazAdBanner()),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
