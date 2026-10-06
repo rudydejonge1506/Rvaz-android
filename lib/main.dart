@@ -1498,6 +1498,8 @@ class _TodayPageState extends State<TodayPage>{
    return{};
  }
  List<dynamic> section(Map<String,dynamic>d,String key)=>RvazApi.list(d[key]);
+ DateTime? eventDate(dynamic e){if(e is! Map)return null;for(final k in ['start_date','event_start_date','event_date','start','date','datum','datetime']){final raw='${e[k]??''}'.trim();if(raw.isEmpty)continue;final parsed=DateTime.tryParse(raw);if(parsed!=null)return parsed.toLocal();final m=RegExp(r'^(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})').firstMatch(raw);if(m!=null)return DateTime(int.parse(m.group(3)!),int.parse(m.group(2)!),int.parse(m.group(1)!));}return null;}
+ bool isTodayEvent(dynamic e){final d=eventDate(e);if(d==null)return false;final now=DateTime.now();return d.year==now.year&&d.month==now.month&&d.day==now.day;}
  String text(dynamic e,String key){if(e is! Map)return'';final v=e[key];if(v is Map)return decodeHtmlEntities('${v['rendered']??''}'.replaceAll(RegExp(r'<[^>]*>'),''));return decodeHtmlEntities('${v??''}'.replaceAll(RegExp(r'<[^>]*>'),''));}
  String greeting(){final h=DateTime.now().hour;if(h<12)return'Goedemorgen 👋';if(h<18)return'Goedemiddag 👋';return'Goedenavond 👋';}
  void openItem(String kind,dynamic e){if(kind=='news'){openArticle(context,e);return;}if(kind=='agenda'){Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:e)));return;}Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:kind=='traffic',initialPlace:place)));}
@@ -1511,7 +1513,7 @@ class _TodayPageState extends State<TodayPage>{
  }
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Voorne Vandaag')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){
    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
-   final d=s.data??{},news=section(d,'news'),p2000=section(d,'p2000'),traffic=section(d,'traffic'),agenda=section(d,'agenda');
+   final d=s.data??{},news=section(d,'news'),p2000=section(d,'p2000'),traffic=section(d,'traffic'),agenda=section(d,'agenda').where(isTodayEvent).toList();
    return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView(padding:const EdgeInsets.all(16),children:[
      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        Text(greeting(),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),const SizedBox(height:4),
