@@ -591,7 +591,7 @@ String cleanArticleHtml(String html) {
   // Strip inline desktop layout styles so WordPress content always fits mobile width.
   out = out.replaceAll(RegExp(r'''\sstyle=("[^"]*"|'[^']*')''', caseSensitive: false), '');
   // Preserve YouTube position as an app marker; ArticlePage renders a real inline player.
-  out = out.replaceAllMapped(RegExp(r'''<iframe[^>]+src=["']([^"']*(?:youtube\.com/embed/|youtube-nocookie\.com/embed/)[^"']+)["'][^>]*>\\s*</iframe>''',caseSensitive:false,dotAll:true),(m){
+  out = out.replaceAllMapped(RegExp(r'''<iframe[^>]+src=["']([^"']*(?:youtube\.com/embed/|youtube-nocookie\.com/embed/)[^"']+)["'][^>]*>\s*</iframe>''',caseSensitive:false,dotAll:true),(m){
     final src=decodeHtmlEntities(m.group(1)??'');
     final uri=Uri.tryParse(src.startsWith('//')?'https:$src':src);
     final parts=uri?.pathSegments??const <String>[];
@@ -943,14 +943,10 @@ class _HomePageState extends State<HomePage>{
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses,weather]);},child:ListView(padding:EdgeInsets.zero,children:[
     if(appConfig.breakingBanner.trim().isNotEmpty)Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[const Icon(Icons.flash_on,size:18,color:Colors.red),const SizedBox(width:7),const Text('BREAKING',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Colors.red)),const SizedBox(width:8),Expanded(child:Text(appConfig.breakingBanner,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)))])),
     FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Container(margin:const EdgeInsets.fromLTRB(16,12,16,0),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,2))]),child:Row(children:[Icon(_weatherIcon(code),size:28,color:Colors.orange),const SizedBox(width:9),Text('$temp°',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(width:8),Expanded(child:Text(_weatherLabel(code),style:const TextStyle(fontSize:12,color:Colors.black54))),const VerticalDivider(),const Icon(Icons.location_on_outlined,size:17,color:cyan),const SizedBox(width:4),const Text('Voorne aan Zee',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))]));}),
-    Transform.translate(
-      offset:const Offset(-16,0),
-      child:SizedBox(
-        width:MediaQuery.sizeOf(context).width,
-        child:InkWell(
+    InkWell(
       onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),
       child:Container(
-        width:double.infinity,
+        width:MediaQuery.sizeOf(context).width,
         height:116,
         margin:const EdgeInsets.only(top:8,bottom:4),
         decoration:BoxDecoration(
@@ -962,7 +958,7 @@ class _HomePageState extends State<HomePage>{
           ),
         ),
         child:Padding(
-          padding:const EdgeInsets.fromLTRB(18,12,14,12),
+          padding:const EdgeInsets.fromLTRB(18,12,18,12),
           child:Column(
             crossAxisAlignment:CrossAxisAlignment.start,
             mainAxisAlignment:MainAxisAlignment.center,
@@ -982,8 +978,6 @@ class _HomePageState extends State<HomePage>{
               ),
             ],
           ),
-        ),
-      ),
         ),
       ),
     ),
