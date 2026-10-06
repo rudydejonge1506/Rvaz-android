@@ -97,41 +97,10 @@ jobs:
             flutter create --platforms=ios .
           fi
 
-      - name: Restore RVAZ iOS app icons
-        shell: bash
+      - name: Keep generated iOS app icons
         run: |
           set -euo pipefail
-          # Use the exact iOS icon uploaded for build 41. It is already visually final.
-          # Convert only the PNG color model to RGB/no-alpha; do not crop, pad or zoom.
-          SOURCE_ICON="assets/cropped-LogoRegio0181.png"
-          test -f "$SOURCE_ICON"
-          test "$(sips -g pixelWidth "$SOURCE_ICON" | awk '/pixelWidth/ {print $2}')" = "512"
-          test "$(sips -g pixelHeight "$SOURCE_ICON" | awk '/pixelHeight/ {print $2}')" = "512"
-          sips -s format jpeg -s formatOptions 100 "$SOURCE_ICON" --out /tmp/rvaz-app-icon-rgb.jpg >/dev/null
-          sips -s format png /tmp/rvaz-app-icon-rgb.jpg --out /tmp/rvaz-app-icon.png >/dev/null
-          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
-          while IFS='|' read -r file pixels; do
-            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
-          done <<'ICONS'
-          Icon-App-20x20@1x.png|20
-          Icon-App-20x20@2x.png|40
-          Icon-App-20x20@3x.png|60
-          Icon-App-29x29@1x.png|29
-          Icon-App-29x29@2x.png|58
-          Icon-App-29x29@3x.png|87
-          Icon-App-40x40@1x.png|40
-          Icon-App-40x40@2x.png|80
-          Icon-App-40x40@3x.png|120
-          Icon-App-60x60@2x.png|120
-          Icon-App-60x60@3x.png|180
-          Icon-App-76x76@1x.png|76
-          Icon-App-76x76@2x.png|152
-          Icon-App-83.5x83.5@2x.png|167
-          Icon-App-1024x1024@1x.png|1024
-          ICONS
-          test "$(sips -g pixelWidth "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelWidth/ {print $2}')" = "1024"
-          test "$(sips -g pixelHeight "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelHeight/ {print $2}')" = "1024"
-          test "$(sips -g hasAlpha "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/hasAlpha/ {print $2}')" = "no"
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: Build Flutter iOS release without signing
         run: |
