@@ -143,21 +143,11 @@ jobs:
         run: |
           flutter build ios --release --no-codesign --build-name=1.1.1 --build-number=43
 
-      - name: Configure Runner App Store signing
+      - name: Configure Runner bundle identifier
         run: |
           set -euo pipefail
           PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBXPROJ"
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.example.rvazAndroid;/PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;/g' "$PBXPROJ"
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path("ios/Runner.xcodeproj/project.pbxproj")
-          s=p.read_text()
-          needle="PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;"
-          repl=needle+'\\n\\t\\t\\t\\tDEVELOPMENT_TEAM = XQ8MH83ZV9;\\n\\t\\t\\t\\tPROVISIONING_PROFILE_SPECIFIER = "RVAZ App Store";\\n\\t\\t\\t\\tCODE_SIGN_IDENTITY = "Apple Distribution";'
-          s=s.replace(needle,repl)
-          p.write_text(s)
-          PY
 
       - name: Archive with Apple Distribution signing
         run: |
@@ -169,8 +159,9 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
             DEVELOPMENT_TEAM=XQ8MH83ZV9 \
-            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY="Apple Distribution" \
+            -allowProvisioningUpdates \
             archive
 
       - name: Export signed App Store IPA
