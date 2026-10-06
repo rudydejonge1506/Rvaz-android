@@ -576,7 +576,13 @@ class _RotatingAppAdState extends State<RotatingAppAd> {
 }
 
 String cleanArticleHtml(String html) {
-  var out = html;
+  // WordPress may store literal HTML entities or escaped HTML (for example
+  // &lt;div&gt;...&lt;/div&gt;) when editors paste code in a post. Decode
+  // those entities before flutter_html renders the article.
+  var out = decodeHtmlEntities(html);
+  if (RegExp(r'&lt;/?[a-z][^&]*&gt;', caseSensitive:false).hasMatch(out)) {
+    out = decodeHtmlEntities(out);
+  }
   final markers = <String>['voorlees','responsivevoice','text-to-speech','tts-control'];
   for (final marker in markers) {
     out = out.replaceAll(RegExp('<[^>]*(?:class|id)=[^>]*$marker[^>]*>.*?</(?:div|section|aside|button)>', caseSensitive: false, dotAll: true), '');
@@ -1518,7 +1524,7 @@ class _TodayPageState extends State<TodayPage>{
    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
    final d=s.data??{},news=section(d,'news'),p2000=section(d,'p2000'),traffic=section(d,'traffic'),agenda=section(d,'agenda').where(isTodayEvent).toList();
    return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView(padding:const EdgeInsets.all(16),children:[
-     Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18),image:DecorationImage(image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl),fit:BoxFit.cover,colorFilter:const ColorFilter.mode(Color(0x77073B63),BlendMode.darken))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        Text(greeting(),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),const SizedBox(height:4),const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),const SizedBox(height:5),
        Text(place=='Voorne aan Zee'?'Stel je adres in voor informatie uit jouw buurt.':'Jouw buurt: $place${street.isEmpty?'':' · $street'}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w600))
      ])),
