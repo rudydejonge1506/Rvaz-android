@@ -1316,6 +1316,8 @@ class _P2000MapCardState extends State<P2000MapCard>{
   );
 }
 
+class TrafficMapCard extends StatelessWidget{final double latitude,longitude;const TrafficMapCard({super.key,required this.latitude,required this.longitude});@override Widget build(BuildContext context){final p=LatLng(latitude,longitude);return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Locatie op de kaart',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(height:220,child:fmap.FlutterMap(options:fmap.MapOptions(initialCenter:p,initialZoom:14),children:[fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),fmap.MarkerLayer(markers:[fmap.Marker(point:p,width:46,height:46,child:const Icon(Icons.location_pin,size:44,color:Colors.red))])])))]);}}
+
 class P2000DetailPage extends StatelessWidget {
   final dynamic item; final bool traffic;
   const P2000DetailPage({super.key,required this.item,required this.traffic});
@@ -1344,6 +1346,7 @@ class P2000DetailPage extends StatelessWidget {
         if(priority.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.priority_high),title:Text(priority)),
         if(traffic&&source.isNotEmpty)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.source_outlined),title:Text(source),subtitle:const Text('Bron verkeersinformatie')),
         if(body.isNotEmpty&&body!=title)...[const Divider(height:28),Text(body,style:const TextStyle(fontSize:16,height:1.5))],
+        if(traffic&&item is Map&&item['latitude'] is num&&item['longitude'] is num)...[const SizedBox(height:14),TrafficMapCard(latitude:(item['latitude'] as num).toDouble(),longitude:(item['longitude'] as num).toDouble())],
         if(!traffic&&(address.isNotEmpty||title.contains(',')))...[const SizedBox(height:14),P2000MapCard(queries:[
           if(address.isNotEmpty)[address,place].where((x)=>x.isNotEmpty).join(', '),
           if(address.isNotEmpty)address,
