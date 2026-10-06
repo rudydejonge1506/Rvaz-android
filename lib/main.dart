@@ -364,9 +364,14 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => _ShellState();
 }
 
+class ShellTabController {
+  static void Function(String)? _select;
+  static void select(String key)=>_select?.call(key);
+}
 class _ShellState extends State<Shell> {
   int index = 0;
-  @override void initState(){super.initState();WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));}
+  @override void initState(){super.initState();ShellTabController._select=(key){const keys=['home','news','emergency','agenda','account'];final i=keys.indexOf(key);if(i>=0&&mounted)setState(()=>index=i);};WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));}
+  @override void dispose(){if(ShellTabController._select!=null)ShellTabController._select=null;super.dispose();}
   static const pageMap = <String,Widget>{
     'home': HomePage(),
     'news': NewsPage(),
@@ -922,15 +927,18 @@ class _HomePageState extends State<HomePage>{
       _HomeShortcut(icon:Icons.home,color:const Color(0xFF19A84A),label:'Mijn Buurt',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage()))),
       _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'P2000',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false)))),
       _HomeShortcut(icon:Icons.calendar_month,color:Colors.deepPurple,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
-      _HomeShortcut(icon:Icons.directions_car,color:Colors.orange,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
-      _HomeShortcut(icon:Icons.calendar_today,color:const Color(0xFF19A84A),label:'Afvalkalender',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()))),
-      _HomeShortcut(icon:Icons.location_on,color:Colors.blue,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()))),
-      _HomeShortcut(icon:Icons.star,color:Colors.amber,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()))),
-      _HomeShortcut(icon:Icons.storefront,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
-      _HomeShortcut(icon:Icons.percent,color:Colors.red,label:'Vouchers',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
-      _HomeShortcut(icon:Icons.person,color:Colors.blueGrey,label:'Mijn RVAZ',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn RVAZ'),backgroundColor:Colors.white,foregroundColor:navy),body:const AccountPage())))),
-      _HomeShortcut(icon:Icons.campaign,color:Colors.blue,label:'Tip de redactie',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),
     ])),
+    Padding(padding:const EdgeInsets.fromLTRB(16,0,16,2),child:Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
+      const ListTile(title:Text('Meer functies',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy))),
+      ListTile(leading:const Icon(Icons.directions_car,color:Colors.orange),title:const Text('112 & Verkeer'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()));}),
+      ListTile(leading:const Icon(Icons.calendar_today,color:Color(0xFF19A84A)),title:const Text('Afvalkalender'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));}),
+      ListTile(leading:const Icon(Icons.location_on,color:Colors.blue),title:const Text('Plaatsen'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()));}),
+      ListTile(leading:const Icon(Icons.star,color:Colors.amber),title:const Text('Favorieten'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()));}),
+      ListTile(leading:const Icon(Icons.storefront,color:Colors.deepPurple),title:const Text('Bedrijven'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()));}),
+      ListTile(leading:const Icon(Icons.percent,color:Colors.red),title:const Text('Vouchers'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()));}),
+      ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn RVAZ'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
+      ListTile(leading:const Icon(Icons.campaign,color:Colors.blue),title:const Text('Tip de redactie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()));}),
+    ]))),icon:const Icon(Icons.apps),label:const Text('Meer functies')))),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[const Expanded(child:Text('Laatste nieuws uit Voorne aan Zee',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy))),TextButton(style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:4),minimumSize:Size.zero,tapTargetSize:MaterialTapTargetSize.shrinkWrap),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Meer laden',style:TextStyle(fontSize:11)),Icon(Icons.chevron_right,size:15)]))]),
@@ -1957,7 +1965,7 @@ String decodeHtmlEntities(String value) {
   return out;
 }
 
-class EventDetailPage extends StatelessWidget{final dynamic event;const EventDetailPage({super.key,required this.event});String v(List<String> keys){for(final k in keys){final x=event[k];if(x!=null&&'$x'.trim().isNotEmpty)return '$x';}return'';}String title(){final x=event['title'];return decodeHtmlEntities(x is Map?'${x['rendered']??''}':'${x??''}');}String category(){final x=event['category']??event['categories']??event['event_category'];if(x is List)return x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');if(x is Map)return '${x['name']??x['title']??''}';return x?.toString()??'';}String address(){final full=v(['full_address','address']);if(full.isNotEmpty)return full;final street=v(['street','straat','location']),nr=v(['house_number','number','huisnummer']),zip=v(['postcode','postal_code']),city=v(['place','city','town','plaats']);final first=[street,nr].where((x)=>x.isNotEmpty).join(' '),second=[zip,city].where((x)=>x.isNotEmpty).join(' ');return[first,second].where((x)=>x.isNotEmpty).join('\n');}
+class EventDetailPage extends StatelessWidget{final dynamic event;const EventDetailPage({super.key,required this.event});String v(List<String> keys){for(final k in keys){final x=event[k];if(x!=null&&'$x'.trim().isNotEmpty)return '$x';}return'';}String title(){final x=event['title'];return decodeHtmlEntities(x is Map?'${x['rendered']??''}':'${x??''}');}String category(){final x=event['category']??event['categories']??event['event_category'];String raw;if(x is List){raw=x.map((e)=>e is Map?(e['name']??e['title']??''):'$e').where((e)=>'$e'.isNotEmpty).join(', ');}else if(x is Map){raw='${x['name']??x['title']??''}';}else{raw=x?.toString()??'';}return decodeHtmlEntities(raw);}String address(){final full=v(['full_address','address']);if(full.isNotEmpty)return full;final street=v(['street','straat','location']),nr=v(['house_number','number','huisnummer']),zip=v(['postcode','postal_code']),city=v(['place','city','town','plaats']);final first=[street,nr].where((x)=>x.isNotEmpty).join(' '),second=[zip,city].where((x)=>x.isNotEmpty).join(' ');return[first,second].where((x)=>x.isNotEmpty).join('\n');}
 DateTime? eventStart(){final raw=v(['start_date','event_start_date','event_date','start','date','datum','datetime']);return DateTime.tryParse(raw);}
 DateTime? eventEnd(){final raw=v(['end_date','event_end_date','end']);return DateTime.tryParse(raw);}
 Future<void> addToCalendar(BuildContext context)async{final start=eventStart();if(start==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Voor dit evenement ontbreekt een geldige datum.')));return;}final end=eventEnd()??start.add(const Duration(hours:2));final event=Event(title:title(),description:v(['excerpt','description']),location:[v(['venue','location_name']),address()].where((x)=>x.isNotEmpty).join(', '),startDate:start,endDate:end);await Add2Calendar.addEvent2Cal(event);}
