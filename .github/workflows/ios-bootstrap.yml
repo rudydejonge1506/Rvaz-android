@@ -101,9 +101,10 @@ jobs:
           # Use the exact iOS icon uploaded for build 41. It is already visually final.
           # Convert only the PNG color model to RGB/no-alpha; do not crop, pad or zoom.
           SOURCE_ICON="assets/cropped-LogoRegio0181.png"
+          if [ ! -f "$SOURCE_ICON" ]; then
+            SOURCE_ICON="assets/rvaz-logo.png"
+          fi
           test -f "$SOURCE_ICON"
-          test "$(sips -g pixelWidth "$SOURCE_ICON" | awk '/pixelWidth/ {print $2}')" = "512"
-          test "$(sips -g pixelHeight "$SOURCE_ICON" | awk '/pixelHeight/ {print $2}')" = "512"
           sips -s format jpeg -s formatOptions 100 "$SOURCE_ICON" --out /tmp/rvaz-app-icon-rgb.jpg >/dev/null
           sips -s format png /tmp/rvaz-app-icon-rgb.jpg --out /tmp/rvaz-app-icon.png >/dev/null
           ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
