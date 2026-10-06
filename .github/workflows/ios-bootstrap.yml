@@ -149,10 +149,6 @@ jobs:
           PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBXPROJ"
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.example.rvazAndroid;/PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;/g' "$PBXPROJ"
-          sed -i '' '/PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;/a\\
-            DEVELOPMENT_TEAM = XQ8MH83ZV9;\\
-            PROVISIONING_PROFILE_SPECIFIER = "RVAZ App Store";\\
-            CODE_SIGN_IDENTITY = "Apple Distribution";' "$PBXPROJ"
 
       - name: Archive with Apple Distribution signing
         run: |
@@ -166,6 +162,8 @@ jobs:
             DEVELOPMENT_TEAM=XQ8MH83ZV9 \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="RVAZ App Store" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
             archive
 
       - name: Export signed App Store IPA
