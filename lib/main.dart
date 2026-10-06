@@ -912,87 +912,39 @@ class _HomePageState extends State<HomePage>{
     return <dynamic>[];
   }
   Future<List<dynamic>> _events()=>RvazApi.firstList(['agenda?per_page=5','events?per_page=5'],keys:const ['events','agenda']);
-  String clean(dynamic v)=>'$v'.replaceAll(RegExp(r'<[^>]*>'),'').replaceAll('&amp;','&').replaceAll('&#8211;','–');
+  String clean(dynamic v)=>decodeHtmlEntities('$v'.replaceAll(RegExp(r'<[^>]*>'),''));
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses,weather]);},child:ListView(padding:EdgeInsets.zero,children:[
     if(appConfig.breakingBanner.trim().isNotEmpty)Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[const Icon(Icons.flash_on,size:18,color:Colors.red),const SizedBox(width:7),const Text('BREAKING',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Colors.red)),const SizedBox(width:8),Expanded(child:Text(appConfig.breakingBanner,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)))])),
-    FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Row(children:[Icon(_weatherIcon(code),size:19,color:navy),const SizedBox(width:7),Text('$temp° · ${_weatherLabel(code)} · Voorne aan Zee',style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:navy))]));}),
-    Padding(
-      padding: const EdgeInsets.fromLTRB(16,16,16,8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage())),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(children:[
-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('Mijn Buurt',style:TextStyle(color:Colors.white,fontSize:24,height:1.05,fontWeight:FontWeight.w900)),
-              const SizedBox(height:7),
-              Text('Afval, nieuws, 112 en verkeer uit jouw buurt.',style:TextStyle(color:Colors.white.withValues(alpha:.88),fontSize:14,height:1.35)),
-            ])),
-            const SizedBox(width:12),
-            Container(width:52,height:52,decoration:BoxDecoration(color:Colors.white.withValues(alpha:.13),borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.home_work_outlined,color:Colors.white,size:28)),
-          ]),
-        ),
-      ),
-    ),
-    Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.25,children:[
+    FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Container(margin:const EdgeInsets.fromLTRB(16,12,16,0),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,2))]),child:Row(children:[Icon(_weatherIcon(code),size:28,color:Colors.orange),const SizedBox(width:9),Text('$temp°',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(width:8),Expanded(child:Text(_weatherLabel(code),style:const TextStyle(fontSize:12,color:Colors.black54))),const VerticalDivider(),const Icon(Icons.location_on_outlined,size:17,color:cyan),const SizedBox(width:4),const Text('Voorne aan Zee',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))]));}),
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,4),child:InkWell(borderRadius:BorderRadius.circular(18),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),child:Container(padding:const EdgeInsets.all(17),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text('Het laatste nieuws en wat er speelt in de regio',style:TextStyle(color:Colors.white.withValues(alpha:.88),fontSize:13)),const SizedBox(height:9),const Row(mainAxisSize:MainAxisSize.min,children:[Text('Bekijk wat er vandaag speelt',style:TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w800)),SizedBox(width:4),Icon(Icons.chevron_right,color:Colors.white,size:18)])])),const Icon(Icons.wb_sunny_outlined,color:Colors.white,size:42)])))),
+    Container(padding:const EdgeInsets.fromLTRB(14,10,14,0),child:GridView.count(crossAxisCount:4,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:.92,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage())))),
-      _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
-      _HomeShortcut(icon:Icons.calendar_month,color:Colors.teal,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
-      _HomeShortcut(icon:Icons.location_on,color:Colors.green,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()))),
-      _HomeShortcut(icon:Icons.favorite,color:Colors.redAccent,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
+      _HomeShortcut(icon:Icons.home_work_outlined,color:Colors.green,label:'Mijn Buurt',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage()))),
+      _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'P2000',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false)))),
+      _HomeShortcut(icon:Icons.calendar_month,color:Colors.deepPurple,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
+      _HomeShortcut(icon:Icons.traffic,color:Colors.orange,label:'112 & Verkeer',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()))),
+      _HomeShortcut(icon:Icons.recycling,color:const Color(0xFF16834B),label:'Afvalkalender',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()))),
+      _HomeShortcut(icon:Icons.location_on,color:Colors.blue,label:'Plaatsen',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()))),
+      _HomeShortcut(icon:Icons.favorite,color:Colors.amber,label:'Favorieten',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
       _HomeShortcut(icon:Icons.business,color:Colors.deepPurple,label:'Bedrijven',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()))),
-    ])),
-    Padding(padding:const EdgeInsets.fromLTRB(16,10,16,0),child:Row(children:[
-      Expanded(child:Card(child:InkWell(borderRadius:BorderRadius.circular(12),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage())),child:const Padding(padding:EdgeInsets.symmetric(horizontal:10,vertical:10),child:Row(children:[Icon(Icons.photo_camera_outlined,size:20,color:navy),SizedBox(width:8),Expanded(child:Text('Tip de redactie',maxLines:2,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:navy)))]))))),
-      const SizedBox(width:8),
-      Expanded(child:Card(child:InkWell(borderRadius:BorderRadius.circular(12),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),child:const Padding(padding:EdgeInsets.symmetric(horizontal:10,vertical:10),child:Row(children:[Icon(Icons.wb_sunny_outlined,size:20,color:navy),SizedBox(width:8),Expanded(child:Text('Dit speelt er vandaag',maxLines:2,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:navy)))]))))),
+      _HomeShortcut(icon:Icons.local_offer_outlined,color:Colors.redAccent,label:'Vouchers',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
+      _HomeShortcut(icon:Icons.person_outline,color:Colors.blueGrey,label:'Mijn RVAZ',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()))),
+      _HomeShortcut(icon:Icons.campaign_outlined,color:Colors.blue,label:'Tip de redactie',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),
     ])),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
-    FutureBuilder<List<dynamic>>(future:businesses,builder:(context,s){
-      final pros=(s.data??[]).where(_businessIsPro).toList();
-      if(pros.isEmpty)return const SizedBox.shrink();
-      final e=pros[DateTime.now().day%pros.length];
-      String bv(String k)=>e is Map?(e[k]?.toString()??''):'';
-      final img=bv('image');
-      return Padding(padding:const EdgeInsets.fromLTRB(16,16,16,4),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('PRO bedrijf',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage())),child:const Text('Bedrijven →'))]),
-        Card(child:InkWell(borderRadius:BorderRadius.circular(14),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>BusinessDetailPage(item:e))),child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[
-          img.isEmpty?const CircleAvatar(radius:34,child:Icon(Icons.storefront)):ClipRRect(borderRadius:BorderRadius.circular(9),child:Image.network(img,width:68,height:68,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:68,height:68,child:Icon(Icons.storefront)))),
-          const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(4)),child:const Text('PRO',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),
-            const SizedBox(height:6),Text(bv('title'),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy)),
-            if(bv('place').isNotEmpty||bv('address').isNotEmpty)Text([bv('place'),bv('address')].where((x)=>x.isNotEmpty).join(' · '),maxLines:2,style:const TextStyle(fontSize:11,color:Colors.black54)),
-          ])),const Icon(Icons.chevron_right,color:navy)
-        ]))))
-      ]));
-    }),
-    Padding(padding:const EdgeInsets.fromLTRB(16,0,16,22),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Laatste nieuws',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Text('Meer →'))]),
+    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Laatste nieuws uit Voorne aan Zee',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Text('Meer laden →'))]),
       FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final all=s.data??[];if(all.isEmpty)return const SizedBox.shrink();final x=all.take(visibleNews).toList();final p=x.first;return Column(children:[
-        Card(clipBehavior:Clip.antiAlias,margin:EdgeInsets.zero,child:InkWell(onTap:()=>openArticle(context,p),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          if(postImage(p).isNotEmpty)Image.network(postImage(p),height:175,width:double.infinity,fit:BoxFit.cover),
-          Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(3)),child:const Text('NIEUWS',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))),const SizedBox(width:5),Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:3),decoration:BoxDecoration(color:cyan,borderRadius:BorderRadius.circular(3)),child:const Text('VOORNE AAN ZEE',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900)))]),const SizedBox(height:7),Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),style:const TextStyle(color:navy,fontSize:18,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
-        const SizedBox(height:10),
-        RotatingAppAd(future:ads),
-        const SizedBox.shrink(),
-        const SizedBox(height:10),
-        ...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:4),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(4),child:Image.network(postImage(p),width:78,height:58,fit:BoxFit.cover)),title:Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
-        if(visibleNews<all.length)Padding(
-          padding:const EdgeInsets.only(top:8),
-          child:OutlinedButton.icon(
-            onPressed:()=>setState(()=>visibleNews=(visibleNews+8).clamp(1,all.length)),
-            icon:const Icon(Icons.expand_more),
-            label:const Text('Meer laden'),
-          ),
-        ),
+        Card(clipBehavior:Clip.antiAlias,margin:EdgeInsets.zero,child:InkWell(onTap:()=>openArticle(context,p),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[if(postImage(p).isNotEmpty)Image.network(postImage(p),height:150,width:double.infinity,fit:BoxFit.cover),Padding(padding:const EdgeInsets.all(11),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),style:const TextStyle(color:navy,fontSize:17,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
+        const SizedBox(height:8),...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:7),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:3),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(postImage(p),width:76,height:56,fit:BoxFit.cover)),title:Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),subtitle:Text(formatPostDate(p),style:const TextStyle(fontSize:10)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
+        if(visibleNews<all.length)OutlinedButton.icon(onPressed:()=>setState(()=>visibleNews=(visibleNews+8).clamp(1,all.length)),icon:const Icon(Icons.expand_more),label:const Text('Meer laden')),
       ]);}),
-      
-    ]))
+    ])),
+    FutureBuilder<List<dynamic>>(future:businesses,builder:(context,s){final pros=(s.data??[]).where(_businessIsPro).take(3).toList();if(pros.isEmpty)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,14,16,4),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Uitgelichte PRO-bedrijven',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage())),child:const Text('Bekijk alle →'))]),
+      SizedBox(height:142,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:pros.length,separatorBuilder:(_,__)=>const SizedBox(width:8),itemBuilder:(c,i){final e=pros[i];String bv(String k)=>e is Map?(e[k]?.toString()??''):'';final img=bv('image');return SizedBox(width:145,child:Card(clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>BusinessDetailPage(item:e))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Stack(fit:StackFit.expand,children:[img.isEmpty?const Center(child:Icon(Icons.storefront,size:36)):Image.network(img,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.storefront,size:36))),Positioned(top:5,right:5,child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(5)),child:const Text('PRO',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))))])),Padding(padding:const EdgeInsets.all(7),child:Text(clean(bv('title')),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:navy)))]))));})),
+    ]));}),
+    Padding(padding:const EdgeInsets.fromLTRB(16,10,16,22),child:Column(children:[RotatingAppAd(future:ads),const SizedBox(height:10),Card(child:ListTile(leading:const Icon(Icons.photo_camera_outlined,color:navy),title:const Text('Tip de redactie',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))))]))
   ]));
 }
 class _HomeShortcut extends StatelessWidget{
