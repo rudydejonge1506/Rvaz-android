@@ -1716,78 +1716,50 @@ class _MyNeighborhoodPageState extends State<MyNeighborhoodPage> {
     final events=<dynamic>[];for(final path in ['agenda?per_page=250','events?per_page=250']){try{final p=path.split('?'),d=await RvazApi.get(p.first,query:Uri.splitQueryString(p[1]));events.addAll(RvazApi.list(d,const ['events','agenda']));}catch(_){}}final now=DateTime.now(),today=DateTime(now.year,now.month,now.day);var ec=0;for(final e in events){if(e is! Map)continue;String v(List<String> ks){for(final k in ks){if(e[k]!=null&&'${e[k]}'.trim().isNotEmpty)return'${e[k]}';}return'';}final d=DateTime.tryParse(v(['start_date','event_start_date','event_date','start','date','datum','datetime'])),p=v(['place','city','town','plaats','event_place']).toLowerCase();if(d!=null&&DateTime(d.year,d.month,d.day)==today&&d.hour>=17&&p.contains(place.toLowerCase()))ec++;}
     return {'waste':waste,'works':worksText,'traffic':trafficText,'p2000':incidentText,'agenda':ec==0?'Vanavond: geen activiteit gevonden in $place':'Vanavond: $ec activiteit${ec==1?'':'en'} in $place'};
   }
-  @override Widget build(BuildContext context)=>Scaffold(
-    backgroundColor:const Color(0xFFF7F9FB),
-    appBar:AppBar(title:const Text('Mijn Buurt')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[
-      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:Row(children:[
-        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Alles dichtbij, op één plek',style:TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.w900)),
-          const SizedBox(height:6),
-          Text(place.isEmpty?'Praktische informatie en meldingen die voor jouw eigen buurt belangrijk zijn.':'Jouw buurt: $place',style:const TextStyle(color:Colors.white,height:1.35))
+  @override Widget build(BuildContext context){
+    Widget shortcut(IconData icon,String label,Color tint,VoidCallback onTap)=>Expanded(child:Card(child:InkWell(borderRadius:BorderRadius.circular(14),onTap:onTap,child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:13),child:Column(children:[CircleAvatar(radius:19,backgroundColor:tint.withValues(alpha:.11),child:Icon(icon,color:tint,size:21)),const SizedBox(height:7),Text(label,textAlign:TextAlign.center,maxLines:2,style:const TextStyle(fontSize:11,height:1.15,fontWeight:FontWeight.w800,color:navy))])))));
+    Widget neighborhoodTile(IconData icon,Color tint,String title,String subtitle,VoidCallback onTap)=>Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:3),leading:CircleAvatar(backgroundColor:tint.withValues(alpha:.11),child:Icon(icon,color:tint)),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right,color:navy),onTap:onTap));
+    return Scaffold(
+      backgroundColor:const Color(0xFFF7F9FB),
+      appBar:AppBar(title:const Text('Mijn Buurt')),
+      body:ListView(padding:const EdgeInsets.all(16),children:[
+        Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(20)),child:Row(children:[
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Mijn Buurt',style:TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.w900)),
+            const SizedBox(height:4),Text(place.isEmpty?'Stel je adres in voor informatie dichtbij.':place,style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w700)),
+            if(street.isNotEmpty)...[const SizedBox(height:3),Text(street,style:const TextStyle(color:Colors.white70))]
+          ])),
+          const Icon(Icons.home_work_outlined,color:Colors.white,size:46)
         ])),
-        const SizedBox(width:12),const Icon(Icons.home_work_outlined,color:Colors.white,size:44)
-      ])),
-      const SizedBox(height:12),
-      Card(child:ListTile(
-        leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.edit_location_alt_outlined,color:navy)),
-        title:const Text('Adres wijzigen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
-        subtitle:Text(street.isEmpty?(place.isEmpty?'Stel postcode en huisnummer in':'Wijzig het adres voor $place'):'$street${place.isEmpty?'':' · $place'}'),
-        trailing:const Icon(Icons.chevron_right,color:navy),
-        onTap:_openWaste,
-      )),
-      const SizedBox(height:16),
-      const Text('Rond mijn straat',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
-      const SizedBox(height:8),
-      Card(child:FutureBuilder<Map<String,String>>(future:_streetLive(),builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Padding(padding:EdgeInsets.all(18),child:Center(child:CircularProgressIndicator()));final d=s.data??const <String,String>{};Widget row(IconData icon,String key)=>Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),child:Row(children:[Icon(icon,size:20,color:navy),const SizedBox(width:10),Expanded(child:Text(d[key]??'Niet beschikbaar'))]));return Column(children:[
-        ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.near_me_outlined,color:navy)),title:Text(street.isEmpty?'Rond jouw straat':street,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(street.isEmpty?(place.isEmpty?'Stel je adres in via de afvalkalender':'Actuele informatie voor $place'):'Actuele informatie rond $street${place.isEmpty?'':' · $place'}')),
-        const Divider(height:1),row(Icons.recycling,'waste'),row(Icons.construction,'works'),row(Icons.traffic,'traffic'),row(Icons.warning_amber_rounded,'p2000'),row(Icons.event_outlined,'agenda'),
-      ]);})),
-      const SizedBox(height:16),
-      const Text('Voor jouw buurt',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
-      const SizedBox(height:8),
-      Card(child:ListTile(
-        leading:const CircleAvatar(backgroundColor:Color(0xFFE8F7EE),child:Icon(Icons.recycling,color:Color(0xFF16834B))),
-        title:const Text('Afvalkalender',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
-        subtitle:Text(place.isEmpty?'Stel je adres in en bekijk wanneer Reinis jouw afval ophaalt':'Afvalkalender voor $place'),
-        trailing:const Icon(Icons.chevron_right,color:navy),onTap:_openWaste,
-      )),
-      const SizedBox(height:8),
-      Card(child:ListTile(
-        leading:const CircleAvatar(backgroundColor:Color(0xFFFFF2E8),child:Icon(Icons.notifications_active_outlined,color:Colors.deepOrange)),
-        title:const Text('Buurtmeldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
-        subtitle:const Text('Stel P2000 en andere lokale meldingen in'),
-        trailing:const Icon(Icons.chevron_right,color:navy),
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())),
-      )),
-      const SizedBox(height:8),
-      Card(child:ListTile(
-        leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.location_on_outlined,color:navy)),
-        title:Text(place.isEmpty?'Nieuws uit jouw plaats':'Nieuws uit $place',style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),
-        subtitle:Text(place.isEmpty?'Kies een plaats voor lokaal nieuws':'Bekijk nieuws uit jouw eigen plaats'),
-        trailing:const Icon(Icons.chevron_right,color:navy),
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place.isEmpty?const PlacesPage():PlaceNewsPage(place:place))),
-      )),
-      const SizedBox(height:8),
-      Card(child:ListTile(
-        leading:const CircleAvatar(backgroundColor:Color(0xFFFFF4E5),child:Icon(Icons.traffic,color:Colors.deepOrange)),
-        title:const Text('Verkeer in de regio',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
-        subtitle:Text(place.isEmpty?'Bekijk actuele verkeersmeldingen':'Start met $place als selectie'),
-        trailing:const Icon(Icons.chevron_right,color:navy),
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place))),
-      )),
-      const SizedBox(height:8),
-      Card(child:ListTile(
-        leading:const CircleAvatar(backgroundColor:Color(0xFFFFECEC),child:Icon(Icons.warning_amber_rounded,color:Colors.red)),
-        title:const Text('Actuele incidenten',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),
-        subtitle:Text(place.isEmpty?'Bekijk de actuele 112- en P2000-meldingen':'Start met meldingen voor $place'),
-        trailing:const Icon(Icons.chevron_right,color:navy),
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:false,initialPlace:place))),
-      )),
-      const SizedBox(height:14),
-      const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('Je buurt wordt bepaald via het adres dat je bij de afvalkalender instelt. Deze voorkeur blijft op je toestel.',style:TextStyle(fontSize:12,color:Colors.black54,height:1.4)))
-    ])
-  );
+        const SizedBox(height:12),
+        Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          shortcut(Icons.near_me_outlined,'Rond mijn straat',const Color(0xFF7C4DFF),(){}),const SizedBox(width:7),
+          shortcut(Icons.traffic,'Verkeer',Colors.deepOrange,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place)))),const SizedBox(width:7),
+          shortcut(Icons.warning_amber_rounded,'112 / P2000',Colors.red,()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:false,initialPlace:place)))),const SizedBox(width:7),
+          shortcut(Icons.notifications_active_outlined,'Buurtmeldingen',const Color(0xFF16834B),()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())))
+        ]),
+        const SizedBox(height:10),
+        neighborhoodTile(Icons.edit_location_alt_outlined,navy,'Adres wijzigen',street.isEmpty?(place.isEmpty?'Postcode, huisnummer en toevoeging instellen':'Wijzig het adres voor $place'):'$street${place.isEmpty?'':' · $place'}',_openWaste),
+        const SizedBox(height:12),
+        const Text('Rond mijn straat',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
+        const SizedBox(height:8),
+        Card(child:FutureBuilder<Map<String,String>>(future:_streetLive(),builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Padding(padding:EdgeInsets.all(18),child:Center(child:CircularProgressIndicator()));final d=s.data??const <String,String>{};Widget row(IconData icon,Color tint,String key)=>Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),child:Row(children:[CircleAvatar(radius:16,backgroundColor:tint.withValues(alpha:.10),child:Icon(icon,size:17,color:tint)),const SizedBox(width:10),Expanded(child:Text(d[key]??'Niet beschikbaar',style:const TextStyle(fontWeight:FontWeight.w600)))]));return Column(children:[
+          ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.near_me_outlined,color:navy)),title:Text(street.isEmpty?'Rond jouw straat':street,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(street.isEmpty?(place.isEmpty?'Stel je adres in via de afvalkalender':'Actuele informatie voor $place'):'Actuele informatie rond $street${place.isEmpty?'':' · $place'}')),
+          const Divider(height:1),row(Icons.recycling,const Color(0xFF16834B),'waste'),row(Icons.construction,Colors.deepOrange,'works'),row(Icons.traffic,Colors.deepOrange,'traffic'),row(Icons.warning_amber_rounded,Colors.red,'p2000'),row(Icons.event_outlined,cyan,'agenda'),
+        ]);})),
+        const SizedBox(height:16),
+        const Text('Voor jouw buurt',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),
+        const SizedBox(height:8),
+        neighborhoodTile(Icons.recycling,const Color(0xFF16834B),'Afvalkalender',place.isEmpty?'Stel je adres in en bekijk wanneer Reinis jouw afval ophaalt':'Afvalkalender voor $place',_openWaste),
+        neighborhoodTile(Icons.notifications_active_outlined,Colors.deepOrange,'Buurtmeldingen','Stel P2000 en andere lokale meldingen in',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
+        neighborhoodTile(Icons.location_on_outlined,cyan,place.isEmpty?'Nieuws uit jouw plaats':'Nieuws uit $place',place.isEmpty?'Kies een plaats voor lokaal nieuws':'Bekijk nieuws uit jouw eigen plaats',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place.isEmpty?const PlacesPage():PlaceNewsPage(place:place)))),
+        neighborhoodTile(Icons.traffic,Colors.deepOrange,'Verkeer in de regio',place.isEmpty?'Bekijk actuele verkeersmeldingen':'Start met $place als selectie',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place)))),
+        neighborhoodTile(Icons.warning_amber_rounded,Colors.red,'Actuele incidenten',place.isEmpty?'Bekijk de actuele 112- en P2000-meldingen':'Start met meldingen voor $place',()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:false,initialPlace:place)))),
+        const SizedBox(height:6),
+        const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('Je buurt wordt bepaald via het adres dat je bij de afvalkalender instelt. Deze voorkeur blijft op je toestel.',style:TextStyle(fontSize:12,color:Colors.black54,height:1.4)))
+      ])
+    );
+  }
 }
 
 class WasteCalendarPage extends StatefulWidget {
