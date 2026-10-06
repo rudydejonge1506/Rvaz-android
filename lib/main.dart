@@ -950,7 +950,7 @@ class _HomePageState extends State<HomePage>{
 class _HomeShortcut extends StatelessWidget{
   final IconData icon;final Color color;final String label;final VoidCallback? onTap;
   const _HomeShortcut({required this.icon,required this.color,required this.label,this.onTap});
-  @override Widget build(BuildContext context)=>Material(color:Colors.white,elevation:1,borderRadius:BorderRadius.circular(11),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(11),child:Padding(padding:const EdgeInsets.symmetric(vertical:10,horizontal:3),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:color,size:26),const SizedBox(height:5),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:navy))]))));
+  @override Widget build(BuildContext context)=>Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(14),child:Padding(padding:const EdgeInsets.symmetric(vertical:7,horizontal:2),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Container(width:48,height:48,decoration:BoxDecoration(color:color.withValues(alpha:.11),shape:BoxShape.circle),child:Icon(icon,color:color,size:25)),const SizedBox(height:7),Text(label,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10.5,height:1.05,fontWeight:FontWeight.w800,color:navy))]))));
 }
 
 class PlacesPage extends StatelessWidget {
