@@ -943,7 +943,44 @@ class _HomePageState extends State<HomePage>{
   @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses,weather]);},child:ListView(padding:EdgeInsets.zero,children:[
     if(appConfig.breakingBanner.trim().isNotEmpty)Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[const Icon(Icons.flash_on,size:18,color:Colors.red),const SizedBox(width:7),const Text('BREAKING',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Colors.red)),const SizedBox(width:8),Expanded(child:Text(appConfig.breakingBanner,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)))])),
     FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Container(margin:const EdgeInsets.fromLTRB(16,12,16,0),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,2))]),child:Row(children:[Icon(_weatherIcon(code),size:28,color:Colors.orange),const SizedBox(width:9),Text('$temp°',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(width:8),Expanded(child:Text(_weatherLabel(code),style:const TextStyle(fontSize:12,color:Colors.black54))),const VerticalDivider(),const Icon(Icons.location_on_outlined,size:17,color:cyan),const SizedBox(width:4),const Text('Voorne aan Zee',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))]));}),
-    Padding(padding:const EdgeInsets.only(top:8,bottom:4),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),child:SizedBox(width:double.infinity,height:108,child:Container(clipBehavior:Clip.antiAlias,decoration:BoxDecoration(color:const Color(0xFF073B63),image:DecorationImage(image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl.trim()),fit:BoxFit.cover,colorFilter:const ColorFilter.mode(Color(0x66000000),BlendMode.darken))),child:Padding(padding:const EdgeInsets.fromLTRB(18,12,14,12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),const SizedBox(height:2),const Text('Het laatste nieuws uit de regio',style:TextStyle(color:Colors.white,fontSize:13)),const SizedBox(height:8),Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(16)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Bekijk al het nieuws',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),SizedBox(width:3),Icon(Icons.chevron_right,color:Colors.white,size:15)]))])))))))),
+    InkWell(
+      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),
+      child:Container(
+        width:double.infinity,
+        height:116,
+        margin:const EdgeInsets.only(top:8,bottom:4),
+        decoration:BoxDecoration(
+          color:const Color(0xFF073B63),
+          image:DecorationImage(
+            image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl.trim()),
+            fit:BoxFit.cover,
+            colorFilter:const ColorFilter.mode(Color(0x66000000),BlendMode.darken),
+          ),
+        ),
+        child:Padding(
+          padding:const EdgeInsets.fromLTRB(18,12,14,12),
+          child:Column(
+            crossAxisAlignment:CrossAxisAlignment.start,
+            mainAxisAlignment:MainAxisAlignment.center,
+            children:[
+              const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
+              const SizedBox(height:2),
+              const Text('Het laatste nieuws uit de regio',style:TextStyle(color:Colors.white,fontSize:13)),
+              const SizedBox(height:8),
+              Container(
+                padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),
+                decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(16)),
+                child:const Row(mainAxisSize:MainAxisSize.min,children:[
+                  Text('Bekijk al het nieuws',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),
+                  SizedBox(width:3),
+                  Icon(Icons.chevron_right,color:Colors.white,size:15),
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
     Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:4,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:4,crossAxisSpacing:6,childAspectRatio:.90,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage())))),
       _HomeShortcut(icon:Icons.today,color:const Color(0xFF19A84A),label:'Voorne Vandaag',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage()))),
