@@ -13,9 +13,6 @@ jobs:
       BUNDLE_ID: nl.regiovoorneaanzee.app
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: feature/ios-bootstrap-v36
-
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -107,17 +104,14 @@ jobs:
           # Use the exact iOS icon uploaded for build 41. It is already visually final.
           # Convert only the PNG color model to RGB/no-alpha; do not crop, pad or zoom.
           SOURCE_ICON="assets/cropped-LogoRegio0181.png"
-          if [ ! -f "$SOURCE_ICON" ]; then
-            SOURCE_ICON="assets/rvaz-logo.png"
-          fi
           test -f "$SOURCE_ICON"
+          test "$(sips -g pixelWidth "$SOURCE_ICON" | awk '/pixelWidth/ {print $2}')" = "512"
+          test "$(sips -g pixelHeight "$SOURCE_ICON" | awk '/pixelHeight/ {print $2}')" = "512"
           sips -s format jpeg -s formatOptions 100 "$SOURCE_ICON" --out /tmp/rvaz-app-icon-rgb.jpg >/dev/null
           sips -s format png /tmp/rvaz-app-icon-rgb.jpg --out /tmp/rvaz-app-icon.png >/dev/null
           ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
-          mkdir -p "$ICON_DIR"
           while IFS='|' read -r file pixels; do
-            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "/tmp/$file" >/dev/null
-            cp "/tmp/$file" "$ICON_DIR/$file"
+            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
           done <<'ICONS'
           Icon-App-20x20@1x.png|20
           Icon-App-20x20@2x.png|40
@@ -141,13 +135,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.1 --build-number=43
-
-      - name: Configure Runner bundle identifier
-        run: |
-          set -euo pipefail
-          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
-          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.example.rvazAndroid;/PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;/g' "$PBXPROJ"
+          flutter build ios --release --no-codesign --build-name=0.6.2 --build-number=50
 
       - name: Archive with Apple Distribution signing
         run: |
@@ -159,8 +147,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
             DEVELOPMENT_TEAM=XQ8MH83ZV9 \
-            CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
 
       - name: Export signed App Store IPA
