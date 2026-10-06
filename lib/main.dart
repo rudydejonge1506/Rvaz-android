@@ -924,7 +924,7 @@ class _HomePageState extends State<HomePage>{
     Padding(padding:const EdgeInsets.fromLTRB(16,8,16,4),child:InkWell(borderRadius:BorderRadius.circular(12),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),child:Container(height:108,clipBehavior:Clip.antiAlias,decoration:BoxDecoration(color:const Color(0xFF073B63),borderRadius:BorderRadius.circular(12),image:appConfig.homeHeroUrl.trim().isEmpty?null:DecorationImage(image:NetworkImage(appConfig.homeHeroUrl),fit:BoxFit.cover,colorFilter:const ColorFilter.mode(Color(0x66000000),BlendMode.darken))),child:Padding(padding:const EdgeInsets.fromLTRB(18,12,14,12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),const SizedBox(height:2),const Text('Het laatste nieuws uit de regio',style:TextStyle(color:Colors.white,fontSize:13)),const SizedBox(height:8),Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(16)),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Bekijk al het nieuws',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),SizedBox(width:3),Icon(Icons.chevron_right,color:Colors.white,size:15)]))]))))),
     Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:4,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:4,crossAxisSpacing:6,childAspectRatio:.90,children:[
       _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage())))),
-      _HomeShortcut(icon:Icons.home,color:const Color(0xFF19A84A),label:'Mijn Buurt',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage()))),
+      _HomeShortcut(icon:Icons.today,color:const Color(0xFF19A84A),label:'Voorne Vandaag',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage()))),
       _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'P2000',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false)))),
       _HomeShortcut(icon:Icons.calendar_month,color:Colors.deepPurple,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
     ])),
@@ -1489,14 +1489,18 @@ class _NewsPageState extends State<NewsPage> {
 
 class TodayPage extends StatefulWidget{const TodayPage({super.key});@override State<TodayPage> createState()=>_TodayPageState();}
 class _TodayPageState extends State<TodayPage>{
- late Future<Map<String,dynamic>> future; String place='';
+ late Future<Map<String,dynamic>> future; String place='',street='';
  @override void initState(){super.initState();future=load();}
  Future<Map<String,dynamic>> load()async{
-   final saved=(await const FlutterSecureStorage().read(key:'rvaz_neighborhood_place')??'').trim();
-   place=saved.isEmpty?'Voorne aan Zee':saved;
+   const st=FlutterSecureStorage();
+   final saved=(await st.read(key:'rvaz_neighborhood_place')??'').trim();
+   final savedStreet=(await st.read(key:'rvaz_neighborhood_street')??'').trim();
+   final pushStreet=(await st.read(key:'rvaz_p2000_street_name')??'').trim();
+   place=saved.isEmpty?'Voorne aan Zee':saved;street=savedStreet.isNotEmpty?savedStreet:pushStreet;
    try{final d=await RvazApi.get('today',query:{'place':place});if(d is Map)return Map<String,dynamic>.from(d);}catch(_){}
    return{};
  }
+ Future<void> openAddress()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));setState(()=>future=load());}
  List<dynamic> section(Map<String,dynamic>d,String key)=>RvazApi.list(d[key]);
  DateTime? eventDate(dynamic e){if(e is! Map)return null;for(final k in ['start_date','event_start_date','event_date','start','date','datum','datetime']){final raw='${e[k]??''}'.trim();if(raw.isEmpty)continue;final parsed=DateTime.tryParse(raw);if(parsed!=null)return parsed.toLocal();final m=RegExp(r'^(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})').firstMatch(raw);if(m!=null)return DateTime(int.parse(m.group(3)!),int.parse(m.group(2)!),int.parse(m.group(1)!));}return null;}
  bool isTodayEvent(dynamic e){final d=eventDate(e);if(d==null)return false;final now=DateTime.now();return d.year==now.year&&d.month==now.month&&d.day==now.day;}
@@ -1507,8 +1511,7 @@ class _TodayPageState extends State<TodayPage>{
    if(items.isEmpty)return const SizedBox.shrink();
    return Card(margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.fromLTRB(14,14,14,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Row(children:[CircleAvatar(radius:18,backgroundColor:color.withValues(alpha:.10),child:Icon(icon,color:color,size:20)),const SizedBox(width:10),Expanded(child:Text(title,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)))]),
-     const SizedBox(height:8),
-     ...items.take(5).map((e)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place')),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openItem(kind,e)))
+     const SizedBox(height:8),...items.take(5).map((e)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place')),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openItem(kind,e)))
    ])));
  }
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Voorne Vandaag')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){
@@ -1516,16 +1519,23 @@ class _TodayPageState extends State<TodayPage>{
    final d=s.data??{},news=section(d,'news'),p2000=section(d,'p2000'),traffic=section(d,'traffic'),agenda=section(d,'agenda').where(isTodayEvent).toList();
    return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView(padding:const EdgeInsets.all(16),children:[
      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       Text(greeting(),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),const SizedBox(height:4),
-       const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),
-       const SizedBox(height:5),Text('Jouw buurt: $place',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w600))
+       Text(greeting(),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),const SizedBox(height:4),const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:29,fontWeight:FontWeight.w900)),const SizedBox(height:5),
+       Text(place=='Voorne aan Zee'?'Stel je adres in voor informatie uit jouw buurt.':'Jouw buurt: $place${street.isEmpty?'':' · $street'}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w600))
      ])),
-     const SizedBox(height:14),
+     const SizedBox(height:10),
+     Card(child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFFEAF4FF),child:Icon(Icons.edit_location_alt_outlined,color:navy)),title:const Text('Adres wijzigen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(street.isEmpty?(place=='Voorne aan Zee'?'Postcode, huisnummer en toevoeging instellen':'Adres voor $place instellen'):'$street · $place'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:openAddress)),
+     Row(children:[
+       Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage())),child:const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Column(children:[Icon(Icons.recycling,color:Color(0xFF16834B)),SizedBox(height:5),Text('Afval',style:TextStyle(fontWeight:FontWeight.w800))]))))),const SizedBox(width:6),
+       Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EmergencyTrafficPage(initialTraffic:true,initialPlace:place))),child:const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Column(children:[Icon(Icons.traffic,color:Colors.deepOrange),SizedBox(height:5),Text('Verkeer',style:TextStyle(fontWeight:FontWeight.w800))]))))),const SizedBox(width:6),
+       Expanded(child:Card(child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage())),child:const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Column(children:[Icon(Icons.notifications_active_outlined,color:Color(0xFF16834B)),SizedBox(height:5),Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w800))])))))
+     ]),
+     const SizedBox(height:8),
      if(d.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Het dagoverzicht is momenteel niet beschikbaar.'))),
-     sectionCard('news','Vandaag in het nieuws',Icons.article_outlined,cyan,news),
-     sectionCard('p2000','112 / P2000 in $place',Icons.warning_amber_rounded,Colors.red,p2000),
+     sectionCard('news',place=='Voorne aan Zee'?'Vandaag in het nieuws':'Nieuws uit $place',Icons.article_outlined,cyan,news),
+     sectionCard('p2000',place=='Voorne aan Zee'?'112 / P2000':'112 / P2000 in $place',Icons.warning_amber_rounded,Colors.red,p2000),
      sectionCard('agenda','Vandaag te doen',Icons.event_outlined,const Color(0xFF16834B),agenda),
-     sectionCard('traffic','Verkeer in de regio',Icons.traffic,Colors.deepOrange,traffic),
+     sectionCard('traffic',place=='Voorne aan Zee'?'Verkeer in de regio':'Verkeer rond $place',Icons.traffic,Colors.deepOrange,traffic),
+     Card(child:ListTile(leading:const Icon(Icons.location_on_outlined,color:cyan),title:Text(place=='Voorne aan Zee'?'Plaatsen':'Meer uit $place',style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Bekijk lokaal nieuws en informatie'),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>place=='Voorne aan Zee'?const PlacesPage():PlaceNewsPage(place:place))))),
    ]));
  }));
 }
