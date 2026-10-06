@@ -383,7 +383,7 @@ class _ShellState extends State<Shell> {
   static const iconMap = <String,IconData>{
     'home':Icons.home_outlined,'news':Icons.article_outlined,'emergency':Icons.warning_amber_rounded,'agenda':Icons.event_outlined,'account':Icons.more_horiz,
   };
-  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112','agenda':'Agenda','account':'Mijn RVAZ'};
+  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112','agenda':'Agenda','account':'Mijn Voorne'};
 
   @override
   Widget build(BuildContext context) {
@@ -957,7 +957,6 @@ class _HomePageState extends State<HomePage>{
       ListTile(leading:const Icon(Icons.local_parking,color:Colors.blue),title:const Text('Parkeren'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const ParkingPage()));}),
       ListTile(leading:const Icon(Icons.park_outlined,color:Colors.green),title:const Text('Natuur & recreatie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const RecreationPage()));}),
       ListTile(leading:const Icon(Icons.waves,color:Colors.lightBlue),title:const Text('Strand & kust'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const CoastPage()));}),
-      ListTile(leading:const Icon(Icons.favorite_outline,color:Colors.deepOrange),title:const Text('Mijn Voorne'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVoornePage()));}),
       ListTile(leading:const Icon(Icons.star,color:Colors.amber),title:const Text('Favorieten'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()));}),
       ListTile(leading:const Icon(Icons.storefront,color:Colors.deepPurple),title:const Text('Bedrijven'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()));}),
       ListTile(leading:const Icon(Icons.percent,color:Colors.red),title:const Text('Vouchers'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()));}),
@@ -1665,7 +1664,7 @@ class _AccountPageState extends State<AccountPage>{
   Widget build(BuildContext context)=>ListView(
     padding:const EdgeInsets.all(18),
     children:[
-      Text(appConfig.accountTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
+      const Text('Mijn Voorne',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const SizedBox(height:14),
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Row(children:[
         _menuIcon(Icons.person),const SizedBox(width:14),
@@ -1680,12 +1679,12 @@ class _AccountPageState extends State<AccountPage>{
       ]))),
       const SizedBox(height:14),
       Card(clipBehavior:Clip.antiAlias,child:Column(children:[
-        _sectionHeader(Icons.location_on,'Mijn omgeving','Alles over jouw buurt en regio'),
+        _sectionHeader(Icons.location_on,'Mijn Voorne','Alles over jouw buurt en regio'),
         ListTile(leading:_menuIcon(Icons.home_work_outlined),title:const Text('Mijn Buurt',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Afval, meldingen en informatie voor jouw buurt'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyNeighborhoodPage()))),
       ])),
       const SizedBox(height:14),
       if(userName!=null)Card(clipBehavior:Clip.antiAlias,child:Column(children:[
-        _sectionHeader(Icons.person,'Mijn RVAZ','Jouw instellingen en voorkeuren'),
+        _sectionHeader(Icons.person,'Mijn Voorne','Jouw instellingen en voorkeuren'),
         ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Kies welke pushmeldingen je wilt ontvangen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
