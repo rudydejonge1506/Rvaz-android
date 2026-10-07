@@ -13,8 +13,6 @@ jobs:
       BUNDLE_ID: nl.regiovoorneaanzee.app
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: feature/ios-bootstrap-v36
 
       - uses: subosito/flutter-action@v2
         with:
@@ -94,45 +92,43 @@ jobs:
           </plist>
           PLIST
 
-      - name: Restore RVAZ iOS app icons
+      - name: Create iOS project and install exact RVAZ icon
         shell: bash
         run: |
           set -euo pipefail
-          # Use the exact iOS icon uploaded for build 41. It is already visually final.
-          # Convert only the PNG color model to RGB/no-alpha; do not crop, pad or zoom.
-          SOURCE_ICON="assets/cropped-LogoRegio0181.png"
-          test -f "$SOURCE_ICON"
-          test "$(sips -g pixelWidth "$SOURCE_ICON" | awk '/pixelWidth/ {print $2}')" = "512"
-          test "$(sips -g pixelHeight "$SOURCE_ICON" | awk '/pixelHeight/ {print $2}')" = "512"
-          sips -s format jpeg -s formatOptions 100 "$SOURCE_ICON" --out /tmp/rvaz-app-icon-rgb.jpg >/dev/null
-          sips -s format png /tmp/rvaz-app-icon-rgb.jpg --out /tmp/rvaz-app-icon.png >/dev/null
+          flutter create --platforms=ios .
           ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
-          while IFS='|' read -r file pixels; do
-            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
-          done <<'ICONS'
-          Icon-App-20x20@1x.png|20
-          Icon-App-20x20@2x.png|40
-          Icon-App-20x20@3x.png|60
-          Icon-App-29x29@1x.png|29
-          Icon-App-29x29@2x.png|58
-          Icon-App-29x29@3x.png|87
-          Icon-App-40x40@1x.png|40
-          Icon-App-40x40@2x.png|80
-          Icon-App-40x40@3x.png|120
-          Icon-App-60x60@2x.png|120
-          Icon-App-60x60@3x.png|180
-          Icon-App-76x76@1x.png|76
-          Icon-App-76x76@2x.png|152
-          Icon-App-83.5x83.5@2x.png|167
-          Icon-App-1024x1024@1x.png|1024
-          ICONS
-          test "$(sips -g pixelWidth "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelWidth/ {print $2}')" = "1024"
-          test "$(sips -g pixelHeight "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelHeight/ {print $2}')" = "1024"
-          test "$(sips -g hasAlpha "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/hasAlpha/ {print $2}')" = "no"
+          echo "${RVAZ_ICON_B64:-}" >/dev/null
+          base64 --decode assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon.png
+          test "$(sips -g pixelWidth /tmp/rvaz-icon.png | awk '/pixelWidth/ {print $2}')" = "1024"
+          test "$(sips -g pixelHeight /tmp/rvaz-icon.png | awk '/pixelHeight/ {print $2}')" = "1024"
+          python3 - <<'PY'
+          import json, os, subprocess
+          d='ios/Runner/Assets.xcassets/AppIcon.appiconset'
+          data=json.load(open(os.path.join(d,'Contents.json')))
+          for item in data['images']:
+              f=item.get('filename')
+              size=item.get('size')
+              scale=item.get('scale')
+              if not f or not size or not scale: continue
+              pt=float(size.split('x')[0]); sc=int(scale.rstrip('x')); px=round(pt*sc)
+              subprocess.run(['sips','-z',str(px),str(px),'/tmp/rvaz-icon.png','--out',os.path.join(d,f)],check=True,stdout=subprocess.DEVNULL)
+          PY
+          APPSTORE_ICON=$(python3 - <<'PY'
+          import json
+          d=json.load(open('ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json'))
+          for i in d['images']:
+              if i.get('idiom')=='ios-marketing':
+                  print(i.get('filename','')); break
+          PY
+          )
+          test -n "$APPSTORE_ICON"
+          test "$(sips -g pixelWidth "$ICON_DIR/$APPSTORE_ICON" | awk '/pixelWidth/ {print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON_DIR/$APPSTORE_ICON" | awk '/pixelHeight/ {print $2}')" = "1024"
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=63
+          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=64
 
       - name: Archive with Apple Distribution signing
         run: |
