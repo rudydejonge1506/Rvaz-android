@@ -33,11 +33,13 @@ jobs:
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist
           test -f ios/Runner/GoogleService-Info.plist
-          test -f ios/Runner/AppDelegate.swift ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift
+          test -f ios/Runner/AppDelegate.swift
+          test -f ios/Runner/Runner-Bridging-Header.h
+          test -f ios/Runner/SceneDelegate.swift
           grep -q 'nl.regiovoorneaanzee.app' ios/Runner.xcodeproj/project.pbxproj
           git fetch --no-tags origin e7bc87ea017399ef7db76b1f43de7dd8e8ed9494
           test "$(git rev-parse FETCH_HEAD)" = "e7bc87ea017399ef7db76b1f43de7dd8e8ed9494"
-          git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/AppFrameworkInfo.plist ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+          git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/AppFrameworkInfo.plist ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings ios/Runner/GoogleService-Info.plist ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift
 
       - name: Install Apple signing credentials
         env:
