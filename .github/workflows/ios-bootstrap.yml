@@ -113,7 +113,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=76
+          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=77
 
       - name: Archive with Apple Distribution signing
         run: |
@@ -125,8 +125,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
             DEVELOPMENT_TEAM=XQ8MH83ZV9 \
-            CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
 
       - name: Export signed App Store IPA
