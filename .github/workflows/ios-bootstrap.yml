@@ -13,6 +13,9 @@ jobs:
       BUNDLE_ID: nl.regiovoorneaanzee.app
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/ios-bootstrap-v36
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -60,7 +63,6 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< "$(security cms -D -i "$PP_PATH")")
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
-          echo "IOS_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
 
           PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
           security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
@@ -92,73 +94,45 @@ jobs:
           </plist>
           PLIST
 
-      - name: Ensure iOS project exists
-        run: |
-          if [ ! -f ios/Runner.xcodeproj/project.pbxproj ]; then
-            flutter create --platforms=ios .
-          fi
-
-      - name: Install exact RVAZ iOS app icons
+      - name: Restore RVAZ iOS app icons
+        shell: bash
         run: |
           set -euo pipefail
-          # Decode the known square RVAZ icon source, then write every size named by
-          # Flutter's generated AppIcon Contents.json. This avoids launcher-icon parsing.
-          python3 - <<'PY'
-          import base64, json, pathlib, subprocess
-          source = pathlib.Path('assets/rvaz-launcher-icon.png.b64')
-          icon = pathlib.Path('/tmp/rvaz-ios-icon.png')
-          icon.write_bytes(base64.b64decode(source.read_text().strip()))
-          appicon = pathlib.Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
-          data = json.loads((appicon / 'Contents.json').read_text())
-          for item in data['images']:
-              name = item.get('filename')
-              size = item.get('size')
-              scale = item.get('scale')
-              if not name or not size or not scale:
-                  continue
-              points = float(size.split('x')[0])
-              factor = float(scale.rstrip('x'))
-              pixels = int(round(points * factor))
-              subprocess.run(['sips','-z',str(pixels),str(pixels),str(icon),'--out',str(appicon / name)], check=True, stdout=subprocess.DEVNULL)
-          PY
-          ICON_1024="ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
-          test -f "$ICON_1024"
-          test "$(sips -g pixelWidth "$ICON_1024" | awk '/pixelWidth/{print $2}')" = "1024"
-          test "$(sips -g pixelHeight "$ICON_1024" | awk '/pixelHeight/{print $2}')" = "1024"
-          echo "Verified exact RVAZ iOS AppIcon set"
-
-      - name: Add required iOS privacy usage descriptions
-        run: |
-          set -euo pipefail
-          PLIST="ios/Runner/Info.plist"
-          /usr/libexec/PlistBuddy -c "Delete :NSCameraUsageDescription" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Camera access is used to scan voucher QR codes." "$PLIST"
-          /usr/libexec/PlistBuddy -c "Delete :NSCalendarsUsageDescription" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSCalendarsUsageDescription string Calendar access is used when you choose to add an event to your calendar." "$PLIST"
+          # Use the exact iOS icon uploaded for build 41. It is already visually final.
+          # Convert only the PNG color model to RGB/no-alpha; do not crop, pad or zoom.
+          SOURCE_ICON="assets/cropped-LogoRegio0181.png"
+          test -f "$SOURCE_ICON"
+          test "$(sips -g pixelWidth "$SOURCE_ICON" | awk '/pixelWidth/ {print $2}')" = "512"
+          test "$(sips -g pixelHeight "$SOURCE_ICON" | awk '/pixelHeight/ {print $2}')" = "512"
+          sips -s format jpeg -s formatOptions 100 "$SOURCE_ICON" --out /tmp/rvaz-app-icon-rgb.jpg >/dev/null
+          sips -s format png /tmp/rvaz-app-icon-rgb.jpg --out /tmp/rvaz-app-icon.png >/dev/null
+          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+          while IFS='|' read -r file pixels; do
+            sips -z "$pixels" "$pixels" /tmp/rvaz-app-icon.png --out "$ICON_DIR/$file" >/dev/null
+          done <<'ICONS'
+          Icon-App-20x20@1x.png|20
+          Icon-App-20x20@2x.png|40
+          Icon-App-20x20@3x.png|60
+          Icon-App-29x29@1x.png|29
+          Icon-App-29x29@2x.png|58
+          Icon-App-29x29@3x.png|87
+          Icon-App-40x40@1x.png|40
+          Icon-App-40x40@2x.png|80
+          Icon-App-40x40@3x.png|120
+          Icon-App-60x60@2x.png|120
+          Icon-App-60x60@3x.png|180
+          Icon-App-76x76@1x.png|76
+          Icon-App-76x76@2x.png|152
+          Icon-App-83.5x83.5@2x.png|167
+          Icon-App-1024x1024@1x.png|1024
+          ICONS
+          test "$(sips -g pixelWidth "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelWidth/ {print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/pixelHeight/ {print $2}')" = "1024"
+          test "$(sips -g hasAlpha "$ICON_DIR/Icon-App-1024x1024@1x.png" | awk '/hasAlpha/ {print $2}')" = "no"
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=62
-
-      - name: Configure Runner signing only
-        run: |
-          set -euo pipefail
-          ruby <<'RUBY'
-          require 'xcodeproj'
-          project = Xcodeproj::Project.open('ios/Runner.xcodeproj')
-          target = project.targets.find { |t| t.name == 'Runner' }
-          abort 'Runner target not found' unless target
-          target.build_configurations.each do |config|
-            next unless config.name == 'Release'
-            config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = ENV.fetch('BUNDLE_ID')
-            config.build_settings['DEVELOPMENT_TEAM'] = 'XQ8MH83ZV9'
-            config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
-            config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
-            config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'RVAZ App Store'
-            config.build_settings['PROVISIONING_PROFILE'] = ENV.fetch('IOS_PROFILE_UUID')
-          end
-          project.save
-          RUBY
+          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=63
 
       - name: Archive with Apple Distribution signing
         run: |
@@ -169,6 +143,9 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            DEVELOPMENT_TEAM=XQ8MH83ZV9 \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
 
       - name: Export signed App Store IPA
