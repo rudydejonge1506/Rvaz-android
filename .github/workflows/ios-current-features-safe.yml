@@ -34,7 +34,8 @@ jobs:
           test -f ios/Runner/Info.plist
           test -f ios/Runner/AppDelegate.swift
           grep -q 'nl.regiovoorneaanzee.app' ios/Runner.xcodeproj/project.pbxproj
-          git diff --exit-code e7bc87ea017399ef7db76b1f43de7dd8e8ed9494 -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+          git fetch --no-tags --depth=1 origin e7bc87ea017399ef7db76b1f43de7dd8e8ed9494
+          git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: Install Apple signing credentials
         env:
