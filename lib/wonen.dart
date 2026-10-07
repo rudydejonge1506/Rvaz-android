@@ -65,3 +65,26 @@ class WonenSectionPage extends StatelessWidget {
   final String title; const WonenSectionPage({super.key,required this.title});
   @override Widget build(BuildContext context) => Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:Text(title)),body:Center(child:Text(title,style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy))));
 }
+
+
+class MijnWoningenPage extends StatelessWidget {
+  const MijnWoningenPage({super.key});
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:const Text('Mijn woningen')),body:ListView(padding:const EdgeInsets.all(16),children:[
+    Row(children:[const Expanded(child:Text('Mijn woningen',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy))),FilledButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NieuweWoningPage())),icon:const Icon(Icons.add),label:const Text('Nieuwe woning'))]),
+    const SizedBox(height:12),const Card(child:ListTile(leading:Icon(Icons.home_outlined,color:wonenNavy),title:Text('Nog geen woningen',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Nieuwe woningen verschijnen hier met foto, adres, prijs en status.')))
+  ]));
+}
+class WonenOfficePage extends StatelessWidget {
+  const WonenOfficePage({super.key});
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:const Text('Mijn kantoor')),body:ListView(padding:const EdgeInsets.all(16),children:[
+    const Text('Kantoorgegevens',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy)),const SizedBox(height:12),
+    for(final label in ['Kantoornaam','KvK nummer','Adres','Postcode','Plaats','Telefoon','Website'])Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(decoration:InputDecoration(labelText:label,filled:true,fillColor:Colors.white,border:const OutlineInputBorder()))),
+    const Card(child:ListTile(leading:Icon(Icons.image_outlined,color:wonenNavy),title:Text('Kantoorlogo',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('Logo wijzigen of verwijderen')))
+  ]));
+}
+class WonenStatsPage extends StatelessWidget {
+  const WonenStatsPage({super.key});
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:const Text('Statistieken')),body:ListView(padding:const EdgeInsets.all(16),children:[
+    const Text('Statistieken',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy)),const SizedBox(height:12),const Row(children:[_Stat('Actief','0',Icons.home),_Stat('Verkocht','0',Icons.check_circle_outline),_Stat('Weergaven','0',Icons.visibility_outlined)]),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Weergaven en prestaties per woning.')))
+  ]));
+}
