@@ -98,78 +98,36 @@ jobs:
             flutter create --platforms=ios .
           fi
 
-      - name: Install RVAZ iOS app icons directly
+      - name: Generate RVAZ iOS app icons
         run: |
           set -euo pipefail
-
-          # Use the same icon-source priority as the Android build.
-          ICON_SOURCE=""
-          if [ -f "assets/images/app_icon.png" ]; then ICON_SOURCE="assets/images/app_icon.png"; fi
-          if [ -z "$ICON_SOURCE" ] && [ -f "assets/app_icon.png" ]; then ICON_SOURCE="assets/app_icon.png"; fi
-          if [ -z "$ICON_SOURCE" ]; then
-            API="https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config"
-            if curl -4 --fail --location --connect-timeout 10 --max-time 25 "$API" -o "$RUNNER_TEMP/rvaz-config.json"; then
-              ICON_URL=$(python3 -c "import json; d=json.load(open('$RUNNER_TEMP/rvaz-config.json')); print(d.get('app_icon_url') or d.get('app_icon') or '')")
-              if [ -n "$ICON_URL" ] && curl -4 --fail --location --connect-timeout 10 --max-time 30 "$ICON_URL" -o "$RUNNER_TEMP/rvaz-icon-source"; then
-                ICON_SOURCE="$RUNNER_TEMP/rvaz-icon-source"
-              fi
-            fi
-          fi
-          if [ -z "$ICON_SOURCE" ] && [ -f "assets/rvaz-launcher-icon.png.b64" ]; then
-            python3 - <<'PY'
+          cat > "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml" <<'YAML'
+          flutter_launcher_icons:
+            android: false
+            ios: true
+            image_path: assets/rvaz-logo.png
+            remove_alpha_ios: true
+            background_color_ios: "#FFFFFF"
+          YAML
+          # Use the existing square RVAZ launcher artwork for iOS only.
+          # Keep all Android icon settings and artwork untouched.
+          python3 - <<'PY'
           import base64, pathlib
           source = pathlib.Path('assets/rvaz-launcher-icon.png.b64').read_text().strip()
-          pathlib.Path('/tmp/rvaz-icon-source.png').write_bytes(base64.b64decode(source))
+          pathlib.Path('/tmp/rvaz-ios-icon.png').write_bytes(base64.b64decode(source))
           PY
-            ICON_SOURCE="/tmp/rvaz-icon-source.png"
-          fi
-          if [ -z "$ICON_SOURCE" ]; then
-            echo "No RVAZ app icon available; refusing to package Flutter's default icon."
-            exit 1
-          fi
-
-          APPICON="ios/Runner/Assets.xcassets/AppIcon.appiconset"
-          test -f "$APPICON/Contents.json"
-
-          # Normalize the chosen RVAZ artwork and remember Flutter's generated 1024 icon.
-          sips -s format png "$ICON_SOURCE" --out "$RUNNER_TEMP/rvaz-icon.png" >/dev/null
-          DEFAULT_1024="$APPICON/Icon-App-1024x1024@1x.png"
-          test -f "$DEFAULT_1024"
-          DEFAULT_HASH=$(shasum -a 256 "$DEFAULT_1024" | awk '{print $1}')
-
-          # Replace every icon referenced by the Xcode AppIcon asset catalog.
-          python3 - <<'PY'
-          import json, pathlib, subprocess
-          appicon = pathlib.Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
-          data = json.loads((appicon / 'Contents.json').read_text())
-          source = pathlib.Path(__import__('os').environ['RUNNER_TEMP']) / 'rvaz-icon.png'
-          written = 0
-          for item in data.get('images', []):
-              filename = item.get('filename')
-              size = item.get('size')
-              scale = item.get('scale')
-              if not filename or not size or not scale:
-                  continue
-              points = float(size.split('x')[0])
-              multiplier = float(scale.rstrip('x'))
-              pixels = int(round(points * multiplier))
-              target = appicon / filename
-              subprocess.run(['sips', '-z', str(pixels), str(pixels), str(source), '--out', str(target)],
-                             check=True, stdout=subprocess.DEVNULL)
-              written += 1
-          if written == 0:
-              raise SystemExit('No iOS AppIcon images were written')
-          print(f'Installed RVAZ artwork into {written} iOS AppIcon files')
-          PY
-
-          ICON_1024="$APPICON/Icon-App-1024x1024@1x.png"
+          cp /tmp/rvaz-ios-icon.png "$RUNNER_TEMP/rvaz-ios-icon.png"
+          sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP/rvaz-ios-icon.png"
+          sed -i '' "s|image_path: assets/rvaz-logo.png|image_path: $RUNNER_TEMP/rvaz-ios-icon.png|" "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml"
+          dart run flutter_launcher_icons -f "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml"
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+          ICON_1024="ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
+          test -f "$ICON_1024"
           ICON_WIDTH=$(sips -g pixelWidth "$ICON_1024" | awk '/pixelWidth/{print $2}')
           ICON_HEIGHT=$(sips -g pixelHeight "$ICON_1024" | awk '/pixelHeight/{print $2}')
           test "$ICON_WIDTH" = "1024"
           test "$ICON_HEIGHT" = "1024"
-          RVAZ_HASH=$(shasum -a 256 "$ICON_1024" | awk '{print $1}')
-          test "$RVAZ_HASH" != "$DEFAULT_HASH"
-          echo "Verified RVAZ replaced Flutter default App Store icon: 1024x1024, sha256=$RVAZ_HASH"
+          echo "Verified generated iOS App Store icon: ${ICON_WIDTH}x${ICON_HEIGHT}"
 
       - name: Add required iOS privacy usage descriptions
         run: |
@@ -182,7 +140,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.2 --build-number=58
+          flutter build ios --release --no-codesign --build-name=1.1.2 --build-number=59
 
       - name: Configure Runner signing only
         run: |
