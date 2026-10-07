@@ -14,6 +14,8 @@ final class RVAZ_Wonen {
  static function init(){
   add_action('init',[__CLASS__,'register']);
   add_action('rest_api_init',[__CLASS__,'rest']);
+  add_action('add_meta_boxes',[__CLASS__,'boxes']);
+  add_action('save_post_'.self::TYPE,[__CLASS__,'save']);
   add_shortcode('rvaz_wonen',[__CLASS__,'shortcode']);
   add_filter('template_include',[__CLASS__,'template']);
  }
@@ -31,6 +33,22 @@ final class RVAZ_Wonen {
   ]);
   foreach(['koop','huur','nieuwbouw','bedrijfspand'] as $tax){
    register_taxonomy('rvaz_'.$tax,self::TYPE,['label'=>ucfirst($tax),'public'=>true,'show_in_rest'=>true]);
+  }
+ }
+
+
+ static function boxes(){ add_meta_box('rvaz_wonen_details','Woninggegevens',[__CLASS__,'box'],self::TYPE,'normal','high'); }
+ static function box($post){
+  wp_nonce_field('rvaz_wonen_save','rvaz_wonen_nonce');
+  $fields=['adres'=>'Adres','postcode'=>'Postcode','plaats'=>'Plaats','prijs'=>'Prijs','woningtype'=>'Woningtype','status'=>'Status','slaapkamers'=>'Slaapkamers','woonoppervlak'=>'Woonoppervlak (m²)','perceel'=>'Perceel (m²)','energielabel'=>'Energielabel','makelaar_url'=>'Link naar makelaar'];
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  foreach($fields as $key=>$label){$v=get_post_meta($post->ID,'_rvaz_wonen_'.$key,true);echo '<label><strong>'.esc_html($label).'</strong><input style="width:100%;margin-top:5px" name="rvaz_wonen_'.esc_attr($key).'" value="'.esc_attr($v).'"></label>';}
+  echo '</div>';
+ }
+ static function save($id){
+  if(!isset($_POST['rvaz_wonen_nonce'])||!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['rvaz_wonen_nonce'])),'rvaz_wonen_save')||!current_user_can('edit_post',$id)||wp_is_post_autosave($id)||wp_is_post_revision($id)) return;
+  foreach(['adres','postcode','plaats','prijs','woningtype','status','slaapkamers','woonoppervlak','perceel','energielabel','makelaar_url'] as $key){
+   if(isset($_POST['rvaz_wonen_'.$key])) update_post_meta($id,'_rvaz_wonen_'.$key,sanitize_text_field(wp_unslash($_POST['rvaz_wonen_'.$key])));
   }
  }
 
