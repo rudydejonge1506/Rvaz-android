@@ -280,24 +280,36 @@ Future<void> openPushMessage(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  final messaging = FirebaseMessaging.instance;
-  final initialMessage = await messaging.getInitialMessage();
 
-  // Render eerst de app (en een eventuele P2000-push) en doe netwerk/configuratie daarna.
-  // Zo blokkeert een cold start niet op config, topic-abonnementen of tokenregistratie.
+  FirebaseMessaging? messaging;
+  RemoteMessage? initialMessage;
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    messaging = FirebaseMessaging.instance;
+    initialMessage = await messaging.getInitialMessage();
+  } catch (e) {
+    // A missing/invalid iOS Firebase configuration must never prevent the app
+    // from starting. Android keeps the existing Firebase/push behaviour.
+    debugPrint('RVAZ Firebase startup skipped: $e');
+  }
+
+  // Render eerst de app; externe diensten mogen een cold start nooit blokkeren.
   runApp(const RvazApp());
   unawaited(initializeAdMob());
   unawaited(setupVoucherAppLinks());
-  FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
-  if (initialMessage != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage));
+
+  if (messaging != null) {
+    FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
+    if (initialMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => openPushMessage(initialMessage!));
+    }
+    messaging.onTokenRefresh.listen((_) { unawaited(registerDeviceToken()); });
   }
-  messaging.onTokenRefresh.listen((_) { unawaited(registerDeviceToken()); });
 
   unawaited(() async {
     await loadConfig();
+    if (messaging == null) return;
     final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (permission.authorizationStatus != AuthorizationStatus.denied) {
       for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
