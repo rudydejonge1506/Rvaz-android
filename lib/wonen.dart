@@ -88,3 +88,37 @@ class WonenStatsPage extends StatelessWidget {
     const Text('Statistieken',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy)),const SizedBox(height:12),const Row(children:[_Stat('Actief','0',Icons.home),_Stat('Verkocht','0',Icons.check_circle_outline),_Stat('Weergaven','0',Icons.visibility_outlined)]),const SizedBox(height:12),const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Weergaven en prestaties per woning.')))
   ]));
 }
+
+
+class WonenSubscriptionPage extends StatelessWidget {
+ const WonenSubscriptionPage({super.key});
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:const Text('Abonnement')),body:ListView(padding:const EdgeInsets.all(16),children:[
+  const Text('Kies een abonnement',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy)),const SizedBox(height:12),
+  _PlanCard(name:'Basis',price:'49',limit:'Tot 5 woningen'),_PlanCard(name:'Plus',price:'99',limit:'Tot 20 woningen'),_PlanCard(name:'Pro',price:'179',limit:'Onbeperkt woningen')
+ ]));
+}
+class _PlanCard extends StatelessWidget {
+ final String name,price,limit; const _PlanCard({required this.name,required this.price,required this.limit});
+ @override Widget build(BuildContext context)=>Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  Text(name,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:wonenNavy)),Text('€ $price per maand',style:const TextStyle(fontSize:25,fontWeight:FontWeight.w900)),const SizedBox(height:8),Text('✓ $limit\n✓ Vermelding op website en app\n✓ Eigen makelaarspagina\n✓ Statistieken'),const SizedBox(height:12),OutlinedButton(onPressed:null,child:Text('Kies $name'))
+ ])));
+}
+class WonenInvoicesPage extends StatelessWidget {
+ const WonenInvoicesPage({super.key});
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:const Text('Facturen')),body:ListView(padding:const EdgeInsets.all(16),children:[
+  const Text('Facturen',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy)),const SizedBox(height:12),
+  Card(child:ListTile(leading:const Icon(Icons.receipt_long,color:wonenNavy),title:const Text('Factuur 2026-0017',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:const Text('Plus · Openstaand'),trailing:const Text('€ 119,79',style:TextStyle(fontWeight:FontWeight.w900)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WonenInvoiceDetailPage()))))
+ ]));
+}
+class WonenInvoiceDetailPage extends StatelessWidget {
+ const WonenInvoiceDetailPage({super.key});
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:wonenBg,appBar:AppBar(backgroundColor:Colors.white,foregroundColor:wonenNavy,title:const Text('Factuur 2026-0017')),body:ListView(padding:const EdgeInsets.all(16),children:[
+  const Text('Factuur 2026-0017',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:wonenNavy)),const SizedBox(height:8),const Chip(label:Text('Openstaand')),const SizedBox(height:10),
+  const Card(child:Padding(padding:EdgeInsets.all(16),child:Column(children:[_InvoiceLine('Abonnement Plus','€ 99,00'),_InvoiceLine('BTW 21%','€ 20,79'),Divider(),_InvoiceLine('Totaal','€ 119,79',bold:true)]))),
+  const SizedBox(height:12),const Row(children:[Expanded(child:FilledButton(onPressed:null,child:Text('Betaal via Tikkie'))),SizedBox(width:8),Expanded(child:OutlinedButton(onPressed:null,child:Text('Download PDF')))])
+ ]));
+}
+class _InvoiceLine extends StatelessWidget {
+ final String left,right; final bool bold; const _InvoiceLine(this.left,this.right,{this.bold=false});
+ @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Row(children:[Expanded(child:Text(left,style:TextStyle(fontWeight:bold?FontWeight.w900:null))),Text(right,style:TextStyle(fontWeight:bold?FontWeight.w900:null))]));
+}
