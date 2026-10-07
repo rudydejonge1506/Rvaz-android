@@ -94,14 +94,15 @@ jobs:
           </plist>
           PLIST
 
-      - name: Keep proven 1.1.1 iOS app icons
+      - name: Recreate iOS project required by proven 1.1.1 source
         run: |
           set -euo pipefail
+          flutter create --platforms=ios .
           test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=70
+          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=71
 
       - name: Archive with Apple Distribution signing
         run: |
