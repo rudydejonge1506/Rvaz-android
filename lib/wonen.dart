@@ -35,9 +35,10 @@ class MakelaarsPortalPage extends StatelessWidget {
       const Row(children: [_Stat('Actief','0',Icons.home), _Stat('Verkocht','0',Icons.home_work), _Stat('Concept','0',Icons.description_outlined)]),
       const SizedBox(height: 14),
       for (final item in const [('Mijn woningen',Icons.home_outlined),('Nieuwe woning',Icons.add_home_outlined),('Mijn kantoor',Icons.business_outlined),('Statistieken',Icons.bar_chart),('Abonnement',Icons.card_membership),('Facturen',Icons.receipt_long)])
-        Card(child: ListTile(leading: Icon(item.$2, color: wonenNavy), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w800)), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => item.$1 == 'Nieuwe woning' ? const NieuweWoningPage() : WonenSectionPage(title: item.$1)))))
+        Card(child: ListTile(leading: Icon(item.$2, color: wonenNavy), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w800)), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => portalPage(item.$1)))))
     ]),
   );
+  static Widget portalPage(String title) { switch(title) { case 'Nieuwe woning': return const NieuweWoningPage(); case 'Mijn woningen': return const MijnWoningenPage(); case 'Mijn kantoor': return const WonenOfficePage(); case 'Statistieken': return const WonenStatsPage(); case 'Abonnement': return const WonenSubscriptionPage(); case 'Facturen': return const WonenInvoicesPage(); default: return WonenSectionPage(title:title); } }
 }
 
 class _Stat extends StatelessWidget {
