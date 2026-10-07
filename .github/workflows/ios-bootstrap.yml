@@ -134,7 +134,7 @@ jobs:
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.2 --build-number=54
+          flutter build ios --release --no-codesign --build-name=1.1.2 --build-number=55
 
       - name: Configure Runner signing only
         run: |
