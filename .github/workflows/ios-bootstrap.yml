@@ -100,11 +100,12 @@ jobs:
           flutter create --platforms=ios --org nl.regiovoorneaanzee .
           test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName RVAZ" ios/Runner/Info.plist
+          sed -i '' 's/com\.example\.rvazAndroid/nl.regiovoorneaanzee.app/g' ios/Runner.xcodeproj/project.pbxproj
           grep -q 'PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;' ios/Runner.xcodeproj/project.pbxproj
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=73
+          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=74
 
       - name: Archive with Apple Distribution signing
         run: |
