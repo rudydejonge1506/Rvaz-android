@@ -11,17 +11,17 @@ jobs:
   upload:
     runs-on: macos-latest
     steps:
-      - name: Find latest successful signed IPA build
+      - name: Use successful recovery IPA build
         id: find
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          RUN_ID=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ios-bootstrap.yml/runs?status=success&per_page=20" --jq '.workflow_runs[0].id')
+          RUN_ID=37623096025
           test -n "$RUN_ID"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "Using successful signed IPA run: $RUN_ID"
+          echo "Using exact 1.1.1 recovery run: $RUN_ID"
 
       - name: Download signed IPA artifact
         env:
@@ -31,7 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ipa
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name RVAZ-iOS-AppStore --dir ipa
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name RVAZ-iOS-1.1.3-from-exact-1.1.1 --dir ipa
           IPA=$(find ipa -type f -name '*.ipa' -print -quit)
           test -n "$IPA"
           echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
