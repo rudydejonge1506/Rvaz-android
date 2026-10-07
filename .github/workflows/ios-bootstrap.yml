@@ -98,29 +98,34 @@ jobs:
             flutter create --platforms=ios .
           fi
 
-      - name: Generate RVAZ iOS app icons
+      - name: Install exact RVAZ iOS app icons
         run: |
           set -euo pipefail
-          cat > "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml" <<'YAML'
-          flutter_launcher_icons:
-            android: false
-            ios: true
-            image_path: assets/rvaz-logo.png
-            remove_alpha_ios: true
-            background_color_ios: "#FFFFFF"
-          YAML
-          # Generate the complete iOS AppIcon set from the real RVAZ logo.
-          # Android remains untouched.
-          sips -g pixelWidth -g pixelHeight assets/rvaz-logo.png
-          dart run flutter_launcher_icons -f "$RUNNER_TEMP/flutter_launcher_icons_ios.yaml"
-          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+          # Decode the known square RVAZ icon source, then write every size named by
+          # Flutter's generated AppIcon Contents.json. This avoids launcher-icon parsing.
+          python3 - <<'PY'
+          import base64, json, pathlib, subprocess
+          source = pathlib.Path('assets/rvaz-launcher-icon.png.b64')
+          icon = pathlib.Path('/tmp/rvaz-ios-icon.png')
+          icon.write_bytes(base64.b64decode(source.read_text().strip()))
+          appicon = pathlib.Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
+          data = json.loads((appicon / 'Contents.json').read_text())
+          for item in data['images']:
+              name = item.get('filename')
+              size = item.get('size')
+              scale = item.get('scale')
+              if not name or not size or not scale:
+                  continue
+              points = float(size.split('x')[0])
+              factor = float(scale.rstrip('x'))
+              pixels = int(round(points * factor))
+              subprocess.run(['sips','-z',str(pixels),str(pixels),str(icon),'--out',str(appicon / name)], check=True, stdout=subprocess.DEVNULL)
+          PY
           ICON_1024="ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
           test -f "$ICON_1024"
-          ICON_WIDTH=$(sips -g pixelWidth "$ICON_1024" | awk '/pixelWidth/{print $2}')
-          ICON_HEIGHT=$(sips -g pixelHeight "$ICON_1024" | awk '/pixelHeight/{print $2}')
-          test "$ICON_WIDTH" = "1024"
-          test "$ICON_HEIGHT" = "1024"
-          echo "Verified RVAZ iOS App Store icon: ${ICON_WIDTH}x${ICON_HEIGHT}"
+          test "$(sips -g pixelWidth "$ICON_1024" | awk '/pixelWidth/{print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON_1024" | awk '/pixelHeight/{print $2}')" = "1024"
+          echo "Verified exact RVAZ iOS AppIcon set"
 
       - name: Add required iOS privacy usage descriptions
         run: |
