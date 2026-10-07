@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Runner/Info.plist ios/Runner/GoogleService-Info.plist
-          test -f ios/Runner/AppDelegate.swift
+          test -f ios/Runner/AppDelegate.swift ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift
           grep -q 'nl.regiovoorneaanzee.app' ios/Runner.xcodeproj/project.pbxproj
           git fetch --no-tags origin e7bc87ea017399ef7db76b1f43de7dd8e8ed9494
           test "$(git rev-parse FETCH_HEAD)" = "e7bc87ea017399ef7db76b1f43de7dd8e8ed9494"
