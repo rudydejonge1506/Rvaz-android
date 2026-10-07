@@ -110,10 +110,23 @@ jobs:
           if 'PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;' not in s:
               raise SystemExit("RVAZ bundle ID was not set")
           PY
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("ios/Runner.xcodeproj/project.pbxproj")
+          s = p.read_text()
+          import re
+          s = re.sub(r'DEVELOPMENT_TEAM = [^;]*;', 'DEVELOPMENT_TEAM = XQ8MH83ZV9;', s)
+          # flutter create can leave DEVELOPMENT_TEAM empty; add it to Runner build settings if absent.
+          if 'DEVELOPMENT_TEAM = XQ8MH83ZV9;' not in s:
+              s = s.replace('PRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;', 'DEVELOPMENT_TEAM = XQ8MH83ZV9;\\n\\t\\t\\t\\tPRODUCT_BUNDLE_IDENTIFIER = nl.regiovoorneaanzee.app;')
+          p.write_text(s)
+          if 'DEVELOPMENT_TEAM = XQ8MH83ZV9;' not in s:
+              raise SystemExit("RVAZ development team was not set")
+          PY
 
       - name: Build Flutter iOS release without signing
         run: |
-          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=78
+          flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=79
 
       - name: Archive with Apple Distribution signing
         run: |
