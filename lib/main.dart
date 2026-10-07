@@ -28,6 +28,9 @@ const site = 'https://regiovoorneaanzee.nl';
 const admobBannerId='ca-app-pub-1599023671130671/1026724281';
 final adConsentReady=ValueNotifier<bool>(false);
 Future<void> initializeAdMob() async {
+  // iOS: do not start Google Mobile Ads until its native App ID is configured.
+  // Starting the SDK without GADApplicationIdentifier terminates the iOS app.
+  if (Platform.isIOS) return;
   await MobileAds.instance.initialize();
   final params=ConsentRequestParameters();
   ConsentInformation.instance.requestConsentInfoUpdate(params,() {
