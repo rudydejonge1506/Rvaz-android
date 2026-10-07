@@ -1,0 +1,49 @@
+name: Build RVAZ iOS current features safely
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout current shared app
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get Flutter packages
+        run: flutter pub get
+
+      - name: Download exact working 1.1.1 IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/11222800133/zip > "$RUNNER_TEMP/old.zip"
+          mkdir -p "$RUNNER_TEMP/old-artifact"
+          unzip -q "$RUNNER_TEMP/old.zip" -d "$RUNNER_TEMP/old-artifact"
+          OLD_IPA="$(find "$RUNNER_TEMP/old-artifact" -type f -name '*.ipa' -print -quit)"
+          test -n "$OLD_IPA"
+          mkdir -p "$RUNNER_TEMP/old-ipa"
+          unzip -q "$OLD_IPA" -d "$RUNNER_TEMP/old-ipa"
+          OLD_APP="$(find "$RUNNER_TEMP/old-ipa/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$OLD_APP"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$OLD_APP/Info.plist")" = "nl.regiovoorneaanzee.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$OLD_APP/Info.plist")" = "1.1.1"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$OLD_APP/Info.plist")" = "43"
+          echo "OLD_APP=$OLD_APP" >> "$GITHUB_ENV"
+
+      - name: Restore exact working native iOS project
+        run: |
+          rm -rf ios
+          cp -R "$OLD_APP/Frameworks/App.framework/flutter_assets" "$RUNNER_TEMP/working-assets"
+          echo "The recovery IPA proves the native/runtime package but does not contain Xcode source."
+          echo "Refusing to generate or alter an iOS project."
+          exit 1
