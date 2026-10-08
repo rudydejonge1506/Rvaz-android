@@ -27,6 +27,9 @@ void main() {
     test('renders absent property values as empty strings', () {
       expect(wonenText({'title': 'Huis'}, 'missing'), '');
       expect(wonenText({'prijs': 125000}, 'prijs'), '125000');
+      expect(wonenText({'status': false}, 'status'), '');
+      expect(wonenText({'status': 'false'}, 'status'), '');
+      expect(wonenText({'status': null}, 'status'), '');
     });
   });
 }
