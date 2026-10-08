@@ -82,6 +82,7 @@ final class RVAZ_Wonen_Native_API {
   self::route('/makelaar/abonnement','POST','change_plan');
   self::route('/makelaar/abonnement/opzeggen','POST','cancel');
   self::route('/makelaar/facturen','GET','invoices');
+  self::route('/makelaar/facturen/(?P<id>\d+)/pdf','GET','invoice_pdf');
   foreach(self::$routes as $path=>$endpoints)register_rest_route(self::NS,$path,$endpoints,true);
  }
  static function public_list() {
@@ -185,6 +186,18 @@ final class RVAZ_Wonen_Native_API {
  }
  static function invoices() {
   global $wpdb;$rows=$wpdb->get_results($wpdb->prepare("SELECT id,invoice_no,period,subtotal,vat,total,status,invoice_date,due_date,tikkie_url,pdf_url,paid_date FROM {$wpdb->prefix}rvaz_wonen_invoices WHERE user_id=%d ORDER BY id DESC",get_current_user_id()),ARRAY_A);return ['items'=>$rows,'billing'=>RVAZ_Wonen::billing()];
+ }
+ static function invoice_pdf($r) {
+  global $wpdb;$row=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}rvaz_wonen_invoices WHERE id=%d AND user_id=%d",absint($r['id']),get_current_user_id()));
+  if(!$row)return self::error('forbidden','Geen toegang tot deze factuur.',403);
+  $b=RVAZ_Wonen::billing();$u=wp_get_current_user();$office=get_user_meta($u->ID,'rvaz_wonen_office_name',true);
+  $lines=['RVAZ Wonen','FACTUUR '.$row->invoice_no,'','Aan: '.($office?:$u->display_name),$u->user_email,'','Factuurdatum: '.$row->invoice_date,'Vervaldatum: '.$row->due_date,'Periode: '.$row->period,'',
+    'Subtotaal: EUR '.number_format((float)$row->subtotal,2,',','.'),'BTW: EUR '.number_format((float)$row->vat,2,',','.'),'Totaal: EUR '.number_format((float)$row->total,2,',','.'),'Status: '.$row->status,'',
+    'IBAN: '.$b['iban'],'Rekeninghouder: '.$b['account_name'],$b['address'],$b['postcode_city'],$b['email'],$b['note']];
+  $content="BT\n/F1 11 Tf\n50 790 Td\n";foreach($lines as $i=>$line){if($i)$content.="0 -24 Td\n";$content.="(".RVAZ_Wonen::pdf_escape($line).") Tj\n";}$content.="ET";
+  $objects=["1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj","2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj","3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>endobj","4 0 obj<< /Length ".strlen($content)." >>stream\n$content\nendstream\nendobj","5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj"];
+  $pdf="%PDF-1.4\n";$offset=[0];foreach($objects as $object){$offset[]=strlen($pdf);$pdf.=$object."\n";}$xref=strlen($pdf);$pdf.="xref\n0 6\n0000000000 65535 f \n";for($i=1;$i<=5;$i++)$pdf.=sprintf("%010d 00000 n \n",$offset[$i]);$pdf.="trailer<< /Size 6 /Root 1 0 R >>\nstartxref\n$xref\n%%EOF";
+  return ['filename'=>sanitize_file_name($row->invoice_no).'.pdf','pdf_base64'=>base64_encode($pdf)];
  }
  static function promo($r) {
   $id=absint($r['id']);if(!self::owned($id))return self::error('forbidden','Geen toegang tot deze woning.',403);

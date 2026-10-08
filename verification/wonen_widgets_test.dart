@@ -1,10 +1,21 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rvaz_android/wonen.dart';
 
 void main() {
   testWidgets('native detail toont adres, prijs en kenmerken van het woningblok', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final root = Platform.environment['FLUTTER_ROOT'];
+    final fonts = Directory('$root/bin/cache/artifacts/material_fonts');
+    final fontFile = fonts.listSync().whereType<File>().firstWhere((file) => file.path.endsWith('Roboto-Regular.ttf'));
+    final loader = FontLoader('Roboto')..addFont(Future.value(ByteData.sublistView(fontFile.readAsBytesSync())));
+    await loader.load();
     final item = mergeWoningWebsiteData({'title': 'Nieuwe woning'},
         File('test/fixtures/woning-website.html').readAsStringSync());
     // Network photos have separate device checks; keep this renderer test deterministic.

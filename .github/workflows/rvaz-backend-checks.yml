@@ -38,6 +38,16 @@ jobs:
           php /tmp/wp-cli.phar plugin activate rvaz-wonen-native-api --path=/tmp/rvaz-wp
       - name: Real WordPress REST integration tests
         run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/backend/tests/integration.php" --path=/tmp/rvaz-wp
+      - name: Verify real HTTP bearer and multipart photo upload
+        run: |
+          mkdir -p /tmp/rvaz-wp/wp-content/mu-plugins
+          cp backend/tests/http-auth.php /tmp/rvaz-wp/wp-content/mu-plugins/ci-auth.php
+          php -S 127.0.0.1:8099 -t /tmp/rvaz-wp >/tmp/rvaz-http.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:8099/ >/dev/null; then break; fi
+            sleep 1
+          done
+          python3 backend/tests/http-upload.py
       - name: Build installable additive plugin
         run: |
           cd backend
