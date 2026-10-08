@@ -27,10 +27,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ipa
-          RESULT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/${{ inputs.build_run_id }}" --jq '.conclusion')
+          RESULT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/37745704234" --jq '.conclusion')
           test "$RESULT" = "success"
-          test "${{ inputs.build_run_id }}" = "37745704234"
-          gh run download ${{ inputs.build_run_id }} --repo "$GITHUB_REPOSITORY" --name RVAZ-iOS-1.1.4-build83-current-features --dir ipa
+          test "37745704234" = "37745704234"
+          gh run download 37745704234 --repo "$GITHUB_REPOSITORY" --name RVAZ-iOS-1.1.4-build83-current-features --dir ipa
           IPA=$(find ipa -type f -name '*.ipa' -print -quit)
           test -n "$IPA"
           echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
