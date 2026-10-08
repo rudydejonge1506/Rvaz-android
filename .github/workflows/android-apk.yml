@@ -45,7 +45,7 @@ jobs:
           for candidate in \
             assets/images/app_icon.png \
             assets/app_icon.png \
-            ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png; do
+            assets/rvaz-android-original.png; do
             if [ -f "$candidate" ] && convert "$candidate" -strip /tmp/rvaz-icon.png 2>/dev/null; then
               ICON_SOURCE="$candidate"
               break
