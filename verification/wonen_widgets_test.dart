@@ -17,7 +17,12 @@ void main() {
     expect(find.text('3235SJ Rockanje'), findsOneWidget);
     expect(find.text('€ 1.299 p/m'), findsOneWidget);
     expect(find.text('120 m²'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('A++++'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     expect(find.text('A++++'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, 3000));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await expectLater(find.byType(MaterialApp),
         matchesGoldenFile('../verification/screenshots/wonen-detail.png'));
