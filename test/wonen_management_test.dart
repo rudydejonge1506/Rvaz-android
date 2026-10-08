@@ -19,6 +19,31 @@ void main() {
     expect(find.text('Foto toevoegen'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('realtor can change existing rental listing to sale using visible selector', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: WoningEditorPage(item: {
+      'id': 12, 'transactie': 'huur', 'publication_status': 'draft',
+    })));
+    await tester.pumpAndSettle();
+    expect(find.text('Huurwoning'), findsOneWidget);
+    expect(find.byKey(const ValueKey('wonen-transactie')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('wonen-transactie')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Koopwoning').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Koopwoning'), findsOneWidget);
+    expect(find.text('Huurwoning'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('new property requires an explicit rental or sale choice', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: WoningEditorPage()));
+    await tester.pumpAndSettle();
+    expect(find.text('Kies huur of koop'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Woning opslaan'), 500, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Woning opslaan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Kies of de woning te huur of te koop is.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('office editor reflects existing website metadata', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: WonenProfileForm(data: {
       'office_name': 'Test Makelaardij', 'postcode': '3235SJ', 'phone': '0612345678',

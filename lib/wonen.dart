@@ -570,6 +570,8 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       ])
         key: TextEditingController(text: wonenText(item, key)),
     };
+    final transaction = fields['transactie']!.text.toLowerCase();
+    fields['transactie']!.text = transaction == 'huur' ? 'Huur' : transaction == 'koop' ? 'Koop' : '';
   }
 
   @override
@@ -581,6 +583,11 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
   }
 
   Future<void> save() async {
+    if (!['Huur', 'Koop'].contains(fields['transactie']!.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kies of de woning te huur of te koop is.')));
+      return;
+    }
     setState(() => busy = true);
     try {
       final body = <String, dynamic>{
@@ -669,7 +676,21 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          for (final entry in fields.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: DropdownButtonFormField<String>(
+              key: const ValueKey('wonen-transactie'),
+              initialValue: fields['transactie']!.text.isEmpty ? null : fields['transactie']!.text,
+              decoration: const InputDecoration(labelText: 'Huur of koop', border: OutlineInputBorder()),
+              hint: const Text('Kies huur of koop'),
+              items: const [
+                DropdownMenuItem(value: 'Huur', child: Text('Huurwoning')),
+                DropdownMenuItem(value: 'Koop', child: Text('Koopwoning')),
+              ],
+              onChanged: busy ? null : (value) => setState(() => fields['transactie']!.text = value ?? ''),
+            ),
+          ),
+          for (final entry in fields.entries.where((entry) => entry.key != 'transactie'))
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TextField(
