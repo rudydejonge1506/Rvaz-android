@@ -37,7 +37,8 @@ jobs:
         run: |
           set -euo pipefail
           test -f ios/Runner.xcodeproj/project.pbxproj
-          test -f ios/Runner/Info.plist ios/Runner/GoogleService-Info.plist
+          test -f ios/Runner/Info.plist
+          test -f ios/Runner/GoogleService-Info.plist
           test -f ios/Runner/AppDelegate.swift
           test -f ios/Runner/Runner-Bridging-Header.h
           test -f ios/Runner/SceneDelegate.swift
