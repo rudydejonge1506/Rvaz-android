@@ -38,28 +38,30 @@ jobs:
         run: flutter pub get
       - name: Prepare RVAZ Android app icon
         run: |
+          # Gebruik alleen lokale icoonbestanden: geen afhankelijkheid van de WordPress-server.
+          # Valideer de daadwerkelijke PNG-decodering voor het genereren van mipmaps.
+          sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
           ICON_SOURCE=""
-          if [ -f "assets/images/app_icon.png" ]; then ICON_SOURCE="assets/images/app_icon.png"; fi
-          if [ -z "$ICON_SOURCE" ] && [ -f "assets/app_icon.png" ]; then ICON_SOURCE="assets/app_icon.png"; fi
-          if [ -z "$ICON_SOURCE" ]; then
-            API="https://regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config"
-            if curl -4 --fail --location --connect-timeout 10 --max-time 25 "$API" -o /tmp/rvaz-config.json; then
-              ICON_URL=$(python3 -c "import json; d=json.load(open('/tmp/rvaz-config.json')); print(d.get('app_icon_url') or d.get('app_icon') or '')")
-              if [ -n "$ICON_URL" ] && curl -4 --fail --location --connect-timeout 10 --max-time 30 "$ICON_URL" -o /tmp/rvaz-icon-source; then
-                ICON_SOURCE="/tmp/rvaz-icon-source"
-              fi
+          for candidate in \
+            assets/images/app_icon.png \
+            assets/app_icon.png \
+            ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png; do
+            if [ -f "$candidate" ] && convert "$candidate" -strip /tmp/rvaz-icon.png 2>/dev/null; then
+              ICON_SOURCE="$candidate"
+              break
+            fi
+          done
+          if [ -z "$ICON_SOURCE" ] && [ -s assets/rvaz-launcher-icon.png.b64 ]; then
+            if base64 --decode assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon-source.png \
+              && convert /tmp/rvaz-icon-source.png -strip /tmp/rvaz-icon.png 2>/dev/null; then
+              ICON_SOURCE="assets/rvaz-launcher-icon.png.b64"
             fi
           fi
-          if [ -z "$ICON_SOURCE" ] && [ -f "assets/rvaz-launcher-icon.png.b64" ]; then
-            base64 --decode assets/rvaz-launcher-icon.png.b64 > /tmp/rvaz-icon-source.png
-            ICON_SOURCE="/tmp/rvaz-icon-source.png"
-          fi
           if [ -z "$ICON_SOURCE" ]; then
-            echo "Geen RVAZ app-icoon beschikbaar; build wordt gestopt om een standaard Flutter-icoon te voorkomen."
+            echo "::error::Geen decodeerbaar lokaal RVAZ PNG-icoon gevonden; gebruik nooit het standaard Flutter-icoon."
             exit 1
           fi
-          sudo apt-get update -qq && sudo apt-get install -y imagemagick >/dev/null
-          convert "$ICON_SOURCE" -strip /tmp/rvaz-icon.png
+          echo "Gevalideerd lokaal Android-icoon: $ICON_SOURCE"
           for spec in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
             dir="${spec%%:*}"; size="${spec##*:}"
             mkdir -p "android/app/src/main/res/$dir"
