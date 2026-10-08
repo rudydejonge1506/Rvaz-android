@@ -83,7 +83,12 @@ Map<String, dynamic> mergeWoningWebsiteData(
   final item = Map<String, dynamic>.from(original);
   final heading = main.querySelector('h1')?.text.trim() ?? '';
   if (heading.isNotEmpty) item['adres'] = heading;
-  final headerText = main.text.replaceAll(RegExp(r'\s+'), ' ');
+  // De HTML-parser plakt soms tekst van opeenvolgende tags aan elkaar.
+  // Scheid de paragrafen zodat postcode en plaats betrouwbaar herkenbaar zijn.
+  final headerText = main.querySelectorAll('h1, p')
+      .map((node) => node.text.trim())
+      .where((value) => value.isNotEmpty)
+      .join(' ');
   final location = RegExp(
     r'\b([1-9][0-9]{3}\s?[A-Z]{2})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\- ]{1,35})',
   ).firstMatch(headerText);
