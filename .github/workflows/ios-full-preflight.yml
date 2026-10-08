@@ -30,7 +30,7 @@ jobs:
           main = Path('lib/main.dart').read_text()
           wonen = Path('lib/wonen.dart').read_text()
           plist = plistlib.loads(Path('ios/Runner/Info.plist').read_bytes())
-          assert re.fullmatch(r'ca-app-pub-\\d+~\\d+', plist.get('GADApplicationIdentifier', '')), 'Missing iOS AdMob app ID'
+          assert re.fullmatch(r'ca-app-pub-[0-9]+~[0-9]+', plist.get('GADApplicationIdentifier', '')), 'Missing iOS AdMob app ID'
           assert 'unawaited(initializeAdMob())' in main, 'AdMob not started'
           assert 'MobileAds.instance.initialize()' in main, 'AdMob SDK not initialized'
           assert 'if (Platform.isIOS) return;' not in main[main.index('Future<void> initializeAdMob()'):main.index('class RvazAdBanner')], 'iOS ads disabled'
