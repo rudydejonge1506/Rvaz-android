@@ -1881,6 +1881,8 @@ class _AccountPageState extends State<AccountPage>{
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.real_estate_agent_outlined),title:const Text('Mijn Wonen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer woningen en aanvragen als makelaar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MijnWonenPage()))),
         const Divider(height:1,indent:72),
+        ListTile(leading:_menuIcon(Icons.real_estate_agent_outlined),title:const Text('Mijn Wonen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Woningen en aanvragen beheren als makelaar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MijnWonenPage()))),
+        const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Kies welke pushmeldingen je wilt ontvangen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
