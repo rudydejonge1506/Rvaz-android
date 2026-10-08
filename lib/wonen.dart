@@ -40,8 +40,14 @@ List<Map<String, dynamic>> wonenItems(dynamic data) {
   return raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
 }
 
-String wonenText(Map<String, dynamic> item, String key) =>
-    (item[key] ?? '').toString();
+String wonenText(Map<String, dynamic> item, String key) {
+  final value = item[key];
+  if (value == null || value is bool) return '';
+  final text = value.toString().trim();
+  return text.toLowerCase() == 'false' || text.toLowerCase() == 'null'
+      ? ''
+      : text;
+}
 
 class WonenPage extends StatefulWidget {
   const WonenPage({super.key});
