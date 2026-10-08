@@ -1861,7 +1861,7 @@ class _AccountPageState extends State<AccountPage>{
   Widget build(BuildContext context)=>ListView(
     padding:const EdgeInsets.all(18),
     children:[
-      const Text('Mijn Voorne',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
+      const Text('Mijn RVAZ',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const SizedBox(height:14),
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Row(children:[
         _menuIcon(Icons.person),const SizedBox(width:14),
