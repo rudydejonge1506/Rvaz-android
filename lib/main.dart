@@ -1876,7 +1876,7 @@ class _AccountPageState extends State<AccountPage>{
       ]))),
       const SizedBox(height:14),
       if(userName!=null)Card(clipBehavior:Clip.antiAlias,child:Column(children:[
-        _sectionHeader(Icons.person,'Mijn Voorne','Jouw instellingen en voorkeuren'),
+        _sectionHeader(Icons.person,'Mijn RVAZ','Jouw instellingen en voorkeuren'),
         ListTile(leading:_menuIcon(Icons.home_outlined),title:const Text('Mijn Voorne',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Jouw adres, lokaal nieuws, agenda en afval'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVoornePage()))),
         const Divider(height:1,indent:72),
         ListTile(leading:_menuIcon(Icons.real_estate_agent_outlined),title:const Text('Mijn Wonen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer woningen en aanvragen als makelaar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MijnWonenPage()))),
