@@ -1,0 +1,42 @@
+{
+  "source_url": "https://www.regiovoorneaanzee.nl/wp-content/uploads/2024/04/cropped-LogoRegio0181.png",
+  "source_sha256": "42185bb03d2eca5ab4eb3ee95e7759168c84a702da1650755e319be7a780fa1b",
+  "android_run": 37751531090,
+  "android_icons": {
+    "res/mipmap-mdpi/ic_launcher.png": {
+      "sha256": "c64bcc4e8562d2722efa428a7f2dc1832bc39f250ed04bf273a646247504d684",
+      "size": [
+        48,
+        48
+      ]
+    },
+    "res/mipmap-hdpi/ic_launcher.png": {
+      "sha256": "8f7d068924003f1fbe3fe2ec259a5506708e75b2e0d08603d1cc3fe371d22c57",
+      "size": [
+        72,
+        72
+      ]
+    },
+    "res/mipmap-xhdpi/ic_launcher.png": {
+      "sha256": "5e82dbae80a61b14196453becf49355a57517ac215322a0a1d3daec4b3d314ef",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "res/mipmap-xxhdpi/ic_launcher.png": {
+      "sha256": "6b676788ecd3fd014a74d904d740b2c9aa15aa3af4a604e73460dbb3a5f9432d",
+      "size": [
+        144,
+        144
+      ]
+    },
+    "res/mipmap-xxxhdpi/ic_launcher.png": {
+      "sha256": "e5919226fb70c46cd1a911e230ee14dea3f5b81d53294e299747653204fcfced",
+      "size": [
+        192,
+        192
+      ]
+    }
+  }
+}
