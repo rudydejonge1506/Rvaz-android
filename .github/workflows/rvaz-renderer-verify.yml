@@ -28,8 +28,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/37777250947 --jq .conclusion)" = success
-          gh run download 37777250947 --repo "$GITHUB_REPOSITORY" --name RVAZ-Android-development-test-APKs --dir /tmp/rvaz-built
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/37784300802 --jq .conclusion)" = success
+          gh run download 37784300802 --repo "$GITHUB_REPOSITORY" --name RVAZ-Android-development-test-APKs --dir /tmp/rvaz-built
           python3 -m pip install Pillow
           AAPT2=$(find "$ANDROID_HOME/build-tools" -name aapt2 | sort -V | tail -1)
           for APK in /tmp/rvaz-built/*.apk; do
