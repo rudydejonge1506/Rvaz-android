@@ -19,6 +19,14 @@ jobs:
         with:
           ref: ios-current-features-safe
 
+      - name: Select App Store supported Xcode and SDK
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+          SDK=$(xcrun --sdk iphoneos --show-sdk-version)
+          test "${SDK%%.*}" -ge 26
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
