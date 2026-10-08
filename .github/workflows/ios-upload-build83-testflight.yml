@@ -1,0 +1,71 @@
+name: Upload RVAZ build 83 to TestFlight
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/ios-upload-build83-testflight.yml']
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Successful iOS 1.1.4 build 83 workflow run ID'
+        required: true
+        default: '37745704234'
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  upload-build83:
+    runs-on: macos-latest
+    steps:
+      - name: Download exact successful build 83 IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ipa
+          RESULT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/${{ inputs.build_run_id }}" --jq '.conclusion')
+          test "$RESULT" = "success"
+          test "${{ inputs.build_run_id }}" = "37745704234"
+          gh run download ${{ inputs.build_run_id }} --repo "$GITHUB_REPOSITORY" --name RVAZ-iOS-1.1.4-build83-current-features --dir ipa
+          IPA=$(find ipa -type f -name '*.ipa' -print -quit)
+          test -n "$IPA"
+          echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
+          echo "Selected signed build 83 IPA: $IPA"
+
+      - name: Install App Store Connect API key
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$API_KEY_P8"
+          test -n "$API_KEY_ID"
+          test -n "$API_ISSUER_ID"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          printf '%s\n' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+      - name: Validate build 83 IPA with Apple
+        env:
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun altool --validate-app -f "$IPA_PATH" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+
+      - name: Upload build 83 to App Store Connect for TestFlight processing
+        env:
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
