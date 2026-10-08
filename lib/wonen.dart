@@ -286,11 +286,20 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
         for (final entry in fields.entries) entry.key: entry.value.text,
         'publication_status': publicationStatus,
       };
-      await wonenRequest(
+      final response = await wonenRequest(
         id == null ? '/makelaar/woningen' : '/makelaar/woningen/$id',
         body: body,
       );
-      if (mounted) Navigator.pop(context);
+      final savedId = response is Map ? int.tryParse('${response['id']}') : null;
+      if (id == null && savedId == null) {
+        throw StateError('API gaf geen woningnummer terug; foto-upload is nog niet beschikbaar.');
+      }
+      if (mounted) {
+        setState(() => id = savedId ?? id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Woning opgeslagen. Je kunt nu foto’s toevoegen.')),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
