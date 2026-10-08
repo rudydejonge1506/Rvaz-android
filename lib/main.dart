@@ -1008,6 +1008,7 @@ class _HomePageState extends State<HomePage>{
       ListTile(leading:const Icon(Icons.park_outlined,color:Colors.green),title:const Text('Natuur & recreatie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const RecreationPage()));}),
       ListTile(leading:const Icon(Icons.waves,color:Colors.lightBlue),title:const Text('Strand & kust'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const CoastPage()));}),
       ListTile(leading:const Icon(Icons.star,color:Colors.amber),title:const Text('Favorieten'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()));}),
+      ListTile(leading:const Icon(Icons.real_estate_agent_outlined,color:navy),title:const Text('Wonen'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WonenPage()));}),
       ListTile(leading:const Icon(Icons.storefront,color:Colors.deepPurple),title:const Text('Bedrijven'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()));}),
       ListTile(leading:const Icon(Icons.percent,color:Colors.red),title:const Text('Vouchers'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()));}),
       ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn Voorne'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
