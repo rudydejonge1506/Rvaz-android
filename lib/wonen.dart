@@ -1,3 +1,4 @@
+import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -49,6 +50,8 @@ String wonenText(Map<String, dynamic> item, String key) {
       : text;
 }
 
+// Gebruik de echte woningweergave van de website zolang de publieke API
+// ingevulde woningvelden ten onrechte als false teruggeeft.
 class WonenPage extends StatefulWidget {
   const WonenPage({super.key});
   @override
@@ -56,83 +59,41 @@ class WonenPage extends StatefulWidget {
 }
 
 class _WonenPageState extends State<WonenPage> {
-  late Future<dynamic> future;
-  String filter = 'Alles';
+  late final WebViewController controller;
+  bool loading = true;
+
   @override
   void initState() {
     super.initState();
-    future = wonenRequest('/woningen');
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageStarted: (_) { if (mounted) setState(() => loading = true); },
+        onPageFinished: (_) { if (mounted) setState(() => loading = false); },
+        onNavigationRequest: (request) {
+          final uri = Uri.tryParse(request.url);
+          if (uri == null || uri.scheme != 'https') return NavigationDecision.prevent;
+          if (uri.host == 'www.regiovoorneaanzee.nl' || uri.host == 'regiovoorneaanzee.nl') {
+            return NavigationDecision.navigate;
+          }
+          launchUrl(uri, mode: LaunchMode.externalApplication);
+          return NavigationDecision.prevent;
+        },
+      ))
+      ..loadRequest(Uri.parse('https://www.regiovoorneaanzee.nl/wonen/'));
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Wonen op Voorne')),
-      body: FutureBuilder<dynamic>(
-        future: future,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Woningen laden mislukt: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final all = wonenItems(snapshot.data);
-          final items = all.where((item) =>
-              filter == 'Alles' ||
-              wonenText(item, 'transactie').toLowerCase().contains(filter.toLowerCase())
-          ).toList();
-          return Column(
-            children: [
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final choice in ['Alles', 'Koop', 'Huur'])
-                    ChoiceChip(
-                      label: Text(choice),
-                      selected: filter == choice,
-                      onSelected: (_) => setState(() => filter = choice),
-                    ),
-                ],
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final image = wonenText(item, 'image');
-                    return Card(
-                      child: ListTile(
-                        leading: image.isEmpty
-                            ? const Icon(Icons.home_outlined)
-                            : Image.network(
-                                image,
-                                width: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.home_outlined),
-                              ),
-                        title: Text(wonenText(item, 'title')),
-                        subtitle: Text(
-                          '${wonenText(item, 'plaats')} · € ${wonenText(item, 'prijs')}',
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => WoningDetailPage(item: item),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Wonen op Voorne'), actions: [
+      IconButton(tooltip: 'Vernieuwen', icon: const Icon(Icons.refresh),
+        onPressed: () => controller.reload()),
+    ]),
+    body: Stack(children: [
+      WebViewWidget(controller: controller),
+      if (loading) const LinearProgressIndicator(),
+    ]),
+  );
 }
 
 class WoningDetailPage extends StatelessWidget {
