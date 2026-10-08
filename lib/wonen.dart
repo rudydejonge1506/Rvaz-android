@@ -4,15 +4,418 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
-const _base='https://regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
-Future<Map<String,String>> _headers() async {final token=await const FlutterSecureStorage().read(key:'rvaz_token');return {'Accept':'application/json','Content-Type':'application/json',if(token!=null&&token.isNotEmpty)...{'Authorization':'Bearer $token','X-RVAZ-Token':token}};}
-Future<dynamic> _request(String path,{String method='GET',Map<String,dynamic>? data})async{final r=await (method=='GET'?http.get(Uri.parse('$_base$path'),headers:await _headers()):http.post(Uri.parse('$_base$path'),headers:await _headers(),body:jsonEncode(data??{}))).timeout(const Duration(seconds:20));if(r.statusCode<200||r.statusCode>=300)throw Exception('HTTP ${r.statusCode}: ${r.body.length>250?r.body.substring(0,250):r.body}');return jsonDecode(r.body);}
-String _v(Map m,String key)=>'${m[key]??''}';
-class WonenPage extends StatefulWidget{const WonenPage({super.key});@override State<WonenPage> createState()=>_WonenPageState();}
-class _WonenPageState extends State<WonenPage>{late Future<dynamic> future;String filter='Alles';@override void initState(){super.initState();future=_request('/woningen');} @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Wonen op Voorne')),body:FutureBuilder<dynamic>(future:future,builder:(context,s){if(s.hasError)return Center(child:Text('Woningen laden mislukt: ${s.error}'));if(!s.hasData)return const Center(child:CircularProgressIndicator());final payload=s.data;final raw=payload is List?payload:(payload is Map?(payload['items']??payload['data']??payload['results']??[]):[]);final all=(raw is List?raw:[]).whereType<Map>().toList();final items=all.where((x)=>filter=='Alles'||_v(x,'transactie').toLowerCase().contains(filter.toLowerCase())).toList();return Column(children:[Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:8,children:[for(final x in ['Alles','Koop','Huur'])ChoiceChip(label:Text(x),selected:filter==x,onSelected:(_)=>setState(()=>filter=x))])),Expanded(child:ListView.builder(itemCount:items.length,itemBuilder:(c,i){final x=items[i];final image=_v(x,'image');return Card(margin:const EdgeInsets.symmetric(horizontal:12,vertical:6),child:ListTile(leading:image.isEmpty?const Icon(Icons.home_outlined,size:42):Image.network(image,width:84,height:72,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.home)),title:Text(_v(x,'title')),subtitle:Text('${_v(x,'plaats')} · € ${_v(x,'prijs')} · ${_v(x,'status')}'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>WoningDetailPage(item:x))));}))]);});}}
-class WoningDetailPage extends StatelessWidget{final Map item;const WoningDetailPage({super.key,required this.item});@override Widget build(BuildContext c){final img=_v(item,'image');return Scaffold(appBar:AppBar(title:Text(_v(item,'title'))),body:ListView(padding:const EdgeInsets.all(16),children:[if(img.isNotEmpty)Image.network(img,height:220,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),const SizedBox(height:16),Text(_v(item,'title'),style:Theme.of(c).textTheme.headlineSmall),Text('${_v(item,'adres')}, ${_v(item,'postcode')} ${_v(item,'plaats')}'),Text('€ ${_v(item,'prijs')} · ${_v(item,'transactie')}'),for(final k in ['woningtype','woonoppervlak','kamers','slaapkamers','energielabel','status'])if(_v(item,k).isNotEmpty)ListTile(title:Text(k),trailing:Text(_v(item,k))),Text(_v(item,'description')),const SizedBox(height:20),FilledButton(onPressed:(){final url=_v(item,'url');if(url.isNotEmpty)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('Woningpagina: $url')));},child:const Text('Woninginformatie'))]));}}
-class MijnWonenPage extends StatefulWidget{const MijnWonenPage({super.key});@override State<MijnWonenPage> createState()=>_MijnWonenPageState();}
-class _MijnWonenPageState extends State<MijnWonenPage>{late Future<dynamic> future;@override void initState(){super.initState();reload();}void reload(){future=_request('/makelaar/woningen');}Future<void> edit([Map? item])async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>WoningEditorPage(item:item)));setState(reload);} @override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Mijn Wonen'),actions:[IconButton(onPressed:()=>setState(reload),icon:const Icon(Icons.refresh))]),floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.add),label:const Text('Woning toevoegen')),body:FutureBuilder<dynamic>(future:future,builder:(c,s){if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(20),child:Text('Makelaarstoegang vereist. Controleer of je bent ingelogd en of de mobiele API actief is.\n${s.error}')));if(!s.hasData)return const Center(child:CircularProgressIndicator());final items=(s.data is List?s.data as List:[]).whereType<Map>().toList();return ListView(children:[ListTile(title:const Text('Aanvragen'),leading:const Icon(Icons.mail_outline),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>const WonenAanvragenPage()))),for(final x in items)Card(child:ListTile(title:Text(_v(x,'title')),subtitle:Text('€ ${_v(x,'prijs')} · ${_v(x,'publication_status')}'),trailing:const Icon(Icons.edit_outlined),onTap:()=>edit(x)))]);});}}
-class WoningEditorPage extends StatefulWidget{final Map? item;const WoningEditorPage({super.key,this.item});@override State<WoningEditorPage> createState()=>_WoningEditorPageState();}
-class _WoningEditorPageState extends State<WoningEditorPage>{late final Map<String,TextEditingController> fields;bool busy=false;int? id;String status='draft';@override void initState(){super.initState();final m=widget.item??{};id=int.tryParse(_v(m,'id'));status=_v(m,'publication_status')=='publish'?'publish':'draft';fields={for(final k in ['title','description','adres','postcode','plaats','prijs','transactie','woningtype','kamers','slaapkamers','woonoppervlak','energielabel'])k:TextEditingController(text:_v(m,k))};} @override void dispose(){for(final c in fields.values)c.dispose();super.dispose();}Future<void> save()async{setState(()=>busy=true);try{final data={for(final e in fields.entries)e.key:e.value.text,'publication_status':status};final result=await _request(id==null?'/makelaar/woningen':'/makelaar/woningen/$id',method:'POST',data:data);id=int.tryParse('${result['id']}');if(mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Woning opgeslagen')));Navigator.pop(context);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Opslaan mislukt: $e')));}finally{if(mounted)setState(()=>busy=false);}}Future<void> photo()async{if(id==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Sla de woning eerst op.')));return;}final image=await ImagePicker().pickImage(source:ImageSource.gallery);if(image==null)return;setState(()=>busy=true);try{final req=http.MultipartRequest('POST',Uri.parse('$_base/makelaar/woningen/$id/fotos'));req.headers.addAll(await _headers());req.headers.remove('Content-Type');req.files.add(await http.MultipartFile.fromPath('photo',image.path));final response=await req.send();if(response.statusCode>=300)throw Exception('HTTP ${response.statusCode}');if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Foto toegevoegd')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}finally{if(mounted)setState(()=>busy=false);}}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:Text(id==null?'Nieuwe woning':'Woning bewerken')),body:ListView(padding:const EdgeInsets.all(16),children:[for(final e in fields.entries)Padding(padding:const EdgeInsets.only(bottom:12),child:TextField(controller:e.value,maxLines:e.key=='description'?4:1,decoration:InputDecoration(labelText:e.key,border:const OutlineInputBorder()))),DropdownButtonFormField<String>(value:status,items:const [DropdownMenuItem(value:'draft',child:Text('Concept')),DropdownMenuItem(value:'publish',child:Text('Publiceren'))],onChanged:(v)=>setState(()=>status=v??'draft')),const SizedBox(height:12),FilledButton(onPressed:busy?null:save,child:const Text('Woning opslaan')),OutlinedButton.icon(onPressed:busy?null:photo,icon:const Icon(Icons.add_photo_alternate_outlined),label:const Text('Foto toevoegen'))]));}}
-class WonenAanvragenPage extends StatelessWidget{const WonenAanvragenPage({super.key});@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Woningaanvragen')),body:FutureBuilder<dynamic>(future:_request('/makelaar/aanvragen'),builder:(c,s){if(s.hasError)return Center(child:Text('${s.error}'));if(!s.hasData)return const Center(child:CircularProgressIndicator());final items=(s.data is List?s.data as List:[]).whereType<Map>().toList();return ListView(children:[for(final x in items)Card(child:ListTile(title:Text(_v(x,'name')),subtitle:Text('${_v(x,'email')} · ${_v(x,'phone')}\n${_v(x,'message')}')))]);});}}
+const wonenApi = 'https://regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
+
+Future<Map<String, String>> wonenHeaders() async {
+  final token = await const FlutterSecureStorage().read(key: 'rvaz_token');
+  return {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    if (token != null && token.isNotEmpty) ...{
+      'Authorization': 'Bearer $token',
+      'X-RVAZ-Token': token,
+    },
+  };
+}
+
+Future<dynamic> wonenRequest(String path, {Map<String, dynamic>? body}) async {
+  final uri = Uri.parse('$wonenApi$path');
+  final headers = await wonenHeaders();
+  final response = await (body == null
+      ? http.get(uri, headers: headers)
+      : http.post(uri, headers: headers, body: jsonEncode(body)))
+      .timeout(const Duration(seconds: 20));
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw Exception('Wonen API HTTP ${response.statusCode}');
+  }
+  return jsonDecode(response.body);
+}
+
+List<Map<String, dynamic>> wonenItems(dynamic data) {
+  final raw = data is List
+      ? data
+      : data is Map ? (data['items'] ?? data['data'] ?? data['results'] ?? []) : [];
+  if (raw is! List) return [];
+  return raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+}
+
+String wonenText(Map<String, dynamic> item, String key) =>
+    (item[key] ?? '').toString();
+
+class WonenPage extends StatefulWidget {
+  const WonenPage({super.key});
+  @override
+  State<WonenPage> createState() => _WonenPageState();
+}
+
+class _WonenPageState extends State<WonenPage> {
+  late Future<dynamic> future;
+  String filter = 'Alles';
+  @override
+  void initState() {
+    super.initState();
+    future = wonenRequest('/woningen');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Wonen op Voorne')),
+      body: FutureBuilder<dynamic>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Woningen laden mislukt: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final all = wonenItems(snapshot.data);
+          final items = all.where((item) =>
+              filter == 'Alles' ||
+              wonenText(item, 'transactie').toLowerCase().contains(filter.toLowerCase())
+          ).toList();
+          return Column(
+            children: [
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final choice in ['Alles', 'Koop', 'Huur'])
+                    ChoiceChip(
+                      label: Text(choice),
+                      selected: filter == choice,
+                      onSelected: (_) => setState(() => filter = choice),
+                    ),
+                ],
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final image = wonenText(item, 'image');
+                    return Card(
+                      child: ListTile(
+                        leading: image.isEmpty
+                            ? const Icon(Icons.home_outlined)
+                            : Image.network(
+                                image,
+                                width: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.home_outlined),
+                              ),
+                        title: Text(wonenText(item, 'title')),
+                        subtitle: Text(
+                          '${wonenText(item, 'plaats')} · € ${wonenText(item, 'prijs')}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => WoningDetailPage(item: item),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class WoningDetailPage extends StatelessWidget {
+  final Map<String, dynamic> item;
+  const WoningDetailPage({super.key, required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = wonenText(item, 'image');
+    return Scaffold(
+      appBar: AppBar(title: Text(wonenText(item, 'title'))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (image.isNotEmpty)
+            Image.network(image, height: 220, fit: BoxFit.cover),
+          Text(wonenText(item, 'title'),
+              style: Theme.of(context).textTheme.headlineSmall),
+          Text('${wonenText(item, 'adres')} · ${wonenText(item, 'plaats')}'),
+          Text('€ ${wonenText(item, 'prijs')}'),
+          for (final key in [
+            'transactie', 'woningtype', 'woonoppervlak',
+            'kamers', 'slaapkamers', 'energielabel', 'status'
+          ])
+            if (wonenText(item, key).isNotEmpty)
+              ListTile(title: Text(key), trailing: Text(wonenText(item, key))),
+          Text(wonenText(item, 'description')),
+        ],
+      ),
+    );
+  }
+}
+
+class MijnWonenPage extends StatefulWidget {
+  const MijnWonenPage({super.key});
+  @override
+  State<MijnWonenPage> createState() => _MijnWonenPageState();
+}
+
+class _MijnWonenPageState extends State<MijnWonenPage> {
+  late Future<dynamic> future;
+  @override
+  void initState() {
+    super.initState();
+    refresh();
+  }
+
+  void refresh() {
+    future = wonenRequest('/makelaar/woningen');
+  }
+
+  Future<void> edit([Map<String, dynamic>? item]) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WoningEditorPage(item: item)),
+    );
+    if (mounted) setState(refresh);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mijn Wonen'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => setState(refresh),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => edit(),
+        icon: const Icon(Icons.add),
+        label: const Text('Woning toevoegen'),
+      ),
+      body: FutureBuilder<dynamic>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text(
+              'Makelaarstoegang of mobiele API niet beschikbaar.\n${snapshot.error}',
+            ));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final items = wonenItems(snapshot.data);
+          return ListView(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.mail_outline),
+                title: const Text('Aanvragen'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WonenAanvragenPage()),
+                ),
+              ),
+              for (final item in items)
+                Card(
+                  child: ListTile(
+                    title: Text(wonenText(item, 'title')),
+                    subtitle: Text(wonenText(item, 'publication_status')),
+                    trailing: const Icon(Icons.edit_outlined),
+                    onTap: () => edit(item),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class WoningEditorPage extends StatefulWidget {
+  final Map<String, dynamic>? item;
+  const WoningEditorPage({super.key, this.item});
+  @override
+  State<WoningEditorPage> createState() => _WoningEditorPageState();
+}
+
+class _WoningEditorPageState extends State<WoningEditorPage> {
+  late final Map<String, TextEditingController> fields;
+  int? id;
+  bool busy = false;
+  String publicationStatus = 'draft';
+
+  @override
+  void initState() {
+    super.initState();
+    final item = widget.item ?? <String, dynamic>{};
+    id = int.tryParse(wonenText(item, 'id'));
+    publicationStatus = wonenText(item, 'publication_status') == 'publish'
+        ? 'publish' : 'draft';
+    fields = {
+      for (final key in [
+        'title', 'description', 'adres', 'postcode', 'plaats', 'prijs',
+        'transactie', 'woningtype', 'kamers', 'slaapkamers',
+        'woonoppervlak', 'energielabel'
+      ])
+        key: TextEditingController(text: wonenText(item, key)),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final controller in fields.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> save() async {
+    setState(() => busy = true);
+    try {
+      final body = <String, dynamic>{
+        for (final entry in fields.entries) entry.key: entry.value.text,
+        'publication_status': publicationStatus,
+      };
+      await wonenRequest(
+        id == null ? '/makelaar/woningen' : '/makelaar/woningen/$id',
+        body: body,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Opslaan mislukt: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> addPhoto() async {
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sla de woning eerst op.')),
+      );
+      return;
+    }
+    final photo = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (photo == null) return;
+    setState(() => busy = true);
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$wonenApi/makelaar/woningen/$id/fotos'),
+      );
+      request.headers.addAll(await wonenHeaders());
+      request.headers.remove('Content-Type');
+      request.files.add(await http.MultipartFile.fromPath('photo', photo.path));
+      final response = await request.send();
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Upload HTTP ${response.statusCode}');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto toegevoegd')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Foto upload mislukt: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(id == null ? 'Nieuwe woning' : 'Woning bewerken')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          for (final entry in fields.entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextField(
+                controller: entry.value,
+                maxLines: entry.key == 'description' ? 4 : 1,
+                decoration: InputDecoration(
+                  labelText: entry.key,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+          DropdownButtonFormField<String>(
+            initialValue: publicationStatus,
+            items: const [
+              DropdownMenuItem(value: 'draft', child: Text('Concept')),
+              DropdownMenuItem(value: 'publish', child: Text('Publiceren')),
+            ],
+            onChanged: (value) =>
+                setState(() => publicationStatus = value ?? 'draft'),
+          ),
+          FilledButton(
+            onPressed: busy ? null : save,
+            child: const Text('Woning opslaan'),
+          ),
+          OutlinedButton.icon(
+            onPressed: busy ? null : addPhoto,
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: const Text('Foto toevoegen'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class WonenAanvragenPage extends StatelessWidget {
+  const WonenAanvragenPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Woningaanvragen')),
+      body: FutureBuilder<dynamic>(
+        future: wonenRequest('/makelaar/aanvragen'),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('${snapshot.error}'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final items = wonenItems(snapshot.data);
+          return ListView(
+            children: [
+              for (final item in items)
+                Card(
+                  child: ListTile(
+                    title: Text(wonenText(item, 'name')),
+                    subtitle: Text(
+                      '${wonenText(item, 'email')} · ${wonenText(item, 'phone')}\n'
+                      '${wonenText(item, 'message')}',
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
