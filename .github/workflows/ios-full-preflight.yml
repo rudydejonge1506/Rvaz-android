@@ -1,0 +1,68 @@
+name: RVAZ full iOS preflight (no release)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ios-current-features-safe
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - name: Run actual tests, when present
+        run: |
+          if [ -d test ] && find test -name '*_test.dart' -type f | grep -q .; then
+            flutter test
+          else
+            echo "::warning::No Flutter tests found: functional behavior remains unverified"
+          fi
+      - name: Check AdMob and Wonen integration wiring
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, plistlib
+          main = Path('lib/main.dart').read_text()
+          wonen = Path('lib/wonen.dart').read_text()
+          plist = plistlib.loads(Path('ios/Runner/Info.plist').read_bytes())
+          assert re.fullmatch(r'ca-app-pub-\\d+~\\d+', plist.get('GADApplicationIdentifier', '')), 'Missing iOS AdMob app ID'
+          assert 'unawaited(initializeAdMob())' in main, 'AdMob not started'
+          assert 'MobileAds.instance.initialize()' in main, 'AdMob SDK not initialized'
+          assert 'if (Platform.isIOS) return;' not in main[main.index('Future<void> initializeAdMob()'):main.index('class RvazAdBanner')], 'iOS ads disabled'
+          assert 'ConsentInformation.instance.canRequestAds()' in main, 'Consent gate missing'
+          assert 'WonenPage(' in main and 'MijnWonenPage(' in main, 'Wonen navigation missing'
+          assert 'rvaz_token' in wonen and '/makelaar/woningen' in wonen, 'Wonen realtor API missing'
+          print('Static iOS AdMob + Wonen integration wiring checks passed')
+          print('WARNING: iOS ad-unit ownership, ad delivery, and WordPress token authentication are NOT proven by static checks.')
+          PY
+  ios-compile:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ios-current-features-safe
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - name: Verify native iOS files and icon inputs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, plistlib
+          root = Path('ios/Runner')
+          assert (root/'Info.plist').is_file()
+          assert (root/'AppDelegate.swift').is_file()
+          directory = root/'Assets.xcassets/AppIcon.appiconset'
+          images = json.loads((directory/'Contents.json').read_text())['images']
+          files = [directory/x['filename'] for x in images if x.get('filename')]
+          assert files and all(p.is_file() and p.stat().st_size > 100 for p in files), 'App icon missing'
+          print(f'Found {len(files)} iOS icon assets. Visual identity NOT verified.')
+          PY
+      - name: Compile iOS simulator without signing or TestFlight upload
+        run: flutter build ios --simulator --debug --no-codesign
