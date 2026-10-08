@@ -1,0 +1,4050 @@
+{
+  "snapshot": "2026-10-08",
+  "total_runs": 606,
+  "failed_runs": 242,
+  "scope": "Every failure run inspected through job/step metadata; representative logs inspected for each distinct failure step. Historical release jobs deliberately not rerun.",
+  "runs": [
+    {
+      "id": 37776824951,
+      "name": "RVAZ safe branch checks",
+      "sha": "9100eb8000a6bcb5862cf5aa25ef851e62a10102",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37776824951",
+      "jobs": [
+        {
+          "id": 113309675676,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate original local Android launcher image"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37776654122,
+      "name": "Recover verified RVAZ icon sources",
+      "sha": "aff4f9ba7d5bdd0e3b7cb78633fa40833dbac0e1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37776654122",
+      "jobs": [
+        {
+          "id": 113309107801,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Recover source used by successful Android build"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37776654101,
+      "name": "RVAZ safe branch checks",
+      "sha": "aff4f9ba7d5bdd0e3b7cb78633fa40833dbac0e1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37776654101",
+      "jobs": [
+        {
+          "id": 113309106679,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate original local Android launcher image"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37759120772,
+      "name": "RVAZ safe branch checks",
+      "sha": "14f3cd0cf7345ae9638ef028ddf38ac0ada73bf4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37759120772",
+      "jobs": [
+        {
+          "id": 113250936281,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate original local Android launcher image"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37758683342,
+      "name": "RVAZ safe branch checks",
+      "sha": "668af28000367de6228db9dbea9f95b5cd083a5d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37758683342",
+      "jobs": [
+        {
+          "id": 113249497291,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate local Android launcher asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37758455951,
+      "name": "RVAZ safe branch checks",
+      "sha": "410f4d358b530556e45b2e781a8456a4101ec71a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37758455951",
+      "jobs": [
+        {
+          "id": 113248746116,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Test Flutter"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37758429634,
+      "name": "RVAZ safe branch checks",
+      "sha": "3edf5a856995c2149d0d9c94bad2411a44ccaff4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37758429634",
+      "jobs": [
+        {
+          "id": 113248658904,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate local Android launcher asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37758352949,
+      "name": "RVAZ safe branch checks",
+      "sha": "c5827129ea20577c70303e960da9647b7e7aa218",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37758352949",
+      "jobs": [
+        {
+          "id": 113248404740,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate local Android launcher asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37757660146,
+      "name": "RVAZ safe branch checks",
+      "sha": "03b282d469d3703caa6417d0dbde7f91a2d9ae2a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37757660146",
+      "jobs": [
+        {
+          "id": 113246077242,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate local Android launcher asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37757351856,
+      "name": "RVAZ safe branch checks",
+      "sha": "e72e636ae35f1ce6c10534cde5b877b753e3b57a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37757351856",
+      "jobs": [
+        {
+          "id": 113245072964,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze Flutter"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37753505646,
+      "name": "RVAZ iOS build84 test IPA only",
+      "sha": "ef7c34c7445fe18c2a01a10f12721e0ad9a84a58",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37753505646",
+      "jobs": [
+        {
+          "id": 113232272760,
+          "conclusion": "cancelled",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37753505593,
+      "name": "Build RVAZ Android APK",
+      "sha": "ef7c34c7445fe18c2a01a10f12721e0ad9a84a58",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37753505593",
+      "jobs": [
+        {
+          "id": 113232272977,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37749625534,
+      "name": "Upload RVAZ build 83 to TestFlight",
+      "sha": "1396f11838bc1b55cba6b92710b70e0b335549b1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37749625534",
+      "jobs": [
+        {
+          "id": 113219382049,
+          "conclusion": "cancelled",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37748239366,
+      "name": "Upload RVAZ build 83 to TestFlight",
+      "sha": "4a6c1a5e03012376bd5c0f14874ac5576d5543a9",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37748239366",
+      "jobs": [
+        {
+          "id": 113214808343,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Download exact successful build 83 IPA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37747239871,
+      "name": "Upload RVAZ build 83 to TestFlight",
+      "sha": "7664a243743acf21f2513c2ee09434c725d41bae",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37747239871",
+      "jobs": [
+        {
+          "id": 113211511881,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Download exact successful build 83 IPA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37744951691,
+      "name": "RVAZ iOS build83 test IPA only",
+      "sha": "ee9cb12a3d62ca319836eecba61d2ece0190a177",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37744951691",
+      "jobs": [
+        {
+          "id": 113204112978,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify proven native iOS identity"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37738246080,
+      "name": "Validate RVAZ Wonen and iOS AdMob changes",
+      "sha": "39a683066cf7d5df0268b73bae45d5aa5601ba59",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37738246080",
+      "jobs": [
+        {
+          "id": 113182644601,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Run flutter test"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37737978715,
+      "name": "Validate RVAZ Wonen and iOS AdMob changes",
+      "sha": "39a683066cf7d5df0268b73bae45d5aa5601ba59",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37737978715",
+      "jobs": [
+        {
+          "id": 113181801696,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Run flutter analyze --no-fatal-infos"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37737731322,
+      "name": "Validate RVAZ Wonen and iOS AdMob changes",
+      "sha": "39a683066cf7d5df0268b73bae45d5aa5601ba59",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37737731322",
+      "jobs": [
+        {
+          "id": 113181026538,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Run flutter analyze --no-fatal-infos"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37735638699,
+      "name": "Upload RVAZ build 82 to TestFlight",
+      "sha": "8b4c153b25199eb705ab1d5418b06311f965f7c7",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37735638699",
+      "jobs": [
+        {
+          "id": 113174407622,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Download exact successful build 82 IPA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37734529102,
+      "name": "Build RVAZ Android APK",
+      "sha": "8b4c153b25199eb705ab1d5418b06311f965f7c7",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37734529102",
+      "jobs": [
+        {
+          "id": 113170959296,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Publish easy phone download"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37734182158,
+      "name": "Upload RVAZ build 81 to TestFlight",
+      "sha": "0bd61ef4a12c8e42778743c6d88ae87d62aa26bb",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37734182158",
+      "jobs": [
+        {
+          "id": 113169884625,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate build 81 IPA with Apple"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37734065523,
+      "name": "Build RVAZ Android APK",
+      "sha": "0bd61ef4a12c8e42778743c6d88ae87d62aa26bb",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37734065523",
+      "jobs": [
+        {
+          "id": 113169511412,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37668116714,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "df061024e99cc039e1fb9dd9b697be89823a2066",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37668116714",
+      "jobs": [
+        {
+          "id": 112952513098,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with proven signing settings"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37667517991,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "33798fc948844588cc83946925831803a2667607",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37667517991",
+      "jobs": [
+        {
+          "id": 112950439556,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify proven native iOS identity"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37666099966,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "e8782f66cea94099856f6272cb370314aa0d2d89",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37666099966",
+      "jobs": [
+        {
+          "id": 112945608227,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build current shared app on proven iOS project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37633705761,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "65618d3eeaf38cf15f47064614305139e710d56d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37633705761",
+      "jobs": [
+        {
+          "id": 112841845793,
+          "conclusion": "cancelled",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37632094988,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "e65fb49c1ee9d7ab0044e5f70c68b11affd51111",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37632094988",
+      "jobs": [
+        {
+          "id": 112828715525,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build current shared app on proven iOS project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37630882768,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "f5476781af5724935f8af11eb30a75a77f6d9cb7",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37630882768",
+      "jobs": [
+        {
+          "id": 112824523169,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build current shared app on proven iOS project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37629820468,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "0de70ac95cf6b57806271d335f967aca075f367f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37629820468",
+      "jobs": [
+        {
+          "id": 112820846833,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build current shared app on proven iOS project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37628665122,
+      "name": "Build RVAZ iOS current Android features",
+      "sha": "31ead4e650fcf2b3954b2e89108f620e5728dd2b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37628665122",
+      "jobs": [
+        {
+          "id": 112818617517,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify proven native iOS identity"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37628415278,
+      "name": "Build RVAZ Android APK",
+      "sha": "31ead4e650fcf2b3954b2e89108f620e5728dd2b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37628415278",
+      "jobs": [
+        {
+          "id": 112816077452,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37622438562,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "a6e750c8e25b50a95bb1ab8cbeb6c9c13323b3f3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37622438562",
+      "jobs": [
+        {
+          "id": 112795782314,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build Flutter iOS release without signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37621310398,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "c6972cab829fca6e15801bf2a52949f3d88fd5b9",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37621310398",
+      "jobs": [
+        {
+          "id": 112791998419,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build Flutter iOS release without signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37620352464,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "a2bd804b108318e08d49e9b0272535e1c2e701f5",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37620352464",
+      "jobs": [
+        {
+          "id": 112788752833,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build Flutter iOS release without signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37620028195,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "5add611e3e1ab8f376aa40cc7b9c5b80b3a2e6e3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37620028195",
+      "jobs": [
+        {
+          "id": 112787653642,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify Flutter project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37619977528,
+      "name": "Build RVAZ Android APK",
+      "sha": "5add611e3e1ab8f376aa40cc7b9c5b80b3a2e6e3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37619977528",
+      "jobs": [
+        {
+          "id": 112787477369,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37619532507,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "90940775c30b54126bf785a6ae33450e632780b8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37619532507",
+      "jobs": [
+        {
+          "id": 112786013165,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify Flutter project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37618369905,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "323258ac6bd5624a307fa9f87d5539a40d185e76",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37618369905",
+      "jobs": [
+        {
+          "id": 112782151229,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37617730105,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "658805bf0bd34ade5dd5e5a80fae4f3b22deb603",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37617730105",
+      "jobs": [
+        {
+          "id": 112780056302,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Recreate iOS project required by proven 1.1.1 source"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37617267171,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "ce9d7ee0f1c5fcf32ac567375113bcbd3d61c5be",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37617267171",
+      "jobs": [
+        {
+          "id": 112778534763,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Recreate iOS project required by proven 1.1.1 source"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37616068182,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "2765ecfe70030225e5dc53de3db863eba96f856b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37616068182",
+      "jobs": [
+        {
+          "id": 112774578347,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37614915633,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "2326a1fff4ce4806a2109b10687c62ef738e8a02",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37614915633",
+      "jobs": [
+        {
+          "id": 112770824239,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37612293706,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "21bcc4ffcc071c4aded3e246c0ed048483c4f43d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37612293706",
+      "jobs": [
+        {
+          "id": 112762194419,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Keep proven 1.1.1 iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37610382214,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "1c1d1d672bfeaef3423a06df2c41e4de46a370ab",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37610382214",
+      "jobs": [
+        {
+          "id": 112755943736,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37609358929,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "e6a72afb12e93f863d6787061d3b87d4d7092f48",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37609358929",
+      "jobs": [
+        {
+          "id": 112752567782,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37608248599,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "db17d7553ff7196301e9f0172660fae1cabea00f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37608248599",
+      "jobs": [
+        {
+          "id": 112748928797,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37607873118,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "e337563603175a7242a7e728a9a48078ab71e8e9",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37607873118",
+      "jobs": [
+        {
+          "id": 112747698294,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Create iOS project and install exact RVAZ icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37607426873,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "82f646ca98c08c209bad848c597fcd5872b7be00",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37607426873",
+      "jobs": [
+        {
+          "id": 112746234984,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Create iOS project and install exact RVAZ icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37607092266,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "4a1f94d276f1be39a2e9fc2866c63174ad326479",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37607092266",
+      "jobs": [
+        {
+          "id": 112745116380,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Create iOS project and install exact RVAZ icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37604020061,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "e788160dbf9e8a0d5da352a63cebaed4853f70bc",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37604020061",
+      "jobs": [
+        {
+          "id": 112735015096,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Generate RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37603967315,
+      "name": "Build RVAZ Android APK",
+      "sha": "e788160dbf9e8a0d5da352a63cebaed4853f70bc",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37603967315",
+      "jobs": [
+        {
+          "id": 112734836735,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37601493165,
+      "name": "Upload RVAZ IPA to App Store Connect",
+      "sha": "647ce4417123b44ed805063cdbb255bcf9c240c6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37601493165",
+      "jobs": [
+        {
+          "id": 112726693954,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate IPA with Apple"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37494792562,
+      "name": "Build RVAZ Android APK",
+      "sha": "29eb745404f4a06db698a5f493776795332d5249",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37494792562",
+      "jobs": [
+        {
+          "id": 112376447930,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37494250254,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "cbd410b3b6ee5c4ea40fd3dd85bcea866cd566c4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37494250254",
+      "jobs": [
+        {
+          "id": 112374580751,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Generate RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37487862424,
+      "name": "Upload RVAZ IPA to App Store Connect",
+      "sha": "5727680999a610dab33afbe3f7cbc9d458724ab8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37487862424",
+      "jobs": [
+        {
+          "id": 112352544251,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate IPA with Apple"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37485488432,
+      "name": "Upload RVAZ IPA to App Store Connect",
+      "sha": "5727680999a610dab33afbe3f7cbc9d458724ab8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37485488432",
+      "jobs": [
+        {
+          "id": 112344296526,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate IPA with Apple"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37484039560,
+      "name": "Upload RVAZ IPA to App Store Connect",
+      "sha": "bb81352f6f33d036a26b37ff792d328dad5f8665",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37484039560",
+      "jobs": [
+        {
+          "id": 112339362665,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate IPA with Apple"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37476522523,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "00439ca85f1f00518b7e778f9bb03f80347a52ee",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37476522523",
+      "jobs": [
+        {
+          "id": 112313255358,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37473590201,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "9e8fa802f46f4fffa35ae156e8838e379b49640e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37473590201",
+      "jobs": [
+        {
+          "id": 112303118177,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37471829312,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "2acc3b43c7d32d8dafad8722270a5e25bdeeca9d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37471829312",
+      "jobs": [
+        {
+          "id": 112297012602,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37470284829,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "4eeef6bc13e79fcd120e0431992327481a407bd1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37470284829",
+      "jobs": [
+        {
+          "id": 112291686411,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37449017697,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "08d3a9ee7711957a528f4c775798706d1045d1c0",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37449017697",
+      "jobs": [
+        {
+          "id": 112220739325,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37447476275,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "cfa381f094c032da96b3be8dfd91dc469f0e4a2f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37447476275",
+      "jobs": [
+        {
+          "id": 112215677298,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37446209020,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "9a9702c52a5e8af627c8cc2c86f495056bd5846b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37446209020",
+      "jobs": [
+        {
+          "id": 112211551836,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Configure Runner App Store signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37445823646,
+      "name": ".github/workflows/ios-bootstrap.yml",
+      "sha": "8dfbfe2edd5deb5e81eb399f8b6ee5f2c0410a57",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37445823646",
+      "jobs": []
+    },
+    {
+      "id": 37443891974,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "d0c8e7d242ed9fd68ab57c173e5eafee708704da",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37443891974",
+      "jobs": [
+        {
+          "id": 112203938994,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37442702889,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "d2ca3fa26c999a4e9dea08e589b944ad1aee39fe",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37442702889",
+      "jobs": [
+        {
+          "id": 112200049582,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37442634364,
+      "name": "Build RVAZ Android APK",
+      "sha": "d2ca3fa26c999a4e9dea08e589b944ad1aee39fe",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37442634364",
+      "jobs": [
+        {
+          "id": 112199819072,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37442398991,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "183be8265615e8abc0d985e1cf659cb74f1860ec",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37442398991",
+      "jobs": [
+        {
+          "id": 112199057093,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build Flutter iOS release without signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37442048845,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "e35708ffc57848e96ec495448e5e3d3062640416",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37442048845",
+      "jobs": [
+        {
+          "id": 112197904877,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37441611051,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "8dc1d5e79a9043416532622e9e36d3fff5fa85c6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37441611051",
+      "jobs": [
+        {
+          "id": 112196463993,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37441079308,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "0ce7af41ea7239ea57dc47d066c76d0574b3de7f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37441079308",
+      "jobs": [
+        {
+          "id": 112194709758,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37440706080,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "de12815b0342aec5ce41891b90dc4112b56b7fc3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37440706080",
+      "jobs": [
+        {
+          "id": 112193489652,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37439920867,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "514280a1bb7e05145b06f9666fc56443448bc4de",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37439920867",
+      "jobs": [
+        {
+          "id": 112190883346,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37436313081,
+      "name": "Build RVAZ Android APK",
+      "sha": "757fc675fca438d4aa8fd64011de10c56723df03",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37436313081",
+      "jobs": [
+        {
+          "id": 112178873734,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37436248177,
+      "name": "Build RVAZ Android APK",
+      "sha": "6e8b73738bf5089f4034ba86eb3c7729025c7f6b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37436248177",
+      "jobs": [
+        {
+          "id": 112178654058,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37435988162,
+      "name": "Build RVAZ Android APK",
+      "sha": "3eb1f926aea43f4844fa444702ee180ef9274c8a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37435988162",
+      "jobs": [
+        {
+          "id": 112177788881,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37433552622,
+      "name": "Build RVAZ Android APK",
+      "sha": "5173c06a701a9ae0bad39012aa8218e9eae60302",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37433552622",
+      "jobs": [
+        {
+          "id": 112169792861,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37433540524,
+      "name": "Build RVAZ Android APK",
+      "sha": "6ff296bf0b2da490688b7464a1de99b4aeaa33a8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37433540524",
+      "jobs": [
+        {
+          "id": 112169752928,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37431301582,
+      "name": "Build RVAZ Android APK",
+      "sha": "37380fda651958942cb7a65b9a9318c81b12597b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37431301582",
+      "jobs": [
+        {
+          "id": 112162549508,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37430761291,
+      "name": "Build RVAZ Android APK",
+      "sha": "8d6599c1271be8ab79a0fa11cfdc924efead9402",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37430761291",
+      "jobs": [
+        {
+          "id": 112160816741,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37428483332,
+      "name": "Build RVAZ Android APK",
+      "sha": "0ff936c4c5d3cac98b3dc419659a03260ee9820c",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37428483332",
+      "jobs": [
+        {
+          "id": 112153522840,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37428424098,
+      "name": "Build RVAZ Android APK",
+      "sha": "ae84efb018d8f158b1f89ca0cbd2b587e936e57f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37428424098",
+      "jobs": [
+        {
+          "id": 112153330158,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37428303572,
+      "name": "Build RVAZ Android APK",
+      "sha": "ce0bf561a321025df35e9ebf1bc01068a76de0a1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37428303572",
+      "jobs": [
+        {
+          "id": 112152941396,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37422739174,
+      "name": "Build RVAZ Android APK",
+      "sha": "1efda1a48001f5c595e35bd6efc13c3e0db3b276",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37422739174",
+      "jobs": [
+        {
+          "id": 112135498373,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36984451504,
+      "name": "Build RVAZ Android APK",
+      "sha": "d3456b60e3ce0469d4debbb72704d567c0e5a746",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36984451504",
+      "jobs": [
+        {
+          "id": 110766161492,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36984446811,
+      "name": "Build RVAZ Android APK",
+      "sha": "d022afa83604b301fd4026da89fcf8e55d864261",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36984446811",
+      "jobs": [
+        {
+          "id": 110766146523,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Configure Google Play release signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36984049901,
+      "name": "Build RVAZ Android APK",
+      "sha": "aad54b5e67b7413a64ce665e979ad06f90ca6162",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36984049901",
+      "jobs": [
+        {
+          "id": 110764892936,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Configure Google Play release signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36976415597,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "1915154f1d60b4a50812264695510f13c1d9b1b6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36976415597",
+      "jobs": [
+        {
+          "id": 110741116495,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify Flutter project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36974132021,
+      "name": "Build RVAZ Android APK",
+      "sha": "a6b993fccca3168647e3da552b3c2d7b34056b63",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36974132021",
+      "jobs": [
+        {
+          "id": 110734177602,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36973622235,
+      "name": "Build RVAZ Android APK",
+      "sha": "2f47d0ecbad32d3ddfbc593bd4472471a29b24c4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36973622235",
+      "jobs": [
+        {
+          "id": 110732643480,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36973611413,
+      "name": "Build RVAZ Android APK",
+      "sha": "03cbffa8ea4a6c09deb3f9d25da155a4600db899",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36973611413",
+      "jobs": [
+        {
+          "id": 110732611386,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36973606149,
+      "name": "Build RVAZ Android APK",
+      "sha": "6b886f3849fd1977ef3bcc2730d2edcb149bec39",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36973606149",
+      "jobs": [
+        {
+          "id": 110732595321,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36966797453,
+      "name": "Build RVAZ Android APK",
+      "sha": "a8b36632243210d3f97abe9db3b5b5bddb2a63c2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36966797453",
+      "jobs": [
+        {
+          "id": 110712193717,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36869071993,
+      "name": "Build RVAZ Android APK",
+      "sha": "84dadd2966c27e5d820b294e71cbbb08dd44b2b9",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36869071993",
+      "jobs": [
+        {
+          "id": 110391884742,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36869066808,
+      "name": "Build RVAZ Android APK",
+      "sha": "6414cc86b634ebdcbe7a1bead452f2776e5d6676",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36869066808",
+      "jobs": [
+        {
+          "id": 110391865918,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36868398945,
+      "name": "Build RVAZ Android APK",
+      "sha": "8917036efeb23a3b4447f11b5a798f66963f145e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36868398945",
+      "jobs": [
+        {
+          "id": 110389597704,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36866058262,
+      "name": "Build RVAZ Android APK",
+      "sha": "5e983c37142aafabaf5e4dee31781c8dc5ed5daa",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36866058262",
+      "jobs": [
+        {
+          "id": 110381717334,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36865568791,
+      "name": "Build RVAZ Android APK",
+      "sha": "89eb30ec9158fcb3b9c64acc53bbbb8e68ac6181",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36865568791",
+      "jobs": [
+        {
+          "id": 110380101070,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36865220608,
+      "name": "Build RVAZ Android APK",
+      "sha": "fa031cf1062a1f615f6d28795b71b524ddadfc5d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36865220608",
+      "jobs": [
+        {
+          "id": 110378948688,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36865206310,
+      "name": "Build RVAZ Android APK",
+      "sha": "457a6ce15c41e1f4ac06e4144c61c24927036b4b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36865206310",
+      "jobs": [
+        {
+          "id": 110378901340,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36865193803,
+      "name": "Build RVAZ Android APK",
+      "sha": "2db7df2a064e0a134ad478ed304e3c0ea1bd6fb4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36865193803",
+      "jobs": [
+        {
+          "id": 110378857752,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36865141628,
+      "name": "Build RVAZ Android APK",
+      "sha": "a9b5c4e97d7e561ecb96e529b4e2ecd1600c54f8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36865141628",
+      "jobs": [
+        {
+          "id": 110378679702,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36716743098,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "b430e5f7b0419d9eaa3e4ec2ca9190ed85d987b6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36716743098",
+      "jobs": [
+        {
+          "id": 109891421961,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36715838641,
+      "name": "Upload RVAZ IPA to App Store Connect",
+      "sha": "19d46e6e9ccfe26e189f9ceea10d1664412c3de7",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36715838641",
+      "jobs": [
+        {
+          "id": 109888411314,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Validate IPA with Apple"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36710945856,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "7189fb98b88208574fe863d8dcf16b233f04aed8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36710945856",
+      "jobs": [
+        {
+          "id": 109872325625,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Restore RVAZ iOS app icons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36707222508,
+      "name": "Upload RVAZ App Store screenshots",
+      "sha": "799307eea09b29da5db624c68376b1ad3069a231",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36707222508",
+      "jobs": [
+        {
+          "id": 109860226860,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Upload screenshots to App Store Connect"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36706663803,
+      "name": "Upload RVAZ App Store screenshots",
+      "sha": "e0b9a6146a121d632b1c0effed83db0fd38cca49",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36706663803",
+      "jobs": [
+        {
+          "id": 109858405348,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Install API dependencies"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36683066759,
+      "name": ".github/workflows/ios-appstore-screenshots.yml",
+      "sha": "29c1fd03e525774816c9ec33192ae3047a82f1fc",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36683066759",
+      "jobs": []
+    },
+    {
+      "id": 36679206917,
+      "name": "Maak RVAZ App Store screenshots",
+      "sha": "6f7c7c6af1ba9e9fd362785468879078351588a4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36679206917",
+      "jobs": [
+        {
+          "id": 109770755756,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Start App Store simulators"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36674922240,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "e4f4cada18e9c091753dd259fa32c3885cdefe95",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36674922240",
+      "jobs": [
+        {
+          "id": 109757704484,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36674268943,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "9c68d17a04b9515c33e3a03d897cbcb29a617149",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36674268943",
+      "jobs": [
+        {
+          "id": 109755716644,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36673600677,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "1afcec17bcde33ceb2b0a6b7effb103dadf01fe0",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36673600677",
+      "jobs": [
+        {
+          "id": 109753688081,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Archive with Apple Distribution signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36673206623,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "43744a0acabf6d2583910aa5458216cba3ebab75",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36673206623",
+      "jobs": [
+        {
+          "id": 109752494904,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed App Store IPA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36672487006,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "43744a0acabf6d2583910aa5458216cba3ebab75",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36672487006",
+      "jobs": [
+        {
+          "id": 109750290895,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed App Store IPA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36672308620,
+      "name": "Build RVAZ iOS App Store IPA",
+      "sha": "3a2a3c20a2d272fcff8ddf57d2abff6f7203a3b8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36672308620",
+      "jobs": [
+        {
+          "id": 109749745388,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify Flutter project"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36582327380,
+      "name": "Prepare RVAZ iOS project",
+      "sha": "6783284859242d65584a9f425e806ec24ea3e844",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36582327380",
+      "jobs": [
+        {
+          "id": 109453426729,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Generate iOS icons from existing RVAZ logo"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36566541795,
+      "name": "Build RVAZ Android APK",
+      "sha": "1b639118f95c84d2f09739397c4ca45b55515ec1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36566541795",
+      "jobs": [
+        {
+          "id": 109399742987,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36566215208,
+      "name": "Build RVAZ Android APK",
+      "sha": "3c9a2c39cdb73986eb1dd5a779ea847e0f38f8e8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36566215208",
+      "jobs": [
+        {
+          "id": 109398658835,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36565938782,
+      "name": "Build RVAZ Android APK",
+      "sha": "723115a84851c9e4c49b9ea7be2fe95a81757450",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36565938782",
+      "jobs": [
+        {
+          "id": 109397721856,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36545699633,
+      "name": "Build RVAZ Android APK",
+      "sha": "eb52a283334e61f50bde36509deccbc3424539dc",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36545699633",
+      "jobs": [
+        {
+          "id": 109331437202,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build signed release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36544617631,
+      "name": "Build RVAZ Android APK",
+      "sha": "6642edc51bc19fd52ce7ea9e3b1b18f83165a7f0",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36544617631",
+      "jobs": [
+        {
+          "id": 109327901219,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36543162934,
+      "name": "Build RVAZ Android APK",
+      "sha": "afbc89eb9f588aa9bb7ec3c4522f14ea0a7be9c5",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36543162934",
+      "jobs": [
+        {
+          "id": 109323159918,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36383702085,
+      "name": "Build RVAZ Android APK",
+      "sha": "5d26e5190227076cc34076cdecace236742ea9ba",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36383702085",
+      "jobs": [
+        {
+          "id": 108804551100,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36381827309,
+      "name": "Build RVAZ Android APK",
+      "sha": "4c10d25f782b5bc664dc7b3a9948ab6e1e91ea86",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36381827309",
+      "jobs": [
+        {
+          "id": 108798991406,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36309966701,
+      "name": "Build RVAZ Android APK",
+      "sha": "5fe1097d20828c355110e15d1356e051e993afd1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36309966701",
+      "jobs": [
+        {
+          "id": 108593875489,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299637518,
+      "name": "Build RVAZ Android APK",
+      "sha": "eacbf84e4f44849961e09eac56393c7f8b7b5e82",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299637518",
+      "jobs": [
+        {
+          "id": 108564788360,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299557908,
+      "name": "Build RVAZ Android APK",
+      "sha": "73828f4d6721edbaa5b7cd947a436262e3df3304",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299557908",
+      "jobs": [
+        {
+          "id": 108564567947,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299310557,
+      "name": "Build RVAZ Android APK",
+      "sha": "b8926507555f2aeeed844f17f84a494795cc6216",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299310557",
+      "jobs": [
+        {
+          "id": 108563883559,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299289832,
+      "name": "Build RVAZ Android APK",
+      "sha": "00879384bcc0597b5548e9b94f4142f109450a3c",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299289832",
+      "jobs": [
+        {
+          "id": 108563828321,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299207157,
+      "name": "Build RVAZ Android APK",
+      "sha": "4e409350d4ca045663db62af49da5c1e9eb89b25",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299207157",
+      "jobs": [
+        {
+          "id": 108563594850,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299178254,
+      "name": "Build RVAZ Android APK",
+      "sha": "3c248a180dc0cf2ac425d22f9590be58f656f497",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299178254",
+      "jobs": [
+        {
+          "id": 108563514288,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299163563,
+      "name": "Build RVAZ Android APK",
+      "sha": "9ac1fc9443d7f8eb860e6f55114d87b7dd101769",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299163563",
+      "jobs": [
+        {
+          "id": 108563473392,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36299075706,
+      "name": "Build RVAZ Android APK",
+      "sha": "50dddac4b9f650870be2deeb6536e610318df28f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36299075706",
+      "jobs": [
+        {
+          "id": 108563231852,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36295244749,
+      "name": "Build RVAZ Android APK",
+      "sha": "bc7bda5982b76a03e485bf3673fd1efb16ea9bda",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36295244749",
+      "jobs": [
+        {
+          "id": 108552773760,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36294469819,
+      "name": "Build RVAZ Android APK",
+      "sha": "6ab5f1642da97aa3b28405ba4333921e821cdc96",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36294469819",
+      "jobs": [
+        {
+          "id": 108550646695,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36294463793,
+      "name": "Build RVAZ Android APK",
+      "sha": "e0902c35dec1cf90ce335ce60837dee503fe7c79",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36294463793",
+      "jobs": [
+        {
+          "id": 108550629197,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36294460100,
+      "name": "Build RVAZ Android APK",
+      "sha": "fd435f36b10563d751c7f7dc6eed016a43e3aaf3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36294460100",
+      "jobs": [
+        {
+          "id": 108550618151,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36226724353,
+      "name": "Build RVAZ Android APK",
+      "sha": "172e0cd885350c4f7be38edb71f70b3bef9510db",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36226724353",
+      "jobs": [
+        {
+          "id": 108362081542,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36220545856,
+      "name": "Build RVAZ Android APK",
+      "sha": "17077a46364f3d4156df916a1bf4b8b0bc9b9f2f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36220545856",
+      "jobs": [
+        {
+          "id": 108344855400,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36115033920,
+      "name": "Build RVAZ Android APK",
+      "sha": "73b3e433d33e7a6d8eaac3286a60b60257ae8bda",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36115033920",
+      "jobs": [
+        {
+          "id": 108007005920,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36114830495,
+      "name": "Build RVAZ Android APK",
+      "sha": "e5f133c5001f539cecf23f0815021f7d6d16af2a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36114830495",
+      "jobs": [
+        {
+          "id": 108006342220,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36113018936,
+      "name": "Build RVAZ Android APK",
+      "sha": "98e81465248b865d5c0f496ee2ebc7469d8b32c9",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36113018936",
+      "jobs": [
+        {
+          "id": 108000561058,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36112294370,
+      "name": "Build RVAZ Android APK",
+      "sha": "2def1352b9936638d1ae16516b6fc1e6af15734e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36112294370",
+      "jobs": [
+        {
+          "id": 107998280753,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36111458876,
+      "name": "Build RVAZ Android APK",
+      "sha": "60c058f8fd807e685e9ef3b415d069d912115001",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36111458876",
+      "jobs": [
+        {
+          "id": 107995632562,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36111450697,
+      "name": "Build RVAZ Android APK",
+      "sha": "2655c22a840154550081286980da3b485b2b91ab",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36111450697",
+      "jobs": [
+        {
+          "id": 107995608139,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36109104352,
+      "name": "Build RVAZ Android APK",
+      "sha": "ef6150e2561660bf5ea5de8f3bf0cb7284b9c3b6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36109104352",
+      "jobs": [
+        {
+          "id": 107988252787,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36107341883,
+      "name": "Build RVAZ Android APK",
+      "sha": "e191f6c251da6b9d9a4a6e4662974e5dead82a0e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36107341883",
+      "jobs": [
+        {
+          "id": 107982797002,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36107333812,
+      "name": "Build RVAZ Android APK",
+      "sha": "341179204833e4e10e6a9c38f84ed2eb1bd812e2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36107333812",
+      "jobs": [
+        {
+          "id": 107982773967,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36106398168,
+      "name": "Build RVAZ Android APK",
+      "sha": "d5f155fae88c48e28b5e09e7a1cba14fb9957478",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36106398168",
+      "jobs": [
+        {
+          "id": 107979805025,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36106111556,
+      "name": "Build RVAZ Android APK",
+      "sha": "0754ce608eac3a0ad582afd8a2af2029164b8e45",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36106111556",
+      "jobs": [
+        {
+          "id": 107978891632,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36106105656,
+      "name": "Build RVAZ Android APK",
+      "sha": "04244bb9519d6f636088b987d2d4fa0a78173724",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36106105656",
+      "jobs": [
+        {
+          "id": 107978870498,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36105669233,
+      "name": "Build RVAZ Android APK",
+      "sha": "1cdf68fe6b67c355d65dd39f5f82f201bde186f5",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36105669233",
+      "jobs": [
+        {
+          "id": 107977509802,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36105655773,
+      "name": "Build RVAZ Android APK",
+      "sha": "e7a9f9d8ff672d879a92ecdf5a3e3fd490092524",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36105655773",
+      "jobs": [
+        {
+          "id": 107977468632,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36099230675,
+      "name": "Build RVAZ Android APK",
+      "sha": "814bb823119ca78cbf4e27a3bb17dc32af143f4c",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36099230675",
+      "jobs": [
+        {
+          "id": 107957963627,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36090871331,
+      "name": "Build RVAZ Android APK",
+      "sha": "b13a64e7bccb81799287279f87c34cd3c30bb0b4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36090871331",
+      "jobs": [
+        {
+          "id": 107932832823,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36090864576,
+      "name": "Build RVAZ Android APK",
+      "sha": "529f86d0636b21c0c1a9098a99900db016c49c97",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36090864576",
+      "jobs": [
+        {
+          "id": 107932811920,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36090782982,
+      "name": "Build RVAZ Android APK",
+      "sha": "2eaa873457525258823841cd49244cd05f9375ab",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36090782982",
+      "jobs": [
+        {
+          "id": 107932570109,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36090300181,
+      "name": "Build RVAZ Android APK",
+      "sha": "6c42920fe4a4e22331a7ff683ded7e1be90a754a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36090300181",
+      "jobs": [
+        {
+          "id": 107931107663,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36090038610,
+      "name": "Build RVAZ Android APK",
+      "sha": "85d24787f1cdea56a3ab3531c48ee13ef70726d4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36090038610",
+      "jobs": [
+        {
+          "id": 107930323958,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36089821223,
+      "name": "Build RVAZ Android APK",
+      "sha": "95a683fa846b3ac2377eb2c9a2c85cafecb46e2a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/36089821223",
+      "jobs": [
+        {
+          "id": 107929660496,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35868489792,
+      "name": "Build RVAZ Android APK",
+      "sha": "9190e198901dfea48d140afaebfab04e71176628",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35868489792",
+      "jobs": [
+        {
+          "id": 107206087165,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify release signatures"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35867514099,
+      "name": "Build RVAZ Android APK",
+      "sha": "8a1be6fdcf2fee28d73bc972d70f9b9dcd870aef",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35867514099",
+      "jobs": [
+        {
+          "id": 107202783259,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon from App API"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35866702992,
+      "name": "Build RVAZ Android APK",
+      "sha": "875b9ee776335bdaf845544eafedb8425ea02f78",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35866702992",
+      "jobs": [
+        {
+          "id": 107200009775,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Configure Google Play release signing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35865131521,
+      "name": "Build RVAZ Android APK",
+      "sha": "9106adcad4ab0f475cddf79b2586630f70f9d2ac",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35865131521",
+      "jobs": [
+        {
+          "id": 107194700317,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Verify release signatures"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35864718022,
+      "name": "Build RVAZ Android APK",
+      "sha": "2ad0bc566f02835e99838db94b7c7bf1d188be98",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35864718022",
+      "jobs": [
+        {
+          "id": 107193279195,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Configure release signing from GitHub secrets"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35863992203,
+      "name": "Build RVAZ Android APK",
+      "sha": "458d9e8bdffd0737b53c37b44862dd34c3be1662",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35863992203",
+      "jobs": [
+        {
+          "id": 107190866300,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Configure release signing from GitHub secrets"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35863040714,
+      "name": ".github/workflows/android-apk.yml",
+      "sha": "5165272da65152275fe49f0d6a310c7be63469e3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35863040714",
+      "jobs": []
+    },
+    {
+      "id": 35856197847,
+      "name": "Build RVAZ Android APK",
+      "sha": "cce622fd068a6700f8efae61ee994ff03ae42f41",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35856197847",
+      "jobs": [
+        {
+          "id": 107165132272,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon from App API"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35855874750,
+      "name": "Build RVAZ Android APK",
+      "sha": "0ef8616670e0db0aea9fd64a46d27d79e41b523f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35855874750",
+      "jobs": [
+        {
+          "id": 107164087532,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35855715623,
+      "name": "Build RVAZ Android APK",
+      "sha": "e6b116c26f565fd08916fdf8087a22ce9545e391",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35855715623",
+      "jobs": [
+        {
+          "id": 107163573477,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35855406055,
+      "name": "Build RVAZ Android APK",
+      "sha": "17085b93056c13adee42bec563d42aac44de055d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35855406055",
+      "jobs": [
+        {
+          "id": 107162572689,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare RVAZ Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35854457356,
+      "name": "Build RVAZ Android APK",
+      "sha": "3f625a90d372cbc90c44bbe894d0dffae14387c2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35854457356",
+      "jobs": [
+        {
+          "id": 107159528847,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35854238114,
+      "name": "Build RVAZ Android APK",
+      "sha": "35f28c79917e898a20e4fde92dd2025760ddc19e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35854238114",
+      "jobs": [
+        {
+          "id": 107158829142,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35851417452,
+      "name": "Build RVAZ Android APK",
+      "sha": "a88dfac3624b996db9d3baa5f0a1160043292192",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35851417452",
+      "jobs": [
+        {
+          "id": 107149739015,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35843821130,
+      "name": "Build RVAZ Android APK",
+      "sha": "e0addffbe7a0b5b3b73a362247c86c40ff4881e2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35843821130",
+      "jobs": [
+        {
+          "id": 107125020188,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35843804912,
+      "name": "Build RVAZ Android APK",
+      "sha": "80bd8788773c97baa5e84d7a0c4ddd702024e308",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35843804912",
+      "jobs": [
+        {
+          "id": 107124968561,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35843779802,
+      "name": "Build RVAZ Android APK",
+      "sha": "7c8eb22208593df7fddf1c5468ed0177336e2c0c",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35843779802",
+      "jobs": [
+        {
+          "id": 107124886704,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35843764525,
+      "name": "Build RVAZ Android APK",
+      "sha": "8df89442ccfe2904495222ecb28a51a25e1328a3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35843764525",
+      "jobs": [
+        {
+          "id": 107124835333,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35843036295,
+      "name": "Build RVAZ Android APK",
+      "sha": "b633071f7fd07dc5e788a9eb99178d6482f826c7",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35843036295",
+      "jobs": [
+        {
+          "id": 107122433928,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35843027523,
+      "name": "Build RVAZ Android APK",
+      "sha": "15c367d6a9698ab9a16f73b6fd0cc5a8b5a6b6f8",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35843027523",
+      "jobs": [
+        {
+          "id": 107122404487,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35842573977,
+      "name": "Build RVAZ Android APK",
+      "sha": "d2d32a8b978cbaab4d6f66edb22974964fed53a1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35842573977",
+      "jobs": [
+        {
+          "id": 107120910235,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35838580410,
+      "name": "Build RVAZ Android APK",
+      "sha": "8bc209bfc224ad2f4184c673352c6034797f7ec6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35838580410",
+      "jobs": [
+        {
+          "id": 107107917869,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Publish easy phone download"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35836584157,
+      "name": "Build RVAZ Android APK",
+      "sha": "c1992b41ea3b965872139900c7e1dcd371854ff6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35836584157",
+      "jobs": [
+        {
+          "id": 107101389988,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35834452245,
+      "name": "Build RVAZ Android APK",
+      "sha": "a5c23de4dbefa322b941e6e49ecad64a85f5fa71",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35834452245",
+      "jobs": [
+        {
+          "id": 107094455261,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35833155628,
+      "name": "Build RVAZ Android APK",
+      "sha": "da936b4018b47b815d841da4dd695fe05dbf73ff",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35833155628",
+      "jobs": [
+        {
+          "id": 107090230492,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare API-managed Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35831809585,
+      "name": "Build RVAZ Android APK",
+      "sha": "78161b01ba612a1a4af5fd42bf165451487ecd6b",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35831809585",
+      "jobs": [
+        {
+          "id": 107085922764,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35831627355,
+      "name": "Build RVAZ Android APK",
+      "sha": "e1ce9e6df70e99e40b332d8dbc3a406133149a0d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35831627355",
+      "jobs": [
+        {
+          "id": 107085336449,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35831601159,
+      "name": "Build RVAZ Android APK",
+      "sha": "75216ca2f75d8fa22139774453387dcca8aae0f4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35831601159",
+      "jobs": [
+        {
+          "id": 107085253634,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35829801790,
+      "name": "Build RVAZ Android APK",
+      "sha": "fdf731ed6ee1f9b46bd09a54ae28490eccdd9275",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35829801790",
+      "jobs": [
+        {
+          "id": 107079522817,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35829749942,
+      "name": "Build RVAZ Android APK",
+      "sha": "0b3864ed5e03b3daac8fde0ae940468c67577880",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35829749942",
+      "jobs": [
+        {
+          "id": 107079367221,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35827004933,
+      "name": "Build RVAZ Android APK",
+      "sha": "6239e7264134543e38c20ca095cfa95c53333d55",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35827004933",
+      "jobs": [
+        {
+          "id": 107070842221,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare API-managed Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35826688243,
+      "name": "Build RVAZ Android APK",
+      "sha": "ae189e9f902ade28fbd8529409b243e7f8500094",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35826688243",
+      "jobs": [
+        {
+          "id": 107069863737,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35823111284,
+      "name": "Build RVAZ Android APK",
+      "sha": "d026e5383e7f1ee80ea0c847f070355822861795",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35823111284",
+      "jobs": [
+        {
+          "id": 107059002769,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35822996596,
+      "name": "Build RVAZ Android APK",
+      "sha": "5185c7577c09e5ac808c5588e1e6cd660f1bf863",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35822996596",
+      "jobs": [
+        {
+          "id": 107058655187,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35729538172,
+      "name": "Build RVAZ Android APK",
+      "sha": "6d9a2163da0a9135b058465c9b3e6701a268b704",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35729538172",
+      "jobs": [
+        {
+          "id": 106751390440,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35729358353,
+      "name": "Build RVAZ Android APK",
+      "sha": "dc03a34ba3faa29aa899cd228e361d3a48a039e1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35729358353",
+      "jobs": [
+        {
+          "id": 106750788729,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35728965361,
+      "name": "Build RVAZ Android APK",
+      "sha": "a2f51aa0f0a888502b9e09e3c1f43cf950a0d326",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35728965361",
+      "jobs": [
+        {
+          "id": 106749487984,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35712065504,
+      "name": "Build RVAZ Android APK",
+      "sha": "a10d034974d82e072786b963ad8f013816a0930f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35712065504",
+      "jobs": [
+        {
+          "id": 106694785046,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35712058391,
+      "name": "Build RVAZ Android APK",
+      "sha": "4fb84501a852bef83c2d77913344fa41bc0f47d5",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35712058391",
+      "jobs": [
+        {
+          "id": 106694763885,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35707324043,
+      "name": "Build RVAZ Android APK",
+      "sha": "b3157c2d8e55fc6cfbc75004efdd9cf5981e2d1d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35707324043",
+      "jobs": [
+        {
+          "id": 106679289882,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35706470351,
+      "name": "Build RVAZ Android APK",
+      "sha": "a5eda0933649cbd2efb010434db5a0c10ec6436e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35706470351",
+      "jobs": [
+        {
+          "id": 106676498094,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare API-managed Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35706313417,
+      "name": "Build RVAZ Android APK",
+      "sha": "659f86f354f6ec99dae996a10795733b5fe3912a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35706313417",
+      "jobs": [
+        {
+          "id": 106675992136,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35706004187,
+      "name": "Build RVAZ Android APK",
+      "sha": "87ed1a588388337300f18b2e3d921593f3a59b00",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35706004187",
+      "jobs": [
+        {
+          "id": 106674973515,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35705985804,
+      "name": "Build RVAZ Android APK",
+      "sha": "5001fd1c67a6cf9cbe166d8fb42b8a7c55a862f4",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35705985804",
+      "jobs": [
+        {
+          "id": 106674915211,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35705278685,
+      "name": "Build RVAZ Android APK",
+      "sha": "a985c86ead9b0f07fafac5d622076c3a7e79ddcd",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35705278685",
+      "jobs": [
+        {
+          "id": 106672571985,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35701409165,
+      "name": "Build RVAZ Android APK",
+      "sha": "ab47175607cee68f690ee6a98ac109538e65dcd7",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35701409165",
+      "jobs": [
+        {
+          "id": 106660079728,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35699738729,
+      "name": "Build RVAZ Android APK",
+      "sha": "45cadaf94695c979dd8dc4d9cde869bac7ecf098",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35699738729",
+      "jobs": [
+        {
+          "id": 106654648989,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35699663425,
+      "name": "Build RVAZ Android APK",
+      "sha": "0cb774f4088b980f6239c92fd717a21f88a29373",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35699663425",
+      "jobs": [
+        {
+          "id": 106654409908,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35699322475,
+      "name": "Build RVAZ Android APK",
+      "sha": "f1400bf62c4915787ef5bcd255840f361230cde2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35699322475",
+      "jobs": [
+        {
+          "id": 106653319368,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35698807211,
+      "name": "Build RVAZ Android APK",
+      "sha": "b15eb9f24f266f79e795e4963815cb94f1dfc30f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35698807211",
+      "jobs": [
+        {
+          "id": 106651651634,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare API-managed Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35698784074,
+      "name": "Build RVAZ Android APK",
+      "sha": "ba35365865af52df57580266739f01c0d60f307a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35698784074",
+      "jobs": [
+        {
+          "id": 106651579155,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare API-managed Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35698762141,
+      "name": "Build RVAZ Android APK",
+      "sha": "4b2eecb57e3e4a1e29c79367e936a1c095f5d6ca",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35698762141",
+      "jobs": [
+        {
+          "id": 106651507074,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Prepare API-managed Android app icon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35697075345,
+      "name": "Build RVAZ Android APK",
+      "sha": "3695eea12b19620db9995b2e545153c1533ef7ad",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35697075345",
+      "jobs": [
+        {
+          "id": 106646195867,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Publish easy phone download"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35696116812,
+      "name": "Build RVAZ Android APK",
+      "sha": "76faa5ec02d43da1ccc64011dd4750b016884616",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35696116812",
+      "jobs": [
+        {
+          "id": 106643240121,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695951698,
+      "name": "Build RVAZ Android APK",
+      "sha": "a0f128eb9affdb569f113646a91fdd20b1d53297",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695951698",
+      "jobs": [
+        {
+          "id": 106642733821,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695942179,
+      "name": "Build RVAZ Android APK",
+      "sha": "015c89e517b1467241c657e737c926a055d6b153",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695942179",
+      "jobs": [
+        {
+          "id": 106642704773,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695860475,
+      "name": "Build RVAZ Android APK",
+      "sha": "5e3a1857734edcfc9d7d6fdddeb603d1655fb3a2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695860475",
+      "jobs": [
+        {
+          "id": 106642463276,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695781598,
+      "name": "Build RVAZ Android APK",
+      "sha": "5222a411c6e4dec1bb42aa443abe24430ea31828",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695781598",
+      "jobs": [
+        {
+          "id": 106642222765,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695493831,
+      "name": "Build RVAZ Android APK",
+      "sha": "98bdba75a6a52b06ed9a6d4e2a31c16dec248ff6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695493831",
+      "jobs": [
+        {
+          "id": 106641337361,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695289950,
+      "name": "Build RVAZ Android APK",
+      "sha": "2dc8256073f2c63c0946d72b14466d94d14a35c1",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695289950",
+      "jobs": [
+        {
+          "id": 106640712632,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35695252091,
+      "name": "Build RVAZ Android APK",
+      "sha": "4cf9100e16d08af1de48b151d1cd6c6549323d4e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35695252091",
+      "jobs": [
+        {
+          "id": 106640600487,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35694800985,
+      "name": "Build RVAZ Android APK",
+      "sha": "e77855ff97edd98906609f3432dcd169e8f4e119",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35694800985",
+      "jobs": [
+        {
+          "id": 106639207591,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35694125843,
+      "name": "Build RVAZ Android APK",
+      "sha": "af739291d443a6565def3a9264b2fa9ed244a19a",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35694125843",
+      "jobs": [
+        {
+          "id": 106637154102,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35693905179,
+      "name": "Build RVAZ Android APK",
+      "sha": "6ed30e857b265e9322603e5bd1379d5a1135e5d3",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35693905179",
+      "jobs": [
+        {
+          "id": 106636490907,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35693366632,
+      "name": "Build RVAZ Android APK",
+      "sha": "f90e75e96923a4d10684e6703f2394c32459c65d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35693366632",
+      "jobs": [
+        {
+          "id": 106634854714,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35693342445,
+      "name": "Build RVAZ Android APK",
+      "sha": "0713fdd9ca0591e053c61a9a2bedcc021b0dfb32",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35693342445",
+      "jobs": [
+        {
+          "id": 106634784402,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35605923419,
+      "name": "Build RVAZ Android APK",
+      "sha": "1382cb92da22cdf7eafc1102bbde497408d63d1d",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35605923419",
+      "jobs": [
+        {
+          "id": 106352851111,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build smaller release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35604627941,
+      "name": "Build RVAZ Android APK",
+      "sha": "7b6b43a92b98d36b9beab160e95a780f1169b282",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35604627941",
+      "jobs": [
+        {
+          "id": 106348604024,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build smaller release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35604402948,
+      "name": "Build RVAZ Android APK",
+      "sha": "46768e3b7ea14826004252b88e117ed414345220",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35604402948",
+      "jobs": [
+        {
+          "id": 106347883707,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35604394336,
+      "name": "Build RVAZ Android APK",
+      "sha": "41bb468ce63510b197f2b97eecef404723e04c04",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35604394336",
+      "jobs": [
+        {
+          "id": 106347855753,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build smaller release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35604057598,
+      "name": "Build RVAZ Android APK",
+      "sha": "dd8ee94e55c48290c0e1d166c746be58beccffdd",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35604057598",
+      "jobs": [
+        {
+          "id": 106346759875,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build smaller release APKs per architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35598268554,
+      "name": "Build RVAZ Android APK",
+      "sha": "bdc73a1bca9f3e34a1aad89722772b9a94cbf0fe",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35598268554",
+      "jobs": [
+        {
+          "id": 106328031282,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35598261616,
+      "name": "Build RVAZ Android APK",
+      "sha": "46f0130c64d83e10215a3b592319c18888624841",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35598261616",
+      "jobs": [
+        {
+          "id": 106328008937,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35598249414,
+      "name": "Build RVAZ Android APK",
+      "sha": "6e60c14852754648694102f8f380db09630a13c6",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35598249414",
+      "jobs": [
+        {
+          "id": 106327969358,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35598111055,
+      "name": "Build RVAZ Android APK",
+      "sha": "5b26ed653ce7efc8b23ec3ca19e6a3a9399a7140",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35598111055",
+      "jobs": [
+        {
+          "id": 106327525269,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35596426830,
+      "name": "Build RVAZ Android APK",
+      "sha": "0758b34999099ce42e2edc59f78a2437c3644ead",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35596426830",
+      "jobs": [
+        {
+          "id": 106322183553,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35591270840,
+      "name": "Build RVAZ Android APK",
+      "sha": "c692f1e3d6a691d41594967eaba4c026719407dd",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35591270840",
+      "jobs": [
+        {
+          "id": 106305963312,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35588797370,
+      "name": "Build RVAZ Android APK",
+      "sha": "8a4887886937c44e13a309897bfb6f4ee18cd46e",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35588797370",
+      "jobs": [
+        {
+          "id": 106298232329,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35588608696,
+      "name": "Build RVAZ Android APK",
+      "sha": "a277e34afad5a006b99be9390d1c2fc8deb6121f",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35588608696",
+      "jobs": [
+        {
+          "id": 106297654158,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35588435362,
+      "name": "Build RVAZ Android APK",
+      "sha": "eb94b26f9bd4bcb31aec8bcd498aa5763f441db2",
+      "url": "https://github.com/rudydejonge1506/Rvaz-android/actions/runs/35588435362",
+      "jobs": [
+        {
+          "id": 106297115298,
+          "conclusion": "failure",
+          "failed_steps": [
+            "Analyze"
+          ]
+        }
+      ]
+    }
+  ],
+  "failure_groups": [
+    {
+      "key": "RVAZ safe branch checks / Validate original local Android launcher image",
+      "count": 3,
+      "run": 37776824951,
+      "job": 113309675676,
+      "evidence": [
+        "2026-10-08T12:26:51.9348635Z Truncated PNG data",
+        "2026-10-08T12:26:51.9400301Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Recover verified RVAZ icon sources / Recover source used by successful Android build",
+      "count": 1,
+      "run": 37776654122,
+      "job": 113309107801,
+      "evidence": [
+        "2026-10-08T12:24:51.4975007Z AssertionError: Original Android launcher resources not found",
+        "2026-10-08T12:24:51.5139583Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "RVAZ safe branch checks / Validate local Android launcher asset",
+      "count": 4,
+      "run": 37758683342,
+      "job": 113249497291,
+      "evidence": [
+        "2026-10-08T09:44:43.5994086Z Truncated PNG data",
+        "2026-10-08T09:44:43.6046304Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "RVAZ safe branch checks / Test Flutter",
+      "count": 1,
+      "run": 37758455951,
+      "job": 113248746116,
+      "evidence": [
+        "2026-10-08T09:42:53.0355439Z ##[group]❌ /home/runner/work/Rvaz-android/Rvaz-android/test/wonen_website_data_test.dart: vult echte kenmerken van woningwebsite aan zonder WebView (failed)",
+        "2026-10-08T09:42:53.0516267Z ##[error]6 tests passed, 1 failed.",
+        "2026-10-08T09:42:53.0880549Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "RVAZ safe branch checks / Analyze Flutter",
+      "count": 1,
+      "run": 37757351856,
+      "job": 113245072964,
+      "evidence": [
+        "2026-10-08T09:33:13.3553752Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "RVAZ iOS build84 test IPA only / cancelled",
+      "count": 1,
+      "run": 37753505646,
+      "job": 113232272760,
+      "evidence": []
+    },
+    {
+      "key": "Build RVAZ Android APK / Prepare RVAZ Android app icon",
+      "count": 20,
+      "run": 37753505593,
+      "job": 113232272977,
+      "evidence": [
+        "2026-10-08T09:00:13.3428991Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Upload RVAZ build 83 to TestFlight / cancelled",
+      "count": 1,
+      "run": 37749625534,
+      "job": 113219382049,
+      "evidence": []
+    },
+    {
+      "key": "Upload RVAZ build 83 to TestFlight / Download exact successful build 83 IPA",
+      "count": 2,
+      "run": 37748239366,
+      "job": 113214808343,
+      "evidence": [
+        "2026-10-08T08:11:59.9193050Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "RVAZ iOS build83 test IPA only / Verify proven native iOS identity",
+      "count": 1,
+      "run": 37744951691,
+      "job": 113204112978,
+      "evidence": [
+        "2026-10-08T07:43:53.2958800Z ##[error]Process completed with exit code 2."
+      ]
+    },
+    {
+      "key": "Validate RVAZ Wonen and iOS AdMob changes / Run flutter test",
+      "count": 1,
+      "run": 37738246080,
+      "job": 113182644601,
+      "evidence": [
+        "2026-10-08T06:34:40.1016760Z Test directory \"test\" not found.",
+        "2026-10-08T06:34:40.1078737Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Validate RVAZ Wonen and iOS AdMob changes / Run flutter analyze --no-fatal-infos",
+      "count": 2,
+      "run": 37737978715,
+      "job": 113181801696,
+      "evidence": [
+        "2026-10-08T06:31:46.9027122Z   error • Expected to find ')' • lib/wonen.dart:12:1625 • expected_token",
+        "2026-10-08T06:31:46.9027955Z   error • Expected to find ')' • lib/wonen.dart:12:1634 • expected_token",
+        "2026-10-08T06:31:46.9029348Z   error • Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it • lib/wonen.dart:12:1636 • expected_executable",
+        "2026-10-08T06:31:46.9030725Z   error • Expected to find ')' • lib/wonen.dart:15:1435 • expected_token",
+        "2026-10-08T06:31:46.9032135Z   error • Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it • lib/wonen.dart:15:1437 • expected_executable",
+        "2026-10-08T06:31:46.9039287Z   error • Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it • lib/wonen.dart:17:2890 • expected_executable",
+        "2026-10-08T06:31:46.9040670Z   error • Expected to find ')' • lib/wonen.dart:18:636 • expected_token",
+        "2026-10-08T06:31:46.9042042Z   error • Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it • lib/wonen.dart:18:638 • expected_executable",
+        "2026-10-08T06:31:46.9140286Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Upload RVAZ build 82 to TestFlight / Download exact successful build 82 IPA",
+      "count": 1,
+      "run": 37735638699,
+      "job": 113174407622,
+      "evidence": [
+        "2026-10-08T06:04:40.7010170Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Publish easy phone download",
+      "count": 3,
+      "run": 37734529102,
+      "job": 113170959296,
+      "evidence": [
+        "2026-10-08T05:59:13.5787508Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Upload RVAZ build 81 to TestFlight / Validate build 81 IPA with Apple",
+      "count": 1,
+      "run": 37734182158,
+      "job": 113169884625,
+      "evidence": [
+        "2026-10-08T05:49:50.5255420Z Invalid Pre-Release Train. The train version '1.1.3' is closed for new build submissions (90186) The server’s response was: ‘{",
+        "2026-10-08T05:49:50.5256300Z     description = \"Invalid Pre-Release Train. The train version '1.1.3' is closed for new build submissions\";",
+        "2026-10-08T05:49:50.5257720Z       description : Invalid Pre-Release Train. The train version '1.1.3' is closed for new build submissions",
+        "2026-10-08T05:49:50.5307890Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS current Android features / Archive with proven signing settings",
+      "count": 1,
+      "run": 37668116714,
+      "job": 112952513098,
+      "evidence": [
+        "2026-10-07T18:42:36.0720860Z     export TREAT_MISSING_BASELINES_AS_TEST_FAILURES=NO",
+        "2026-10-07T18:42:43.7679580Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Runner.xcodeproj: error: The file \"/Users/runner/work/Rvaz-android/Rvaz-android/ios/Runner/Runner.entitlements\" could not be opened. Verify the value of the CODE_SIGN_ENTITLEMENTS build setting for target \"Runner\" is correct and that the file exists on disk. (in target 'Runner' from project 'Runner')",
+        "2026-10-07T18:42:43.7882300Z The following build commands failed:",
+        "2026-10-07T18:42:43.8199970Z ##[error]Process completed with exit code 65."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS current Android features / Verify proven native iOS identity",
+      "count": 2,
+      "run": 37667517991,
+      "job": 112950439556,
+      "evidence": [
+        "2026-10-07T18:33:45.7736660Z ##[error]Process completed with exit code 2."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS current Android features / Build current shared app on proven iOS project",
+      "count": 4,
+      "run": 37666099966,
+      "job": 112945608227,
+      "evidence": [
+        "2026-10-07T18:29:01.2936390Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS current Android features / cancelled",
+      "count": 1,
+      "run": 37633705761,
+      "job": 112841845793,
+      "evidence": []
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Build Flutter iOS release without signing",
+      "count": 4,
+      "run": 37622438562,
+      "job": 112795782314,
+      "evidence": [
+        "2026-10-07T12:39:25.2626620Z   error • The method 'subscribeToTopic' can't be unconditionally invoked because the receiver can be 'null'. Try making the call conditional (using '?.') or adding a null check to the target ('!') • lib/main.dart:316:31 • unchecked_use_of_nullable_value",
+        "2026-10-07T12:39:32.8209680Z Xcode failed to resolve Swift Package Manager dependencies:",
+        "2026-10-07T12:39:32.8216320Z xcodebuild: error: Unable to read project 'Runner.xcodeproj'.",
+        "2026-10-07T12:39:32.8242060Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Verify Flutter project",
+      "count": 4,
+      "run": 37620028195,
+      "job": 112787653642,
+      "evidence": [
+        "2026-10-07T12:19:29.2749440Z   error • The method 'subscribeToTopic' can't be unconditionally invoked because the receiver can be 'null'. Try making the call conditional (using '?.') or adding a null check to the target ('!') • lib/main.dart:316:31 • unchecked_use_of_nullable_value",
+        "2026-10-07T12:19:29.2921330Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Archive with Apple Distribution signing",
+      "count": 15,
+      "run": 37618369905,
+      "job": 112782151229,
+      "evidence": [
+        "2026-10-07T12:12:10.7888750Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Pods/Pods.xcodeproj: error: flutter_secure_storage has conflicting provisioning settings. flutter_secure_storage is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'flutter_secure_storage' from project 'Pods')",
+        "2026-10-07T12:12:10.7995830Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Flutter/ephemeral/Packages/.packages/google_mobile_ads-9.1.0/Package.swift: error: google_mobile_ads_google_mobile_ads has conflicting provisioning settings. google_mobile_ads_google_mobile_ads is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'google_mobile_ads_google_mobile_ads' from project 'google_mobile_ads')",
+        "2026-10-07T12:12:10.8097080Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Runner.xcodeproj: error: Runner has conflicting provisioning settings. Runner is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'Runner' from project 'Runner')",
+        "2026-10-07T12:12:10.8399970Z /Users/runner/Library/Developer/Xcode/DerivedData/Runner-coiyuxhdgfwkwobzyvisbuptxhma/SourcePackages/checkouts/firebase-ios-sdk/Package.swift: error: Firebase_FirebaseMessaging has conflicting provisioning settings. Firebase_FirebaseMessaging is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'Firebase_FirebaseMessaging' from project 'Firebase')",
+        "2026-10-07T12:12:10.8498590Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Flutter/ephemeral/Packages/.packages/image_picker_ios-0.8.13+9/Package.swift: error: image_picker_ios_image_picker_ios has conflicting provisioning settings. image_picker_ios_image_picker_ios is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'image_picker_ios_image_picker_ios' from project 'image_picker_ios')",
+        "2026-10-07T12:12:10.8601960Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Flutter/ephemeral/Packages/.packages/share_plus-12.0.2/Package.swift: error: share_plus_share_plus has conflicting provisioning settings. share_plus_share_plus is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'share_plus_share_plus' from project 'share_plus')",
+        "2026-10-07T12:12:10.8701050Z /Users/runner/Library/Developer/Xcode/DerivedData/Runner-coiyuxhdgfwkwobzyvisbuptxhma/SourcePackages/checkouts/promises/Package.swift: error: Promises_FBLPromises has conflicting provisioning settings. Promises_FBLPromises is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'Promises_FBLPromises' from project 'Promises')",
+        "2026-10-07T12:12:10.8804780Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Flutter/ephemeral/Packages/.packages/url_launcher_ios-6.4.2/Package.swift: error: url_launcher_ios_url_launcher_ios has conflicting provisioning settings. url_launcher_ios_url_launcher_ios is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'url_launcher_ios_url_launcher_ios' from project 'url_launcher_ios')",
+        "2026-10-07T12:12:10.8906810Z /Users/runner/Library/Developer/Xcode/DerivedData/Runner-coiyuxhdgfwkwobzyvisbuptxhma/SourcePackages/checkouts/GoogleDataTransport/Package.swift: error: GoogleDataTransport_GoogleDataTransport has conflicting provisioning settings. GoogleDataTransport_GoogleDataTransport is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'GoogleDataTransport_GoogleDataTransport' from project 'GoogleDataTransport')",
+        "2026-10-07T12:12:10.9010700Z /Users/runner/Library/Developer/Xcode/DerivedData/Runner-coiyuxhdgfwkwobzyvisbuptxhma/SourcePackages/checkouts/firebase-ios-sdk/Package.swift: error: Firebase_FirebaseCoreInternal has conflicting provisioning settings. Firebase_FirebaseCoreInternal is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'Firebase_FirebaseCoreInternal' from project 'Firebase')",
+        "2026-10-07T12:12:10.9113070Z /Users/runner/Library/Developer/Xcode/DerivedData/Runner-coiyuxhdgfwkwobzyvisbuptxhma/SourcePackages/checkouts/nanopb/Package.swift: error: nanopb_nanopb has conflicting provisioning settings. nanopb_nanopb is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'nanopb_nanopb' from project 'nanopb')",
+        "2026-10-07T12:12:10.9211810Z /Users/runner/Library/Developer/Xcode/DerivedData/Runner-coiyuxhdgfwkwobzyvisbuptxhma/SourcePackages/checkouts/GoogleUtilities/Package.swift: error: GoogleUtilities_GoogleUtilities-Network has conflicting provisioning settings. GoogleUtilities_GoogleUtilities-Network is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'GoogleUtilities_GoogleUtilities-Network' from project 'GoogleUtilities')",
+        "2026-10-07T12:12:10.9311330Z /Users/runner/work/Rvaz-android/Rvaz-android/ios/Flutter/ephemeral/Packages/.packages/app_links-6.4.1/Package.swift: error: app_links_app_links has conflicting provisioning settings. app_links_app_links is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified. Set the code signing identity value to \"Apple Development\" in the build settings editor, or switch to manual signing in the Signing & Capabilities editor. (in target 'app_links_app_links' from project 'app_links')",
+        "2026-10-07T12:12:10.9409830Z ##[error]Process completed with exit code 65."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Recreate iOS project required by proven 1.1.1 source",
+      "count": 2,
+      "run": 37617730105,
+      "job": 112780056302,
+      "evidence": [
+        "2026-10-07T12:00:34.9607470Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Keep proven 1.1.1 iOS app icons",
+      "count": 1,
+      "run": 37612293706,
+      "job": 112762194419,
+      "evidence": [
+        "2026-10-07T11:12:12.3075200Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Restore RVAZ iOS app icons",
+      "count": 9,
+      "run": 37610382214,
+      "job": 112755943736,
+      "evidence": [
+        "2026-10-07T10:54:46.3604120Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Create iOS project and install exact RVAZ icon",
+      "count": 3,
+      "run": 37607873118,
+      "job": 112747698294,
+      "evidence": [
+        "2026-10-07T10:32:28.5775640Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Generate RVAZ iOS app icons",
+      "count": 2,
+      "run": 37604020061,
+      "job": 112735015096,
+      "evidence": [
+        "2026-10-07T09:57:58.4373260Z ✕ Could not generate launcher icons",
+        "2026-10-07T09:57:58.4394340Z ImageException: Invalid IDAT checksum",
+        "2026-10-07T09:57:58.4429520Z ##[error]Process completed with exit code 2."
+      ]
+    },
+    {
+      "key": "Upload RVAZ IPA to App Store Connect / Validate IPA with Apple",
+      "count": 5,
+      "run": 37601493165,
+      "job": 112726693954,
+      "evidence": [
+        "2026-10-07T09:36:05.9131530Z 2026-10-07 09:36:05.893 ERROR: [altool.90AC2CBC0] Invalid Pre-Release Train. The train version '1.1.2' is closed for new build submissions (90186) The server’s response was: ‘{",
+        "2026-10-07T09:36:05.9133040Z     description = \"Invalid Pre-Release Train. The train version '1.1.2' is closed for new build submissions\";",
+        "2026-10-07T09:36:05.9135290Z       description : Invalid Pre-Release Train. The train version '1.1.2' is closed for new build submissions",
+        "2026-10-07T09:36:05.9165150Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Configure Runner App Store signing",
+      "count": 1,
+      "run": 37446209020,
+      "job": 112211551836,
+      "evidence": [
+        "2026-10-06T10:00:52.9346310Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Analyze",
+      "count": 103,
+      "run": 37436313081,
+      "job": 112178873734,
+      "evidence": [
+        "2026-10-06T08:29:10.0014875Z warning • The '!' will have no effect because the receiver can't be null. Try removing the '!' operator • lib/main.dart:1718:230 • unnecessary_non_null_assertion",
+        "2026-10-06T08:29:10.0218621Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Build signed release APKs per architecture",
+      "count": 6,
+      "run": 36984451504,
+      "job": 110766161492,
+      "evidence": [
+        "2026-10-02T08:32:57.3523283Z FAILURE: Build failed with an exception.",
+        "2026-10-02T08:32:57.7839288Z Gradle task assembleRelease failed with exit code 1",
+        "2026-10-02T08:32:57.7893577Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Configure Google Play release signing",
+      "count": 3,
+      "run": 36984446811,
+      "job": 110766146523,
+      "evidence": [
+        "2026-10-02T08:31:44.6349042Z Release build type not found; refusing broad Gradle changes",
+        "2026-10-02T08:31:44.6386603Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Upload RVAZ App Store screenshots / Upload screenshots to App Store Connect",
+      "count": 1,
+      "run": 36707222508,
+      "job": 109860226860,
+      "evidence": [
+        "2026-09-30T11:14:14.6132310Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Upload RVAZ App Store screenshots / Install API dependencies",
+      "count": 1,
+      "run": 36706663803,
+      "job": 109858405348,
+      "evidence": [
+        "2026-09-30T11:08:31.9627730Z error: externally-managed-environment",
+        "2026-09-30T11:08:32.0525530Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Maak RVAZ App Store screenshots / Start App Store simulators",
+      "count": 1,
+      "run": 36679206917,
+      "job": 109770755756,
+      "evidence": [
+        "2026-09-30T06:39:43.8371480Z Invalid device type: com.apple.CoreSimulator.SimDeviceType.iPad-Pro-12-9-inch-6th-generation",
+        "2026-09-30T06:39:43.8496770Z ##[error]Process completed with exit code 146."
+      ]
+    },
+    {
+      "key": "Build RVAZ iOS App Store IPA / Build signed App Store IPA",
+      "count": 2,
+      "run": 36673206623,
+      "job": 109752494904,
+      "evidence": [
+        "2026-09-30T05:26:58.2423650Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Prepare RVAZ iOS project / Generate iOS icons from existing RVAZ logo",
+      "count": 1,
+      "run": 36582327380,
+      "job": 109453426729,
+      "evidence": [
+        "2026-09-29T14:25:01.7888930Z ✕ Could not generate launcher icons",
+        "2026-09-29T14:25:01.7892860Z ImageException: Invalid IDAT checksum",
+        "2026-09-29T14:25:01.7961370Z ##[error]Process completed with exit code 2."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Verify release signatures",
+      "count": 2,
+      "run": 35868489792,
+      "job": 107206087165,
+      "evidence": [
+        "2026-09-23T13:44:53.6496686Z ##[error]Process completed with exit code 4."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Prepare RVAZ Android app icon from App API",
+      "count": 2,
+      "run": 35867514099,
+      "job": 107202783259,
+      "evidence": [
+        "2026-09-23T13:35:56.7458269Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Configure release signing from GitHub secrets",
+      "count": 2,
+      "run": 35864718022,
+      "job": 107193279195,
+      "evidence": [
+        "2026-09-23T13:06:41.1759188Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Prepare Android app icon",
+      "count": 8,
+      "run": 35843821130,
+      "job": 107125020188,
+      "evidence": [
+        "2026-09-23T09:35:43.2089266Z ✕ Could not generate launcher icons",
+        "2026-09-23T09:35:43.2092082Z ImageException: Invalid PLTE checksum",
+        "2026-09-23T09:35:43.2138519Z ##[error]Process completed with exit code 2."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Prepare API-managed Android app icon",
+      "count": 6,
+      "run": 35833155628,
+      "job": 107090230492,
+      "evidence": [
+        "2026-09-23T07:43:45.4912814Z ✕ Could not generate launcher icons",
+        "2026-09-23T07:43:45.4915442Z ImageException: Invalid IDAT checksum",
+        "2026-09-23T07:43:45.4966557Z ##[error]Process completed with exit code 2."
+      ]
+    },
+    {
+      "key": "Build RVAZ Android APK / Build smaller release APKs per architecture",
+      "count": 4,
+      "run": 35605923419,
+      "job": 106352851111,
+      "evidence": [
+        "2026-09-21T13:31:48.7020859Z ../../../.pub-cache/hosted/pub.dev/flutter_html-3.0.0/lib/src/tree/styled_element.dart:31:17: Error: Method not found: 'matches'.",
+        "2026-09-21T13:31:53.7042642Z Target kernel_snapshot_program failed: Exception",
+        "2026-09-21T13:31:53.7046280Z FAILURE: Build failed with an exception.",
+        "2026-09-21T13:31:53.7047309Z Execution failed for task ':app:compileFlutterBuildRelease'.",
+        "2026-09-21T13:31:54.1678093Z Gradle task assembleRelease failed with exit code 1",
+        "2026-09-21T13:31:54.1727143Z ##[error]Process completed with exit code 1."
+      ]
+    }
+  ]
+}
