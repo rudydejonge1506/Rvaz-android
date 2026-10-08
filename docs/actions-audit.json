@@ -4046,5 +4046,52 @@
         "2026-09-21T13:31:54.1727143Z ##[error]Process completed with exit code 1."
       ]
     }
-  ]
+  ],
+  "repair_verification": {
+    "flutter": {
+      "run": 37784300793,
+      "conclusion": "success",
+      "tests": 13,
+      "analysis_errors": 0,
+      "analysis_warnings": 0,
+      "analysis_info": 25
+    },
+    "backend": {
+      "run": 37784300811,
+      "conclusion": "success",
+      "checks": 41,
+      "live_installed": false
+    },
+    "android": {
+      "run": 37784300802,
+      "conclusion": "success",
+      "artifact_id": 11554211242,
+      "digest": "sha256:0709469395126ef655b2a156ee3a06515ea74a4923af9446a2cd9623ef5223b4",
+      "launcher_pixel_verification_run": 37785592065
+    },
+    "ios85": {
+      "run": 37779023894,
+      "conclusion": "success",
+      "apple_processing": "VALID",
+      "artifact_id": 11552916475
+    },
+    "ios86": {
+      "run": 37784300746,
+      "status": "queued"
+    },
+    "additional_failure_fixes": [
+      {
+        "run": 37777251309,
+        "cause": "Apple rejected iOS18.5 SDK / Xcode16.4; requires iOS26 SDK",
+        "replacement_run": 37779023894,
+        "result": "success"
+      },
+      {
+        "run": 37778544540,
+        "cause": "Renderer widget assertion beyond viewport; fixed scroll before assertion",
+        "replacement_run": 37784300832,
+        "result": "success"
+      }
+    ]
+  }
 }

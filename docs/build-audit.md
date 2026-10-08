@@ -44,5 +44,5 @@ Een geslaagde compilatie bewijst geen volledige makelaarsbeheerfunctie. De serve
 - Eerste build 85 compileerde en exporteerde, maar Apple weigerde run 37777251309 wegens Xcode 16.4 / iOS 18.5 SDK. Xcode 26.3 / iOS 26 SDK is expliciet geselecteerd; opvolger 37779023894 is succesvol tot en met TestFlight-processing.
 - Renderer-test 37778544540 vroeg naar een widget buiten de viewport. Test scrollt nu naar het energielabel; opvolger 37784300832 slaagt en genereert een leesbare native screenshot met Roboto.
 - Backendtest [37784300811](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300811) slaagt: 40 REST/businesslogic-controles en echte HTTP bearer/multipartupload met galerijverwijdering. Geen productiedatabase of echte e-mailontvanger wordt gebruikt.
-- De oorspronkelijke Android-launcher is in alle drie gesigneerde APK-architecturen op pixels vergeleken met het bestaande juiste icoon. Alle vergelijkingen identiek (renderer-run 37784300832, eerste herstelde Android-build).
+- De oorspronkelijke Android-launcher is in alle drie gesigneerde APK-architecturen op pixels vergeleken met het bestaande juiste icoon. Alle vergelijkingen identiek (renderer-run 37785592065, nieuwste uitgebreide beheerbuild).
 - De TestFlight-upload publiceert geen App Store-versie, wijzigt geen publieke metadata en uploadt geen screenshots.
