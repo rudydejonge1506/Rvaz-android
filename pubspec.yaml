@@ -8,6 +8,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.2
+  html: ^0.15.4
   url_launcher: ^6.3.0
   flutter_html: 3.0.0-beta.2
   youtube_player_iframe: ^5.2.2
