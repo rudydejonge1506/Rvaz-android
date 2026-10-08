@@ -1,4 +1,3 @@
-import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -59,40 +58,114 @@ class WonenPage extends StatefulWidget {
 }
 
 class _WonenPageState extends State<WonenPage> {
-  late final WebViewController controller;
-  bool loading = true;
-
+  late Future<dynamic> future;
+  String filter = 'Alles';
+  String type = 'Alle woningtypen';
   @override
   void initState() {
     super.initState();
-    controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageStarted: (_) { if (mounted) setState(() => loading = true); },
-        onPageFinished: (_) { if (mounted) setState(() => loading = false); },
-        onNavigationRequest: (request) {
-          final uri = Uri.tryParse(request.url);
-          if (uri == null || uri.scheme != 'https') return NavigationDecision.prevent;
-          if (uri.host == 'www.regiovoorneaanzee.nl' || uri.host == 'regiovoorneaanzee.nl') {
-            return NavigationDecision.navigate;
-          }
-          launchUrl(uri, mode: LaunchMode.externalApplication);
-          return NavigationDecision.prevent;
-        },
-      ))
-      ..loadRequest(Uri.parse('https://www.regiovoorneaanzee.nl/wonen/'));
+    future = wonenRequest('/woningen');
   }
+
+  void reload() => setState(() => future = wonenRequest('/woningen'));
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Wonen op Voorne'), actions: [
-      IconButton(tooltip: 'Vernieuwen', icon: const Icon(Icons.refresh),
-        onPressed: () => controller.reload()),
+      IconButton(tooltip: 'Vernieuwen', onPressed: reload,
+        icon: const Icon(Icons.refresh)),
     ]),
-    body: Stack(children: [
-      WebViewWidget(controller: controller),
-      if (loading) const LinearProgressIndicator(),
-    ]),
+    body: FutureBuilder<dynamic>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Woningen ophalen is niet gelukt.'),
+            TextButton(onPressed: reload, child: const Text('Opnieuw proberen')),
+          ]));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final all = wonenItems(snapshot.data);
+        final items = all.where((item) {
+          final transaction = wonenText(item, 'transactie').toLowerCase();
+          final kind = wonenText(item, 'woningtype').toLowerCase();
+          return (filter == 'Alles' || transaction == filter.toLowerCase()) &&
+              (type == 'Alle woningtypen' || kind == type.toLowerCase());
+        }).toList();
+        return Column(children: [
+          Padding(padding: const EdgeInsets.all(12), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Koop- en huurwoningen op Voorne aan Zee',
+                style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              SingleChildScrollView(scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  for (final choice in ['Alles', 'Koop', 'Huur'])
+                    Padding(padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(label: Text(choice),
+                        selected: filter == choice,
+                        onSelected: (_) => setState(() => filter = choice))),
+                ])),
+              DropdownButton<String>(value: type, isExpanded: true,
+                items: ['Alle woningtypen', 'Woning', 'Appartement',
+                  'Nieuwbouw', 'Bedrijfspand']
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+                onChanged: (value) => setState(() =>
+                  type = value ?? 'Alle woningtypen')),
+              Text('${items.length} resultaten'),
+            ])),
+          Expanded(child: items.isEmpty
+            ? const Center(child: Text('Geen woningen gevonden met deze filters.'))
+            : ListView.builder(itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final item = items[i];
+                  final image = wonenText(item, 'image');
+                  final title = wonenText(item, 'adres').isNotEmpty
+                    ? wonenText(item, 'adres') : wonenText(item, 'title');
+                  final location = [
+                    wonenText(item, 'postcode'), wonenText(item, 'plaats')
+                  ].where((e) => e.isNotEmpty).join(' ');
+                  final price = wonenText(item, 'prijs');
+                  final details = [
+                    if (wonenText(item, 'woonoppervlak').isNotEmpty)
+                      '${wonenText(item, 'woonoppervlak')} m² wonen',
+                    if (wonenText(item, 'kamers').isNotEmpty)
+                      '${wonenText(item, 'kamers')} kamers',
+                    if (wonenText(item, 'energielabel').isNotEmpty)
+                      'Label ${wonenText(item, 'energielabel')}',
+                  ].join(' · ');
+                  return Card(clipBehavior: Clip.antiAlias,
+                    margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                    child: InkWell(onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) =>
+                        WoningDetailPage(item: item))),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (image.isNotEmpty)
+                            Image.network(image, width: double.infinity,
+                              height: 190, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                const SizedBox(height: 90,
+                                  child: Center(child: Icon(Icons.home_outlined)))),
+                          Padding(padding: const EdgeInsets.all(14),
+                            child: Column(crossAxisAlignment:
+                              CrossAxisAlignment.start, children: [
+                              Text(title, style: Theme.of(context).textTheme.titleLarge),
+                              if (location.isNotEmpty) Text(location),
+                              if (price.isNotEmpty)
+                                Text('€ $price', style: Theme.of(context).textTheme.titleMedium),
+                              if (details.isNotEmpty) Text(details),
+                              const Align(alignment: Alignment.centerRight,
+                                child: Icon(Icons.chevron_right)),
+                            ])),
+                        ])));
+                })),
+        ]);
+      },
+    ),
   );
 }
 
@@ -103,46 +176,56 @@ class WoningDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final image = wonenText(item, 'image');
+    final address = wonenText(item, 'adres');
+    final title = address.isNotEmpty ? address : wonenText(item, 'title');
+    final location = [wonenText(item, 'postcode'),
+      wonenText(item, 'plaats')].where((e) => e.isNotEmpty).join(' ');
+    final price = wonenText(item, 'prijs');
+    const labels = <String, String>{
+      'woningtype': 'Soort woning', 'transactie': 'Aanbod',
+      'status': 'Status', 'bouwjaar': 'Bouwjaar',
+      'woonoppervlak': 'Woonoppervlakte', 'perceel': 'Perceeloppervlakte',
+      'kamers': 'Aantal kamers', 'slaapkamers': 'Slaapkamers',
+      'badkamers': 'Badkamers', 'energielabel': 'Energielabel',
+      'tuin': 'Tuin', 'balkon': 'Balkon', 'garage': 'Garage',
+      'aanvaarding': 'Aanvaarding', 'borg': 'Borg',
+      'contractduur': 'Contractduur', 'inkomenseisen': 'Inkomenseisen',
+    };
     return Scaffold(
-      appBar: AppBar(title: Text(wonenText(item, 'title'))),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (image.isNotEmpty)
-            Image.network(image, height: 220, fit: BoxFit.cover),
-          Text(wonenText(item, 'title'),
-              style: Theme.of(context).textTheme.headlineSmall),
-          Text('${wonenText(item, 'adres')} · ${wonenText(item, 'plaats')}'),
-          Text('€ ${wonenText(item, 'prijs')}'),
-          for (final key in [
-            'transactie', 'woningtype', 'woonoppervlak',
-            'kamers', 'slaapkamers', 'energielabel', 'status'
-          ])
-            if (wonenText(item, key).isNotEmpty)
-              ListTile(title: Text(key), trailing: Text(wonenText(item, key))),
-          Text(wonenText(item, 'description')),
-          const SizedBox(height: 16),
-          if (wonenText(item, 'url').startsWith('https://'))
-            FilledButton.icon(
-              onPressed: () async {
-                final uri = Uri.tryParse(wonenText(item, 'url'));
-                if (uri == null || uri.scheme != 'https' ||
-                    uri.host != 'regiovoorneaanzee.nl') return;
-                final opened = await launchUrl(
-                  uri,
-                  mode: LaunchMode.externalApplication,
-                );
-                if (!opened && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Woningpagina openen mislukt')),
-                  );
-                }
-              },
-              icon: const Icon(Icons.mail_outline),
-              label: const Text('Contact opnemen met de makelaar'),
-            ),
+      appBar: AppBar(title: Text(title.isEmpty ? 'Woning' : title)),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        if (image.isNotEmpty) ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(image, width: double.infinity,
+            height: 240, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+              const SizedBox(height: 120,
+                child: Center(child: Icon(Icons.home_outlined))))),
+        const SizedBox(height: 12),
+        Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        if (location.isNotEmpty) Text(location),
+        if (price.isNotEmpty) Text('€ $price',
+          style: Theme.of(context).textTheme.titleLarge),
+        if (wonenText(item, 'description').isNotEmpty) ...[
+          const SizedBox(height: 18),
+          Text('Omschrijving', style: Theme.of(context).textTheme.titleLarge),
+          Text(wonenText(item, 'description')
+            .replaceAll(RegExp(r'<[^>]*>'), ' ').trim()),
         ],
-      ),
+        const SizedBox(height: 18),
+        Text('Kenmerken', style: Theme.of(context).textTheme.titleLarge),
+        for (final entry in labels.entries)
+          if (wonenText(item, entry.key).isNotEmpty)
+            ListTile(contentPadding: EdgeInsets.zero,
+              title: Text(entry.value),
+              trailing: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(wonenText(item, entry.key),
+                  textAlign: TextAlign.end))),
+        const SizedBox(height: 12),
+        const Text('Meer informatie of contact met de makelaar is momenteel '
+          'alleen beschikbaar wanneer de makelaars-API dit ondersteunt.'),
+      ]),
     );
   }
 }
