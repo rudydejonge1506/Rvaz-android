@@ -1,3 +1,4 @@
+import 'package:html/parser.dart' as htmlParser;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -50,6 +51,98 @@ String wonenText(Map<String, dynamic> item, String key) {
 
 // Gebruik de echte woningweergave van de website zolang de publieke API
 // ingevulde woningvelden ten onrechte als false teruggeeft.
+// De openbare Wonen-API mist soms gegevens die op de woningpagina wel staan.
+// Lees die inhoud als DATA en toon hem uitsluitend in onze eigen Flutter-widgets.
+const _websiteFacts = <String, String>{
+  'Soort woning': 'woningtype',
+  'Aanbod': 'transactie',
+  'Status': 'status',
+  'Bouwjaar': 'bouwjaar',
+  'Woonoppervlakte': 'woonoppervlak',
+  'Perceeloppervlakte': 'perceel',
+  'Aantal kamers': 'kamers',
+  'Slaapkamers': 'slaapkamers',
+  'Badkamers': 'badkamers',
+  'Energielabel': 'energielabel',
+  'Tuin': 'tuin',
+  'Balkon': 'balkon',
+  'Garage': 'garage',
+  'Aanvaarding': 'aanvaarding',
+  'Borg': 'borg',
+  'Contractduur': 'contractduur',
+  'Inkomenseisen': 'inkomenseisen',
+};
+
+Map<String, dynamic> mergeWoningWebsiteData(
+  Map<String, dynamic> original, String htmlSource,
+) {
+  final doc = htmlParser.parse(htmlSource);
+  final main = doc.querySelector('main article') ??
+      doc.querySelector('article') ?? doc.querySelector('main');
+  if (main == null) return Map<String, dynamic>.from(original);
+  final item = Map<String, dynamic>.from(original);
+  final heading = main.querySelector('h1')?.text.trim() ?? '';
+  if (heading.isNotEmpty) item['adres'] = heading;
+  final headerText = main.text.replaceAll(RegExp(r'\s+'), ' ');
+  final location = RegExp(
+    r'\b([1-9][0-9]{3}\s?[A-Z]{2})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\- ]{1,35})',
+  ).firstMatch(headerText);
+  if (location != null) {
+    item['postcode'] = location.group(1)!.trim();
+    item['plaats'] = location.group(2)!.trim();
+  }
+  final price = RegExp(r'€\s*([0-9][0-9.,]*(?:\s*p/m)?)',
+      caseSensitive: false).firstMatch(headerText);
+  if (price != null) item['prijs'] = price.group(1)!.trim();
+
+  final facts = main.querySelectorAll('section').where((node) =>
+      node.querySelector('h2')?.text.trim().toLowerCase() == 'kenmerken');
+  if (facts.isNotEmpty) {
+    final factText = facts.first.text.replaceAll(RegExp(r'\s+'), ' ');
+    final names = _websiteFacts.keys.toList();
+    final matches = RegExp(
+      names.map(RegExp.escape).join('|'), caseSensitive: false,
+    ).allMatches(factText).toList();
+    for (var i = 0; i < matches.length; i++) {
+      final match = matches[i];
+      final label = names.firstWhere((name) =>
+          name.toLowerCase() == match.group(0)!.toLowerCase());
+      final end = i + 1 < matches.length
+          ? matches[i + 1].start : factText.length;
+      final value = factText.substring(match.end, end).trim();
+      if (value.isNotEmpty) item[_websiteFacts[label]!] = value;
+    }
+  }
+  return item;
+}
+
+Future<List<Map<String, dynamic>>> getWonenListings() async {
+  final all = wonenItems(await wonenRequest('/woningen'));
+  final result = <Map<String, dynamic>>[];
+  for (final item in all) {
+    final urlText = wonenText(item, 'url');
+    final url = Uri.tryParse(urlText);
+    if (url == null || url.scheme != 'https' ||
+        (url.host != 'regiovoorneaanzee.nl' &&
+         url.host != 'www.regiovoorneaanzee.nl') ||
+        !url.path.startsWith('/woning/')) {
+      result.add(item);
+      continue;
+    }
+    try {
+      final response = await http.get(url).timeout(const Duration(seconds: 12));
+      if (response.statusCode == 200) {
+        result.add(mergeWoningWebsiteData(item, response.body));
+        continue;
+      }
+    } catch (_) {
+      // Geen gefantaseerde data bij uitval; toon alleen echte API-velden.
+    }
+    result.add(item);
+  }
+  return result;
+}
+
 class WonenPage extends StatefulWidget {
   const WonenPage({super.key});
   @override
@@ -63,10 +156,10 @@ class _WonenPageState extends State<WonenPage> {
   @override
   void initState() {
     super.initState();
-    future = wonenRequest('/woningen');
+    future = getWonenListings();
   }
 
-  void reload() => setState(() => future = wonenRequest('/woningen'));
+  void reload() => setState(() => future = getWonenListings());
 
   @override
   Widget build(BuildContext context) => Scaffold(
