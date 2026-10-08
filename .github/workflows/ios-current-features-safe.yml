@@ -40,6 +40,19 @@ jobs:
           grep -q 'nl.regiovoorneaanzee.app' ios/Runner.xcodeproj/project.pbxproj
           git fetch --no-tags origin e7bc87ea017399ef7db76b1f43de7dd8e8ed9494
           test "$(git rev-parse FETCH_HEAD)" = "e7bc87ea017399ef7db76b1f43de7dd8e8ed9494"
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          directory = pathlib.Path("ios/Runner/Assets.xcassets/AppIcon.appiconset")
+          data = json.loads((directory / "Contents.json").read_text())
+          filenames = sorted({item["filename"] for item in data["images"] if item.get("filename")})
+          for filename in filenames:
+              path = directory / filename
+              assert path.is_file(), f"Missing original icon: {path}"
+              expected = subprocess.check_output(["git", "rev-parse", f"FETCH_HEAD:{path}"], text=True).strip()
+              actual = subprocess.check_output(["git", "hash-object", str(path)], text=True).strip()
+              assert actual == expected, f"Icon differs from original: {path}"
+          print(f"Verified {len(filenames)} exact historical icon files")
+          PY
           git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/AppFrameworkInfo.plist ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings ios/Runner/GoogleService-Info.plist ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift ios/Runner/Runner.entitlements
 
       - name: Install Apple signing credentials
@@ -79,7 +92,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.1.3 --build-number=81
+        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=82
 
       - name: Archive with proven signing settings
         run: |
@@ -92,7 +105,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.3-build81-current-features
+          name: RVAZ-iOS-1.1.4-build82-current-features
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
