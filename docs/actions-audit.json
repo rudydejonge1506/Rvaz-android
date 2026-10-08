@@ -4111,5 +4111,19 @@
         "result": "success"
       }
     ]
+  },
+  "rent_sale_fix": {
+    "description": "Visible Huurwoning/Koopwoning selector at top of editor; preserve existing choice and require new listings to choose",
+    "flutter_run": 37795483938,
+    "flutter_conclusion": "success",
+    "flutter_tests": 15,
+    "live_api_roundtrip": "Temporary draft 17761 saved Huur, updated Koop, then trashed",
+    "android_run": 37795483976,
+    "ios_run": 37795484169,
+    "ios_build": 87,
+    "status": "verified",
+    "android_conclusion": "success",
+    "ios_conclusion": "success",
+    "apple_processing": "VALID"
   }
 }

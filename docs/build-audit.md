@@ -6,7 +6,7 @@ Alle 606 beschikbare runs zijn opgehaald. Voor alle 242 als mislukt geregistreer
 
 - `rvaz-safe-branch-checks.yml`: Flutter-analyse, alle tests, native Wonen en SHA-256-controle van de officiële iconen.
 - `rvaz-android-test.yml`: APK-testbuilds met bestaande identiteit en signing; launcher-PNG's zijn byte-exact uit succesvolle run 37751531090. Alleen artifacts, geen release/tag/publicatie.
-- `ios-current-features-safe.yml`: behoudt het bewezen native iOS-project, gebruikt het officiële RVAZ-icoon, bouwt 1.1.4 (86), met Xcode 26.3 / iOS 26 SDK, valideert en uploadt uitsluitend naar TestFlight; Apple-processing wordt via een read-only API-call gecontroleerd.
+- `ios-current-features-safe.yml`: behoudt het bewezen native iOS-project, gebruikt het officiële RVAZ-icoon, bouwt 1.1.4 (87), met Xcode 26.3 / iOS 26 SDK, valideert en uploadt uitsluitend naar TestFlight; Apple-processing wordt via een read-only API-call gecontroleerd.
 
 `main`, de live Android-app, iOS-build 80 en de publieke App Store-release worden niet gewijzigd. Oude runs worden niet opnieuw uitgevoerd: oude uploads verwijzen naar gesloten versie-trains of kunnen bestaande releasebestanden overschrijven. Historische rode runs worden door nieuwe geslaagde runs opgevolgd; hun historische conclusie wordt niet aangepast.
 
@@ -50,3 +50,7 @@ Een geslaagde compilatie bewijst geen volledige makelaarsbeheerfunctie. De aanvu
 ## Eindstatus
 
 Android native-beheerbuild 37784300802 is geslaagd. TestFlight 1.1.4 (86), run 37784300746 poging 2, is volledig geslaagd en door Apple geldig verwerkt. De aanvullende Wonen API 1.0.0 is live actief en via de ingelogde WordPress-beheerverbinding functioneel gecontroleerd. Op een fysiek toestel is geen gebruikerssessie door de assistent bediend; de echte telefooncontrole blijft bij de gebruiker. Main, live Android-release, iOS-build 80 en publieke App Store-release zijn niet gewijzigd.
+
+## Huur/koop-keuze — vervolg op gebruikerscontrole
+
+Gebruiker bevestigde dat Mijn Wonen werkt, maar miste een duidelijke huur/koop-keuze. De vrije tekstinvoer is vervangen door een keuzelijst bovenaan het formulier: Huurwoning of Koopwoning. Een bestaande keuze wordt ingevuld; een nieuwe woning vereist een expliciete keuze. Analyse en 15 tests geslaagd in run 37795483938. Op de live API is tijdelijk concept 17761 aangemaakt als Huur, gewijzigd naar Koop en opgeruimd in de prullenbak. Android-run 37795483976 en TestFlight-build 87/run 37795484169 zijn geslaagd, inclusief signing, upload en Apple-processing VALID. Geen wijziging aan de API-plugin nodig.
