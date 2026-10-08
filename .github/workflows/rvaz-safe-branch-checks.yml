@@ -1,0 +1,53 @@
+name: RVAZ safe branch checks
+on:
+  push:
+    branches: [ios-current-features-safe]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  flutter-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze Flutter
+        run: flutter analyze --no-fatal-infos
+      - name: Test Flutter
+        run: flutter test
+      - name: Confirm native property pages
+        run: |
+          ! grep -q 'WebViewWidget' lib/wonen.dart
+          grep -q 'WoningDetailPage(item: item)' lib/wonen.dart
+          grep -q "title:const Text('Mijn Wonen'" lib/main.dart
+      - name: Validate local Android launcher asset
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,io,struct,zlib
+          p=Path('assets/rvaz-launcher-icon.png.b64')
+          if not p.is_file(): raise SystemExit('Launcher icon asset missing')
+          data=base64.b64decode(p.read_text().strip(),validate=True)
+          if data[:8]!=bytes.fromhex('89504e470d0a1a0a'): raise SystemExit('Invalid PNG signature')
+          offset=8
+          ended=False
+          while offset<len(data):
+              if offset+12>len(data): raise SystemExit('Truncated PNG chunk')
+              n=struct.unpack('>I',data[offset:offset+4])[0]
+              typ=data[offset+4:offset+8]
+              end=offset+12+n
+              if end>len(data): raise SystemExit('Truncated PNG data')
+              actual=zlib.crc32(data[offset+4:offset+8+n])&0xffffffff
+              expected=struct.unpack('>I',data[offset+8+n:end])[0]
+              if actual!=expected: raise SystemExit('Invalid PNG chunk CRC')
+              offset=end
+              if typ==b'IEND': ended=True;break
+          if not ended or offset!=len(data): raise SystemExit('PNG missing IEND')
+          print('PNG structure verified')
+          PY
