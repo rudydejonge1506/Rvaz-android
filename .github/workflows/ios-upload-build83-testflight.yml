@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   upload-build83:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Download exact successful build 83 IPA
         env:
