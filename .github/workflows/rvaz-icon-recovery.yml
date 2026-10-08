@@ -1,0 +1,72 @@
+name: Recover verified RVAZ icon sources
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['.github/workflows/rvaz-icon-recovery.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover source used by successful Android build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = ios-current-features-safe
+          mkdir -p /tmp/rvaz-existing
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/37751531090 --jq .conclusion)" = success
+          gh run download 37751531090 --repo "$GITHUB_REPOSITORY" --name RVAZ-Android-small-release-APKs --dir /tmp/rvaz-existing
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 90 https://www.regiovoorneaanzee.nl/wp-json/rvaz-app/v1/config -o /tmp/rvaz-config.json
+          ICON_URL=$(python3 -c "import json; print(json.load(open('/tmp/rvaz-config.json'))['app_icon_url'])")
+          test "$ICON_URL" = https://www.regiovoorneaanzee.nl/wp-content/uploads/2024/04/cropped-LogoRegio0181.png
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 90 "$ICON_URL" -o assets/rvaz-android-original.png
+          python3 -m pip install Pillow
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import zipfile, io, json, hashlib
+          source=Path('assets/rvaz-android-original.png')
+          image=Image.open(source); image.load()
+          assert image.width == image.height and image.width >= 192
+          apk=zipfile.ZipFile('/tmp/rvaz-existing/app-arm64-v8a-release.apk')
+          icons=[n for n in apk.namelist() if 'ic_launcher' in n and n.endswith('.png')]
+          assert icons, 'Original Android launcher resources not found'
+          records={}
+          for name in icons:
+              data=apk.read(name)
+              icon=Image.open(io.BytesIO(data)); icon.load()
+              path=Path('android-icon-original') / name
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_bytes(data)
+              records[name]={'sha256':hashlib.sha256(data).hexdigest(),'size':list(icon.size)}
+          Path('assets/icon-provenance.json').write_text(json.dumps({
+              'source_url':'https://www.regiovoorneaanzee.nl/wp-content/uploads/2024/04/cropped-LogoRegio0181.png',
+              'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),
+              'android_run':37751531090,'android_icons':records},indent=2)+'\n')
+          print('Recovered original Android resources:', json.dumps(records))
+          # Replace the corrupt in-app logo with the valid official image.
+          Path('assets/rvaz-logo.png').write_bytes(source.read_bytes())
+          PY
+      - name: Save recovered icons only on development branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/rvaz-android-original.png assets/rvaz-logo.png assets/icon-provenance.json android-icon-original
+          if ! git diff --cached --quiet; then
+            git commit -m 'Recover official RVAZ source and exact successful Android launcher resources'
+            git push origin HEAD:ios-current-features-safe
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RVAZ-original-icons
+          path: |
+            assets/rvaz-android-original.png
+            assets/icon-provenance.json
+            android-icon-original
+          if-no-files-found: error
