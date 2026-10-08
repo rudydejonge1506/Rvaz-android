@@ -24,7 +24,7 @@ Alle 606 beschikbare runs zijn opgehaald. Voor alle 242 als mislukt geregistreer
 | Screenshot-workflows | Onbeschikbaar simulatortype, extern beheerde Python-omgeving, niet-bewerkbare App Store-versie | Geen screenshot-upload uitvoeren: valt buiten de beschermde TestFlight-opdracht; actuele workflow gebruikt dynamische apparaatkeuze en venv |
 | Workflow zonder jobs | Ongeldige eerdere YAML-definities | Actuele YAML-bestanden zijn syntactisch gecontroleerd; vervangende testflows draaien |
 | Geannuleerde macOS-jobs | Runner-annulering vóór uitvoering | Vast `macos-15` gebruiken |
-| Wonen-beheer | Live namespace heeft alleen aanbod en makelaar/me; beheer/foto/aanvraag-routes ontbreken | WPVibe gekoppeld; bron-ZIP gelezen; aanvullende API gebouwd en in tijdelijke WordPress getest. Live activatie van de ZIP is nog vereist. |
+| Wonen-beheer | Live namespace heeft alleen aanbod en makelaar/me; beheer/foto/aanvraag-routes ontbreken | WPVibe gekoppeld; bron-ZIP gelezen; aanvullende API gebouwd en in tijdelijke WordPress getest. Plugin 1.0.0 live actief. Aanbod en ingelogde beheer-API gecontroleerd; tijdelijk concept aangemaakt, gewijzigd en naar prullenbak verplaatst. |
 
 ## Actuele verificatie
 
@@ -34,9 +34,9 @@ Alle 606 beschikbare runs zijn opgehaald. Voor alle 242 als mislukt geregistreer
 - Tests: 13/13 geslaagd; native beheer- en foutmeldingswidgets inbegrepen.
 - Android-build: https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37777250947 — geslaagd, APK signing en pakketidentiteit gecontroleerd. Nieuwe uitgebreide beheerbuild: [37784300802](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300802) — geslaagd: drie gesigneerde ABI-APK's, package-identiteit gecontroleerd.
 - iOS-build 85: [37779023894](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37779023894) — gesigneerde IPA, validatie, upload en Apple-processing `VALID` geslaagd.
-- iOS-build 86 met volledigere native beheerfuncties: [37784300746](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300746) — wacht op macOS-runner.
+- iOS-build 86 met volledigere native beheerfuncties: [37784300746](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300746) — poging 1 door GitHub geannuleerd vóór uitvoering; poging 2 gestart en runner actief.
 
-Een geslaagde compilatie bewijst geen volledige makelaarsbeheerfunctie. De serverroutes en ingelogde beheerhandelingen moeten nog op de live site worden geverifieerd na installatie en activatie van `backend/dist/RVAZ-Wonen-Native-API-1.0.0.zip`. WPVibe kan deze custom plugin-ZIP niet uploaden.
+Een geslaagde compilatie bewijst geen volledige makelaarsbeheerfunctie. De aanvullende plugin is door de gebruiker geïnstalleerd en is live actief. Op 8 oktober zijn aanbod, makelaarstoegang, woningen, statistieken, kantoor, instellingen, abonnement, facturen, PDF en inbox via de live API gecontroleerd. Tijdelijk concept 17760 is opgeslagen en gewijzigd, daarna naar de prullenbak verplaatst; het publieke aanbod is niet gewijzigd. Deze servercontrole gebruikt de ingelogde WordPress-beheerverbinding; de daadwerkelijke app-login op een toestel blijft een aparte controle.
 
 
 ## Aanvullend gecontroleerd tijdens herstel

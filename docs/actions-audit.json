@@ -4060,7 +4060,20 @@
       "run": 37784300811,
       "conclusion": "success",
       "checks": 41,
-      "live_installed": false
+      "live_installed": true,
+      "live_verified": [
+        "public property metadata",
+        "administrator realtor permission",
+        "own listings",
+        "real dashboard counters",
+        "office profile",
+        "settings",
+        "subscription",
+        "invoices",
+        "authenticated PDF",
+        "inbox",
+        "create/update/trash temporary draft 17760"
+      ]
     },
     "android": {
       "run": 37784300802,
@@ -4077,7 +4090,9 @@
     },
     "ios86": {
       "run": 37784300746,
-      "status": "queued"
+      "attempt": 2,
+      "status": "in_progress",
+      "previous_attempt": "cancelled before any build step"
     },
     "additional_failure_fixes": [
       {

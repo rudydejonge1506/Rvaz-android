@@ -23,4 +23,4 @@ WPVibe ondersteunt aangepaste plugin-ZIP-upload niet: bronbestanden buiten een d
 
 WordPress REST- en echte HTTP/multiparttests zijn geslaagd in run [37784300811](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300811). Ze controleren echte WordPress-opslag, eigenaarschap, ingetrokken tokens via de App API, blokkering, limieten, galerij, facturen/PDF, abonnementwijzigingen, opzegging en behoud van historische factuurbedragen. Mail wordt uitsluitend in de tijdelijke CI-installatie onderdrukt.
 
-Dit is nog geen bewijs van installatie op de live site. Daar moeten routes en app-login na activatie opnieuw worden gecontroleerd.
+Plugin 1.0.0 is op 8 oktober 2026 live geactiveerd. De publieke woningkenmerken, ingelogde beheer-GET-routes, factuur-PDF en aanmaken/wijzigen/opruimen van een tijdelijk concept zijn via WPVibe gecontroleerd. Een controle met de ingelogde WordPress-beheerverbinding vervangt geen controle met een app-token op een toestel.
