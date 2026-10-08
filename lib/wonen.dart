@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const wonenApi = 'https://regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
 
@@ -153,6 +154,26 @@ class WoningDetailPage extends StatelessWidget {
             if (wonenText(item, key).isNotEmpty)
               ListTile(title: Text(key), trailing: Text(wonenText(item, key))),
           Text(wonenText(item, 'description')),
+          const SizedBox(height: 16),
+          if (wonenText(item, 'url').startsWith('https://'))
+            FilledButton.icon(
+              onPressed: () async {
+                final uri = Uri.tryParse(wonenText(item, 'url'));
+                if (uri == null || uri.scheme != 'https' ||
+                    uri.host != 'regiovoorneaanzee.nl') return;
+                final opened = await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!opened && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Woningpagina openen mislukt')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.mail_outline),
+              label: const Text('Contact opnemen met de makelaar'),
+            ),
         ],
       ),
     );
