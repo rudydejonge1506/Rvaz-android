@@ -1,0 +1,135 @@
+name: RVAZ Android development test APK
+# Trigger Google Play build 2026-10-01
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['lib/**', 'test/**', 'assets/**', 'android-icon-original/**', 'scripts/**', 'pubspec.yaml', '.github/workflows/rvaz-android-test.yml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android project
+        run: flutter create --platforms=android --org nl.regiovoorneaanzee --project-name rvaz_android .
+      - name: Configure Firebase Android
+        run: |
+          cp firebase/google-services.json android/app/google-services.json
+          python3 - <<'PY'
+          from pathlib import Path
+          settings = Path('android/settings.gradle.kts')
+          s = settings.read_text()
+          needle = 'plugins {'
+          s = s.replace(needle, needle + '\n    id("com.google.gms.google-services") version "4.4.4" apply false', 1)
+          settings.write_text(s)
+          app = Path('android/app/build.gradle.kts')
+          a = app.read_text()
+          a = a.replace('plugins {', 'plugins {\n    id("com.google.gms.google-services")', 1)
+          app.write_text(a)
+          PY
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
+      - name: Get packages
+        run: flutter pub get
+      - name: Preserve exact original Android launcher resources
+        run: |
+          python3 scripts/verify_icons.py
+          cp -R android-icon-original/res/. android/app/src/main/res/
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+      - name: Run all Flutter tests
+        run: flutter test
+      - name: Configure RVAZ app identity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          m = manifest.read_text()
+          m = m.replace('android:label="rvaz_android"', 'android:label="Regio Voorne aan Zee"')
+          permission = '<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
+          if permission not in m:
+              m = m.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">', '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\\n    ' + permission, 1)
+          ad_id_permission = '<uses-permission android:name="com.google.android.gms.permission.AD_ID"/>'
+          if ad_id_permission not in m:
+              m = m.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">', '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\\n    ' + ad_id_permission, 1)
+          app_link = '''<intent-filter android:autoVerify="true">
+              <action android:name="android.intent.action.VIEW"/>
+              <category android:name="android.intent.category.DEFAULT"/>
+              <category android:name="android.intent.category.BROWSABLE"/>
+              <data android:scheme="https" android:host="regiovoorneaanzee.nl" android:pathPrefix="/voucher-inwisselen"/>
+          </intent-filter>'''
+          if 'android:pathPrefix="/voucher-inwisselen"' not in m:
+              m = m.replace('</activity>', app_link + '\n        </activity>', 1)
+          calendar_query = '<queries><intent><action android:name="android.intent.action.INSERT"/><data android:mimeType="vnd.android.cursor.item/event"/></intent></queries>'
+          if 'vnd.android.cursor.item/event' not in m:
+              m = m.replace('<application', calendar_query + '\n    <application', 1)
+          meta = '<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1599023671130671~2667109012"/>'
+          if 'com.google.android.gms.ads.APPLICATION_ID' not in m:
+              close = m.find('>', m.find('<application'))
+              m = m[:close+1] + '\n        ' + meta + m[close+1:]
+          manifest.write_text(m)
+          PY
+      - name: Configure Google Play release signing
+        env:
+          RVAZ_KEYSTORE_BASE64: ${{ secrets.RVAZ_KEYSTORE_BASE64 }}
+          RVAZ_KEYSTORE_PASSWORD: ${{ secrets.RVAZ_KEYSTORE_PASSWORD }}
+          RVAZ_KEY_PASSWORD: ${{ secrets.RVAZ_KEY_PASSWORD }}
+        run: |
+          test -n "$RVAZ_KEYSTORE_BASE64" || { echo "RVAZ_KEYSTORE_BASE64 ontbreekt"; exit 1; }
+          test -n "$RVAZ_KEYSTORE_PASSWORD" || { echo "RVAZ_KEYSTORE_PASSWORD ontbreekt"; exit 1; }
+          test -n "$RVAZ_KEY_PASSWORD" || { echo "RVAZ_KEY_PASSWORD ontbreekt"; exit 1; }
+          printf '%s' "$RVAZ_KEYSTORE_BASE64" | base64 --decode > android/app/rvaz-upload.jks
+          keytool -list -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" >/dev/null
+          DETECTED_ALIAS=$(keytool -list -v -keystore android/app/rvaz-upload.jks -storepass "$RVAZ_KEYSTORE_PASSWORD" 2>/dev/null | sed -n 's/^Alias name: //p' | head -1)
+          test -n "$DETECTED_ALIAS" || { echo "Geen sleutelalias gevonden"; exit 1; }
+          printf '%s\n' "storePassword=$RVAZ_KEYSTORE_PASSWORD" "keyPassword=$RVAZ_KEY_PASSWORD" "keyAlias=$DETECTED_ALIAS" "storeFile=rvaz-upload.jks" > android/key.properties
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle.kts')
+          s = p.read_text()
+          if 'java.util.Properties' not in s:
+              s = 'import java.util.Properties\nimport java.io.FileInputStream\n\n' + s
+          setup = 'val keystoreProperties = Properties()\nval keystorePropertiesFile = rootProject.file("key.properties")\nkeystoreProperties.load(FileInputStream(keystorePropertiesFile))\n\n'
+          if 'val keystoreProperties = Properties()' not in s:
+              s = s.replace('android {', setup + 'android {', 1)
+          if 'create("release")' not in s:
+              signing = '    signingConfigs {\n        create("release") {\n            keyAlias = keystoreProperties["keyAlias"] as String\n            keyPassword = keystoreProperties["keyPassword"] as String\n            storeFile = file(keystoreProperties["storeFile"] as String)\n            storePassword = keystoreProperties["storePassword"] as String\n        }\n    }\n'
+              s = s.replace('    buildTypes {', signing + '    buildTypes {', 1)
+          s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+          # Release build 42 crashes before Flutter starts in WorkManager/Room after R8
+          # obfuscation. Keep the release code intact and disable shrinking/minification.
+          release_marker = '        release {'
+          if release_marker in s:
+              s = s.replace(release_marker, release_marker + '\n            isMinifyEnabled = false\n            isShrinkResources = false', 1)
+          else:
+              raise SystemExit('Release build type not found; refusing broad Gradle changes')
+          p.write_text(s)
+          PY
+      - name: Build signed release APKs per architecture
+        run: flutter build apk --release --split-per-abi
+      - name: Verify release signatures
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          for APK in build/app/outputs/flutter-apk/app-*-release.apk; do
+            "$APKSIGNER" verify --verbose --print-certs "$APK"
+          done
+          echo "Release APKs en AAB zijn ondertekend."
+      - name: Verify APK package
+        run: |
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
+          for APK in build/app/outputs/flutter-apk/app-*-release.apk; do
+            "$AAPT" dump badging "$APK" | grep "package: name='nl.regiovoorneaanzee.rvaz_android'"
+            "$AAPT" dump badging "$APK" | grep "application-label:'Regio Voorne aan Zee'"
+          done
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RVAZ-Android-development-test-APKs
+          path: build/app/outputs/flutter-apk/app-*-release.apk
+          if-no-files-found: error

@@ -1,7 +1,32 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rvaz_android/wonen.dart';
 
 void main() {
+  test('leest het woningblok binnen het nieuwsartikel van de live website', () {
+    final html = File('test/fixtures/woning-website.html').readAsStringSync();
+    final result = mergeWoningWebsiteData({'title': 'Nieuwe woning',
+      'id': {'ID': 17634}, 'prijs': false}, html);
+    expect(wonenText(result, 'id'), '17634');
+    expect(result['adres'], 'Vogelgaarde');
+    expect(result['postcode'], '3235SJ');
+    expect(result['plaats'], 'Rockanje');
+    expect(result['prijs'], '1.299 p/m');
+    expect(result['woonoppervlak'], '120 m²');
+    expect(result['perceel'], '100 m²');
+    expect(result['kamers'], '1');
+    expect(result['slaapkamers'], '4');
+    expect(result['badkamers'], '1');
+    expect(result['energielabel'], 'A++++');
+    expect(result['tuin'], 'Ja');
+    expect(result['balkon'], 'Nee');
+    expect(result['inkomenseisen'], '- Salarisstroken');
+    expect(result['description'], 'Test');
+    expect(result['makelaar_naam'], 'Test Makelaardij');
+    expect(result['photos'], hasLength(1));
+    expect(wonenArea(wonenText(result, 'woonoppervlak')), '120 m²');
+    expect(wonenArea('80'), '80 m²');
+  });
   test('vult echte kenmerken van woningwebsite aan zonder WebView', () {
     const html = '''
     <main><article>

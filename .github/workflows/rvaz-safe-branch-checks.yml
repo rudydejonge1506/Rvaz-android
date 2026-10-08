@@ -25,39 +25,5 @@ jobs:
           ! grep -q 'WebViewWidget' lib/wonen.dart
           grep -q 'WoningDetailPage(item: item)' lib/wonen.dart
           grep -q "title:const Text('Mijn Wonen'" lib/main.dart
-      - name: Validate original local Android launcher image
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import base64,struct,zlib
-          original=Path('assets/rvaz-android-original.png')
-          legacy=Path('assets/rvaz-launcher-icon.png.b64')
-          if original.is_file():
-              data=original.read_bytes()
-              print('Checking installed original RVAZ logo')
-          elif legacy.is_file():
-              data=base64.b64decode(legacy.read_text().strip(),validate=True)
-              print('Checking legacy RVAZ icon; original image not installed yet')
-          else:
-              raise SystemExit('RVAZ icon source not found')
-          if data[:8] != bytes.fromhex('89504e470d0a1a0a'):
-              raise SystemExit('Invalid PNG signature')
-          offset=8
-          seen_iend=False
-          while offset<len(data):
-              if offset+12>len(data):raise SystemExit('Truncated PNG chunk header')
-              n=struct.unpack('>I',data[offset:offset+4])[0]
-              end=offset+n+12
-              if end>len(data):raise SystemExit('Truncated PNG data')
-              chunk=data[offset+4:offset+8+n]
-              crc=struct.unpack('>I',data[offset+8+n:end])[0]
-              if (zlib.crc32(chunk)&0xffffffff)!=crc:
-                  raise SystemExit('Invalid PNG CRC')
-              if chunk[:4]==b'IEND':seen_iend=True
-              offset=end
-              if seen_iend:break
-          if not seen_iend or offset!=len(data):
-              raise SystemExit('Incomplete PNG')
-          print('Valid original RVAZ PNG')
-          PY
+      - name: Verify exact RVAZ icon assets
+        run: python3 scripts/verify_icons.py

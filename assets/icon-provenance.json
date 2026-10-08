@@ -38,5 +38,22 @@
         192
       ]
     }
+  },
+  "ios_icons": {
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": "fb86e759630bc27495337c24d09a1e4123721a711456b1728ac7483e0a905444",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": "14dd375ec89a89d7c7aa55f887d71df6efdd829915fb0e5fd7111aec48ba0e65",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": "afcf41099c178746847c5377dd6d42bdf43e86b84bec3c9364ee7d4d2630ecd0",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": "5728424b007fdda325d7602b1a06d8f881a16a55f30fe47f475452437fb82d36",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": "3fec00f914fb3e85f25e1b076fe1bd94ecd42f951296502abeb56aee43dbf22a",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": "854e6fa09781a2987c4339306db73533650164d91dd4b3bf5d72e21f7b89491c",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": "fa9467b0696eb8decb169061aaef141d63ce3fd2f273a98f9be44e8dc1bdc840",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": "fa9467b0696eb8decb169061aaef141d63ce3fd2f273a98f9be44e8dc1bdc840",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": "a3bbeb00f447cabbe731b8a30db60f744b51cc538ed4953e3a8d57fd89f97999",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": "05bc0c3d0c355d6c3c54c72f118f677fd2aedafb3b9a2990a1256d9c0b138f7c",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": "fb86e759630bc27495337c24d09a1e4123721a711456b1728ac7483e0a905444",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": "5d41d0d9f13a77e57cb2d9a74faf01b4ec367ba8b776b3b85989a3d190773dde",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": "b8ff2b31411eaa80744ee85ba7ea33801bdacb9e47be2501666297849ecda066",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "1eec88cc46930429fff9bbff1a88bccd8091348ca98b9ec88a2dbe289afbb6ea",
+    "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "59f4f64447fb5c60e3a7fdb3a5df14b9e21900a23e3dc10c43d2f25f59c26794"
   }
 }

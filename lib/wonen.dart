@@ -1,9 +1,10 @@
-import 'package:html/parser.dart' as htmlParser;
+import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const wonenApi = 'https://regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
 
@@ -27,9 +28,20 @@ Future<dynamic> wonenRequest(String path, {Map<String, dynamic>? body}) async {
       : http.post(uri, headers: headers, body: jsonEncode(body)))
       .timeout(const Duration(seconds: 20));
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw Exception('Wonen API HTTP ${response.statusCode}');
+    String message;
+    if (response.statusCode == 401) {
+      message = 'Log opnieuw in via Mijn RVAZ.';
+    } else if (response.statusCode == 403) {
+      message = 'Dit account heeft geen makelaarstoegang.';
+    } else if (response.statusCode == 404) {
+      message = 'Deze beheerfunctie is nog niet beschikbaar. Probeer later opnieuw.';
+    } else {
+      message = 'De woninggegevens konden niet worden geladen. Probeer opnieuw.';
+    }
+    throw Exception(message);
   }
-  return jsonDecode(response.body);
+  if (response.body.trim().isEmpty) return <String, dynamic>{};
+  return jsonDecode(utf8.decode(response.bodyBytes));
 }
 
 List<Map<String, dynamic>> wonenItems(dynamic data) {
@@ -41,13 +53,17 @@ List<Map<String, dynamic>> wonenItems(dynamic data) {
 }
 
 String wonenText(Map<String, dynamic> item, String key) {
-  final value = item[key];
+  var value = item[key];
+  if (key == 'id' && value is Map) value = value['ID'] ?? value['id'];
   if (value == null || value is bool) return '';
   final text = value.toString().trim();
   return text.toLowerCase() == 'false' || text.toLowerCase() == 'null'
       ? ''
       : text;
 }
+
+String wonenArea(String value) => value.contains('m²') || value.isEmpty
+    ? value : '$value m²';
 
 // Gebruik de echte woningweergave van de website zolang de publieke API
 // ingevulde woningvelden ten onrechte als false teruggeeft.
@@ -76,16 +92,20 @@ const _websiteFacts = <String, String>{
 Map<String, dynamic> mergeWoningWebsiteData(
   Map<String, dynamic> original, String htmlSource,
 ) {
-  final doc = htmlParser.parse(htmlSource);
-  final main = doc.querySelector('main article') ??
+  final doc = html_parser.parse(htmlSource);
+  final property = doc.querySelector('.rvw-property');
+  final main = property ?? doc.querySelector('main article') ??
       doc.querySelector('article') ?? doc.querySelector('main');
   if (main == null) return Map<String, dynamic>.from(original);
   final item = Map<String, dynamic>.from(original);
-  final heading = main.querySelector('h1')?.text.trim() ?? '';
+  final heading = (main.querySelector('.rvw-property-top h1') ??
+      main.querySelector('h1'))?.text.trim() ?? '';
   if (heading.isNotEmpty) item['adres'] = heading;
   // De HTML-parser plakt soms tekst van opeenvolgende tags aan elkaar.
   // Scheid de paragrafen zodat postcode en plaats betrouwbaar herkenbaar zijn.
-  final headerText = main.querySelectorAll('h1, p')
+  final headerText = main.querySelectorAll(
+      property != null
+          ? '.rvw-property-location, .rvw-property-price' : 'h1, p')
       .map((node) => node.text.trim())
       .where((value) => value.isNotEmpty)
       .join(' ');
@@ -100,23 +120,47 @@ Map<String, dynamic> mergeWoningWebsiteData(
       caseSensitive: false).firstMatch(headerText);
   if (price != null) item['prijs'] = price.group(1)!.trim();
 
-  final facts = main.querySelectorAll('section').where((node) =>
-      node.querySelector('h2')?.text.trim().toLowerCase() == 'kenmerken');
-  if (facts.isNotEmpty) {
-    final factText = facts.first.text.replaceAll(RegExp(r'\s+'), ' ');
-    final names = _websiteFacts.keys.toList();
-    final matches = RegExp(
-      names.map(RegExp.escape).join('|'), caseSensitive: false,
-    ).allMatches(factText).toList();
-    for (var i = 0; i < matches.length; i++) {
-      final match = matches[i];
-      final label = names.firstWhere((name) =>
-          name.toLowerCase() == match.group(0)!.toLowerCase());
-      final end = i + 1 < matches.length
-          ? matches[i + 1].start : factText.length;
-      final value = factText.substring(match.end, end).trim();
-      if (value.isNotEmpty) item[_websiteFacts[label]!] = value;
+  final rows = main.querySelectorAll('.rvw-spec-row');
+  if (rows.isNotEmpty) {
+    for (final row in rows) {
+      final label = row.querySelector('.rvw-spec-label')?.text.trim();
+      final value = row.querySelector('.rvw-spec-value')?.text.trim() ?? '';
+      final key = _websiteFacts[label];
+      if (key != null && value.isNotEmpty) item[key] = value;
     }
+  } else {
+    final facts = main.querySelectorAll('section').where((node) =>
+        node.querySelector('h2')?.text.trim().toLowerCase() == 'kenmerken');
+    if (facts.isNotEmpty) {
+      final factText = facts.first.text.replaceAll(RegExp(r'\s+'), ' ');
+      final names = _websiteFacts.keys.toList();
+      final matches = RegExp(names.map(RegExp.escape).join('|'),
+          caseSensitive: false).allMatches(factText).toList();
+      for (var i = 0; i < matches.length; i++) {
+        final match = matches[i];
+        final label = names.firstWhere((name) =>
+            name.toLowerCase() == match.group(0)!.toLowerCase());
+        final end = i + 1 < matches.length
+            ? matches[i + 1].start : factText.length;
+        final value = factText.substring(match.end, end).trim();
+        if (value.isNotEmpty) item[_websiteFacts[label]!] = value;
+      }
+    }
+  }
+  final description = main.querySelector('.rvw-description');
+  if (description != null) item['description'] = description.text.trim();
+  final photos = main.querySelectorAll('.rvw-property-gallery img')
+      .map((image) => image.attributes['src'] ?? '')
+      .where((url) => Uri.tryParse(url)?.scheme == 'https').toSet().toList();
+  if (photos.isNotEmpty) {
+    item['image'] = photos.first;
+    item['photos'] = photos;
+  }
+  final agent = main.querySelector('.rvw-agent-card');
+  if (agent != null) {
+    item['makelaar_naam'] = agent.querySelector('.rvw-agent-name')?.text.trim();
+    item['makelaar_telefoon'] = agent.querySelector('.rvw-agent-meta')?.text.trim();
+    item['makelaar_url'] = agent.querySelector('.rvw-agent-link')?.attributes['href'];
   }
   return item;
 }
@@ -228,7 +272,7 @@ class _WonenPageState extends State<WonenPage> {
                   final price = wonenText(item, 'prijs');
                   final details = [
                     if (wonenText(item, 'woonoppervlak').isNotEmpty)
-                      '${wonenText(item, 'woonoppervlak')} m² wonen',
+                      '${wonenArea(wonenText(item, 'woonoppervlak'))} wonen',
                     if (wonenText(item, 'kamers').isNotEmpty)
                       '${wonenText(item, 'kamers')} kamers',
                     if (wonenText(item, 'energielabel').isNotEmpty)
@@ -273,6 +317,9 @@ class WoningDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final image = wonenText(item, 'image');
+    final photos = item['photos'] is List
+        ? (item['photos'] as List).whereType<String>().toList()
+        : <String>[];
     final address = wonenText(item, 'adres');
     final title = address.isNotEmpty ? address : wonenText(item, 'title');
     final location = [wonenText(item, 'postcode'),
@@ -298,6 +345,14 @@ class WoningDetailPage extends StatelessWidget {
             errorBuilder: (_, __, ___) =>
               const SizedBox(height: 120,
                 child: Center(child: Icon(Icons.home_outlined))))),
+        if (photos.length > 1) SizedBox(height: 110, child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [for (final photo in photos) Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Image.network(photo, width: 150, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
+          )],
+        )),
         const SizedBox(height: 12),
         Text(title, style: Theme.of(context).textTheme.headlineSmall),
         if (location.isNotEmpty) Text(location),
@@ -320,8 +375,23 @@ class WoningDetailPage extends StatelessWidget {
                 child: Text(wonenText(item, entry.key),
                   textAlign: TextAlign.end))),
         const SizedBox(height: 12),
-        const Text('Meer informatie of contact met de makelaar is momenteel '
-          'alleen beschikbaar wanneer de makelaars-API dit ondersteunt.'),
+        if (wonenText(item, 'makelaar_naam').isNotEmpty)
+          ListTile(contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.real_estate_agent_outlined),
+            title: Text(wonenText(item, 'makelaar_naam')),
+            subtitle: Text(wonenText(item, 'makelaar_telefoon'))),
+        if (wonenText(item, 'makelaar_url').isNotEmpty)
+          OutlinedButton.icon(icon: const Icon(Icons.open_in_new),
+            label: const Text('Website makelaar'),
+            onPressed: () async {
+              final uri = Uri.tryParse(wonenText(item, 'makelaar_url'));
+              if (uri == null || !['http', 'https'].contains(uri.scheme)) return;
+              final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (!opened && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('De makelaarswebsite kon niet worden geopend.')));
+              }
+            }),
       ]),
     );
   }
@@ -433,7 +503,9 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       for (final key in [
         'title', 'description', 'adres', 'postcode', 'plaats', 'prijs',
         'transactie', 'woningtype', 'kamers', 'slaapkamers',
-        'woonoppervlak', 'energielabel'
+        'woonoppervlak', 'energielabel', 'status', 'bouwjaar', 'perceel',
+        'badkamers', 'tuin', 'balkon', 'garage', 'aanvaarding', 'borg',
+        'contractduur', 'inkomenseisen', 'prijstype', 'makelaar_url'
       ])
         key: TextEditingController(text: wonenText(item, key)),
     };
@@ -487,7 +559,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       return;
     }
     final photo = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (photo == null) return;
+    if (photo == null || !mounted) return;
     setState(() => busy = true);
     try {
       final request = http.MultipartRequest(
@@ -497,7 +569,8 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       request.headers.addAll(await wonenHeaders());
       request.headers.remove('Content-Type');
       request.files.add(await http.MultipartFile.fromPath('photo', photo.path));
-      final response = await request.send();
+      final response = await request.send().timeout(const Duration(seconds: 60));
+      await response.stream.drain<void>().timeout(const Duration(seconds: 20));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Upload HTTP ${response.statusCode}');
       }

@@ -1,6 +1,9 @@
-name: Build RVAZ iOS current Android features
+name: RVAZ iOS build85 and TestFlight only
 
 on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['lib/**', 'test/**', 'assets/**', 'ios/**', 'scripts/**', 'pubspec.yaml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
 
 permissions:
@@ -8,7 +11,7 @@ permissions:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-15
     env:
       BUNDLE_ID: nl.regiovoorneaanzee.app
     steps:
@@ -27,11 +30,15 @@ jobs:
       - name: Verify current shared Flutter app
         run: flutter analyze --no-fatal-infos
 
+      - name: Run all Flutter tests
+        run: flutter test
+
       - name: Verify proven native iOS identity
         run: |
           set -euo pipefail
           test -f ios/Runner.xcodeproj/project.pbxproj
-          test -f ios/Runner/Info.plist ios/Runner/GoogleService-Info.plist
+          test -f ios/Runner/Info.plist
+          test -f ios/Runner/GoogleService-Info.plist
           test -f ios/Runner/AppDelegate.swift
           test -f ios/Runner/Runner-Bridging-Header.h
           test -f ios/Runner/SceneDelegate.swift
@@ -39,19 +46,7 @@ jobs:
           grep -q 'nl.regiovoorneaanzee.app' ios/Runner.xcodeproj/project.pbxproj
           git fetch --no-tags origin e7bc87ea017399ef7db76b1f43de7dd8e8ed9494
           test "$(git rev-parse FETCH_HEAD)" = "e7bc87ea017399ef7db76b1f43de7dd8e8ed9494"
-          python3 - <<'PY'
-          import json, pathlib, subprocess
-          directory = pathlib.Path("ios/Runner/Assets.xcassets/AppIcon.appiconset")
-          data = json.loads((directory / "Contents.json").read_text())
-          filenames = sorted({item["filename"] for item in data["images"] if item.get("filename")})
-          for filename in filenames:
-              path = directory / filename
-              assert path.is_file(), f"Missing original icon: {path}"
-              expected = subprocess.check_output(["git", "rev-parse", f"FETCH_HEAD:{path}"], text=True).strip()
-              actual = subprocess.check_output(["git", "hash-object", str(path)], text=True).strip()
-              assert actual == expected, f"Icon differs from original: {path}"
-          print(f"Verified {len(filenames)} exact historical icon files")
-          PY
+          python3 scripts/verify_icons.py
           git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/AppFrameworkInfo.plist ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings ios/Runner/GoogleService-Info.plist ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift ios/Runner/Runner.entitlements
 
       - name: Install Apple signing credentials
@@ -91,7 +86,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=82
+        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=85
 
       - name: Archive with proven signing settings
         run: |
@@ -104,7 +99,54 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.4-build82-current-features
+          name: RVAZ-iOS-1.1.4-build85-native-wonen
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: Verify signed IPA identity
+        run: |
+          python3 - <<'PY'
+          import glob, zipfile, plistlib
+          ipa=glob.glob('build/ios/ipa/*.ipa')
+          assert len(ipa)==1
+          with zipfile.ZipFile(ipa[0]) as z:
+              names=[n for n in z.namelist() if n.startswith('Payload/') and n.count('/')==2 and n.endswith('/Info.plist')]
+              assert len(names)==1
+              info=plistlib.loads(z.read(names[0]))
+              assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
+              assert info['CFBundleVersion']=='85'
+              assert info['CFBundleShortVersionString']=='1.1.4'
+              assert info.get('CFBundleIcons'), 'Compiled app icons missing'
+          PY
+
+      - name: Validate and upload build 85 to TestFlight only
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$API_KEY_P8"
+          test -n "$API_KEY_ID"
+          test -n "$API_ISSUER_ID"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          printf '%s\n' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          IPA=$(find build/ios/ipa -name '*.ipa' -print -quit)
+          xcrun altool --validate-app -f "$IPA" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+          xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+
+      - name: Verify Apple finished TestFlight processing
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography --break-system-packages
+          python3 scripts/verify_testflight.py
+
+      - name: Clean signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
