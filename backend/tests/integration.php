@@ -1,0 +1,51 @@
+<?php
+// Executed exclusively against the disposable CI WordPress database.
+if(!defined('ABSPATH'))exit;
+add_filter('pre_wp_mail',function(){return true;});
+function check($condition,$name){if(!$condition)throw new RuntimeException($name);echo "PASS: $name\n";}
+function call_api($method,$path,$body=[],$uid=0,$token=''){
+ wp_set_current_user($uid);$r=new WP_REST_Request($method,'/rvaz-wonen/v1'.$path);if($body)$r->set_body_params($body);if($token)$r->set_header('authorization','Bearer '.$token);return rest_do_request($r);
+}
+$agent=wp_create_user('agent-a','test-only-password','agent-a@example.invalid');$other=wp_create_user('agent-b','test-only-password','agent-b@example.invalid');$regular=wp_create_user('regular','test-only-password','regular@example.invalid');
+(new WP_User($agent))->set_role(RVAZ_Wonen::ROLE);(new WP_User($other))->set_role(RVAZ_Wonen::ROLE);
+$server=rest_get_server();
+register_rest_route('rvaz-app/v1','/me',['methods'=>'GET','permission_callback'=>'__return_true','callback'=>function($r)use($agent){if($r->get_header('authorization')!=='Bearer VALID_APP_TOKEN')return new WP_Error('revoked','Invalid or revoked',['status'=>401]);return ['user'=>['id'=>$agent]];}],true);
+check(call_api('GET','/makelaar/woningen')->get_status()===401,'anonymous denied');
+check(call_api('GET','/makelaar/woningen',[],0,'EXPIRED_TOKEN')->get_status()===401,'revoked app token denied by existing App API');
+check(call_api('GET','/makelaar/woningen',[],0,'VALID_APP_TOKEN')->get_status()===200,'valid App API account bridges to Wonen');
+check(call_api('GET','/makelaar/woningen',[],$regular)->get_status()===403,'ordinary user cannot manage property');
+check(call_api('GET','/makelaar/me',[],1)->get_data()['makelaar']===true,'administrator has realtor access');
+update_user_meta($agent,'rvaz_wonen_blocked','1');check(call_api('GET','/makelaar/woningen',[],$agent)->get_status()===403,'blocked realtor denied');delete_user_meta($agent,'rvaz_wonen_blocked');
+$before=count(get_posts(['post_type'=>RVAZ_Wonen::TYPE,'post_status'=>'any','numberposts'=>-1]));
+check(call_api('POST','/makelaar/woningen',['publication_status'=>'invalid'],$agent)->get_status()===400,'invalid publication rejected');
+check(call_api('POST','/makelaar/woningen',['publication_status'=>'publish'],$agent)->get_status()===403,'publish without active subscription denied');
+check(count(get_posts(['post_type'=>RVAZ_Wonen::TYPE,'post_status'=>'any','numberposts'=>-1]))===$before,'failed create does not leave orphan draft');
+$res=call_api('POST','/makelaar/woningen',['title'=>'Nieuwe woning','adres'=>'Vogelgaarde','postcode'=>'3235SJ','plaats'=>'Rockanje','woonoppervlak'=>'120','energielabel'=>'A++++'],$agent);check($res->get_status()===200,'create draft');$id=$res->get_data()['id'];
+check(is_int($id)&&$id>0,'serializer returns integer property ID');
+check(call_api('POST',"/makelaar/woningen/$id",['prijs'=>'1'],$other)->get_status()===403,'another realtor cannot edit');
+check(call_api('POST',"/makelaar/woningen/$id/fotos",[],$other)->get_status()===403,'another realtor cannot upload photo');
+check(call_api('POST',"/makelaar/woningen/$id/fotos",[],$agent)->get_status()===400,'missing upload rejected');
+check(call_api('POST',"/makelaar/woningen/$id/galerij",['photo_ids'=>[999]],$agent)->get_status()===403,'foreign attachment denied');
+global $wpdb;$wpdb->insert($wpdb->prefix.'rvaz_wonen_subscriptions',['user_id'=>$agent,'plan'=>'basis','status'=>'active','start_date'=>'2026-10-08']);
+$res=call_api('POST',"/makelaar/woningen/$id",['publication_status'=>'publish'],$agent);check($res->get_status()===200,'publish with active subscription');
+$public=call_api('GET','/woningen')->get_data();check(count($public)===1&&$public[0]['adres']==='Vogelgaarde'&&$public[0]['woonoppervlak']==='120','public API returns real property metadata instead of WP_Post false values');
+check(!array_key_exists('photos',$public[0])&&!array_key_exists('views',$public[0]),'public API excludes management fields');
+update_user_meta($agent,'rvaz_wonen_limit_override',1);check(call_api('POST','/makelaar/woningen',['publication_status'=>'publish'],$agent)->get_status()===403,'per-realtor publication limit enforced');
+check(call_api('POST','/makelaar/kantoor',['office_name'=>'Test kantoor','phone'=>'0612345678'],$agent)->get_data()['office_name']==='Test kantoor','office round trip');
+$public=call_api('GET','/woningen')->get_data();check($public[0]['makelaar_naam']==='Test kantoor','public broker profile reflects website metadata');
+check(call_api('POST','/makelaar/instellingen',['contact_email'=>'wrong'],$agent)->get_status()===400,'invalid contact email denied');
+check(call_api('POST','/makelaar/instellingen',['contact_email'=>'realtor@example.invalid','email_notifications'=>true],$agent)->get_data()['email_notifications']===true,'notification settings round trip');
+$wpdb->insert($wpdb->prefix.'rvaz_wonen_messages',['property_id'=>$id,'agent_user_id'=>$agent,'name'=>'Synthetic visitor','email'=>'visitor@example.invalid','phone'=>'','message'=>'CI test only','status'=>'new','created'=>current_time('mysql')]);$message=$wpdb->insert_id;
+check(call_api('POST',"/makelaar/aanvragen/$message",['action'=>'read'],$other)->get_status()===403,'private message protected');
+check(call_api('POST',"/makelaar/aanvragen/$message",['action'=>'read'],$agent)->get_status()===200,'mark message read');
+check(call_api('GET','/makelaar/aanvragen',[],$agent)->get_data()[0]['status']==='read','inbox mutation persisted');
+check(call_api('POST','/makelaar/abonnement',['plan'=>'plus','confirm'=>true,'expected_price'=>'1'],$agent)->get_status()===409,'stale subscription price cannot create charge');
+check(call_api('POST',"/makelaar/woningen/$id/promotie",['confirm'=>true,'expected_price'=>'29.00'],$agent)->get_status()===200,'confirmed promotion request');
+check(call_api('GET','/makelaar/dashboard',[],$agent)->get_data()['published']===1,'dashboard uses actual publication count');
+$wpdb->insert($wpdb->prefix.'rvaz_wonen_invoices',['user_id'=>$agent,'invoice_no'=>'PROTECTED-OLD','period'=>'old','subtotal'=>100,'vat'=>21,'total'=>121,'status'=>'paid']);
+RVAZ_Wonen_Native_API::install();$invoice=$wpdb->get_row("SELECT * FROM {$wpdb->prefix}rvaz_wonen_invoices WHERE invoice_no='PROTECTED-OLD'");check($invoice&&(float)$invoice->total===121.0&&(float)$invoice->vat===21.0,'schema upgrade preserves historical invoices');
+check(call_api('POST','/makelaar/abonnement/opzeggen',['confirm'=>true],$agent)->get_data()['subscription']['status']==='cancelled','confirmed cancellation');check(get_post_status($id)==='draft','cancellation makes listings inactive');
+check(call_api('POST',"/makelaar/woningen/$id/verwijderen",['confirm'=>true],$agent)->get_status()===200&&get_post_status($id)==='trash','property deletion uses recoverable trash');
+check(call_api('POST','/makelaar/aanmelden',['office'=>'Office','contact_name'=>'Agent','phone'=>'0612345678','plan'=>'basis','expected_price'=>'49','confirm'=>true],$regular)->get_status()===200,'regular account can request reviewed realtor application');
+check(!in_array(RVAZ_Wonen::ROLE,(new WP_User($regular))->roles,true),'application does not self-grant realtor role');
+echo "All WordPress integration checks passed.\n";
