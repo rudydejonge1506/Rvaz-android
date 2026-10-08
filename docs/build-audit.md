@@ -34,7 +34,7 @@ Alle 606 beschikbare runs zijn opgehaald. Voor alle 242 als mislukt geregistreer
 - Tests: 13/13 geslaagd; native beheer- en foutmeldingswidgets inbegrepen.
 - Android-build: https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37777250947 — geslaagd, APK signing en pakketidentiteit gecontroleerd. Nieuwe uitgebreide beheerbuild: [37784300802](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300802) — geslaagd: drie gesigneerde ABI-APK's, package-identiteit gecontroleerd.
 - iOS-build 85: [37779023894](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37779023894) — gesigneerde IPA, validatie, upload en Apple-processing `VALID` geslaagd.
-- iOS-build 86 met volledigere native beheerfuncties: [37784300746](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300746) — poging 1 door GitHub geannuleerd vóór uitvoering; poging 2 gestart en runner actief.
+- iOS-build 86 met volledigere native beheerfuncties: [37784300746](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300746) — poging 1 door GitHub geannuleerd vóór uitvoering; poging 2 volledig geslaagd: analyse/tests, signing, IPA, validatie, upload en Apple-processing VALID.
 
 Een geslaagde compilatie bewijst geen volledige makelaarsbeheerfunctie. De aanvullende plugin is door de gebruiker geïnstalleerd en is live actief. Op 8 oktober zijn aanbod, makelaarstoegang, woningen, statistieken, kantoor, instellingen, abonnement, facturen, PDF en inbox via de live API gecontroleerd. Tijdelijk concept 17760 is opgeslagen en gewijzigd, daarna naar de prullenbak verplaatst; het publieke aanbod is niet gewijzigd. Deze servercontrole gebruikt de ingelogde WordPress-beheerverbinding; de daadwerkelijke app-login op een toestel blijft een aparte controle.
 
@@ -46,3 +46,7 @@ Een geslaagde compilatie bewijst geen volledige makelaarsbeheerfunctie. De aanvu
 - Backendtest [37784300811](https://github.com/rudydejonge1506/Rvaz-android/actions/runs/37784300811) slaagt: 40 REST/businesslogic-controles en echte HTTP bearer/multipartupload met galerijverwijdering. Geen productiedatabase of echte e-mailontvanger wordt gebruikt.
 - De oorspronkelijke Android-launcher is in alle drie gesigneerde APK-architecturen op pixels vergeleken met het bestaande juiste icoon. Alle vergelijkingen identiek (renderer-run 37785592065, nieuwste uitgebreide beheerbuild).
 - De TestFlight-upload publiceert geen App Store-versie, wijzigt geen publieke metadata en uploadt geen screenshots.
+
+## Eindstatus
+
+Android native-beheerbuild 37784300802 is geslaagd. TestFlight 1.1.4 (86), run 37784300746 poging 2, is volledig geslaagd en door Apple geldig verwerkt. De aanvullende Wonen API 1.0.0 is live actief en via de ingelogde WordPress-beheerverbinding functioneel gecontroleerd. Op een fysiek toestel is geen gebruikerssessie door de assistent bediend; de echte telefooncontrole blijft bij de gebruiker. Main, live Android-release, iOS-build 80 en publieke App Store-release zijn niet gewijzigd.

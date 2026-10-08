@@ -4091,7 +4091,10 @@
     "ios86": {
       "run": 37784300746,
       "attempt": 2,
-      "status": "in_progress",
+      "conclusion": "success",
+      "apple_processing": "VALID",
+      "version": "1.1.4",
+      "build": 86,
       "previous_attempt": "cancelled before any build step"
     },
     "additional_failure_fixes": [
