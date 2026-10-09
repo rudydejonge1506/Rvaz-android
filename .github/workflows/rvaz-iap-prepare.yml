@@ -1,0 +1,21 @@
+name: Prepare unsubmitted RVAZ Wonen EUR25 purchase draft
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['.github/workflows/rvaz-iap-prepare.yml','verification/store-payments/prepare_apple.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare private one-month purchase without publishing
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography --break-system-packages
+          python3 verification/store-payments/prepare_apple.py
