@@ -4,7 +4,7 @@ const fs=require('node:fs');const assert=require('node:assert/strict');
  for(const kind of ['broker','regular']){const html=fs.readFileSync(`/tmp/rvaz-newsletter-${kind}.html`,'utf8');
   for(const width of [360,1000]){await page.setViewportSize({width,height:900});await page.setContent(html);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'newsletter has no horizontal overflow');
    const links=await page.locator('a').evaluateAll(nodes=>nodes.map(a=>({text:a.textContent,url:a.getAttribute('href')})));assert.ok(links.some(a=>a.url.includes('/wonen-voor-makelaars/')));
-   if(kind==='broker'){assert.equal(await page.getByText('MAKELAAR',{exact:true}).count(),1);assert.ok(await page.getByRole('link',{name:'Aanmelden als makelaar'}).isVisible());assert.equal(await page.locator('ol > li').count(),4);}
+   if(kind==='broker'){assert.equal(await page.locator('table').getByText('MAKELAAR',{exact:true}).count(),1);assert.ok(await page.getByRole('link',{name:'Aanmelden als makelaar'}).isVisible());assert.equal(await page.locator('ol > li').count(),4);}
    else assert.equal(await page.getByRole('heading',{name:'Wonen op Voorne',exact:true}).count(),1);
    await page.screenshot({path:`/tmp/rvaz-newsletter-${kind}-${width}.png`,fullPage:true});
   }console.log(`PASS: ${kind} actual email render on desktop and mobile, links and no overflow`);

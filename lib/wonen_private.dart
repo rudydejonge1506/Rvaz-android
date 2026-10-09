@@ -11,7 +11,7 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
   Widget build(BuildContext context) => WonenDataPage(title: 'Mijn particuliere woning', path: '/particulier/woningen', content: (context, data, refresh) {
     final rows = wonenItems(data);
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('Zelf je woning verkopen', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+      const Text('Zelf je woning of kamer aanbieden', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
       const Text('Je kunt één woning tegelijk aanbieden. RVAZ beoordeelt je woning voordat deze verschijnt. Aanpassingen aan een gepubliceerde advertentie worden opnieuw beoordeeld.'),
       if (rows.isEmpty) FilledButton.icon(icon: const Icon(Icons.add_home_outlined), label: const Text('Woning toevoegen'), onPressed: () async {
         await Navigator.push(context, MaterialPageRoute(builder: (_) => const WoningEditorPage(privateOffer: true))); refresh();
@@ -22,6 +22,8 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
         Text('Betaling: ${wonenText(row, 'payment_status') == 'paid' ? 'Bevestigd' : 'Nog niet bevestigd'}'),
         if ((int.tryParse('${row['placement_expires']}') ?? 0) > 0) Text('Einddatum: ${DateTime.fromMillisecondsSinceEpoch(int.parse('${row['placement_expires']}') * 1000).toLocal().toString().substring(0, 16)}'),
         if (wonenText(row, 'review_reason').isNotEmpty) Text('Beoordeling: ${wonenText(row, 'review_reason')}'),
+        if (wonenText(row, 'publication_status') == 'pending' && ['not_ordered', 'cancelled', ''].contains(wonenText(row, 'payment_status')))
+          WonenPrivateOrder(id: int.parse('${row['id']}'), refresh: refresh),
         OutlinedButton.icon(icon: const Icon(Icons.edit_outlined), label: const Text('Woning en foto’s bewerken'), onPressed: busy ? null : () async {
           await Navigator.push(context, MaterialPageRoute(builder: (_) => WoningEditorPage(item: row, privateOffer: true))); refresh();
         }),
@@ -34,6 +36,7 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
           finally { if (mounted) setState(() => busy = false); }
         }, child: const Text('Indienen voor beoordeling')),
       ]))),
+      ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Mijn facturen'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenInvoicesPage(privateOffer: true)))),
       ListTile(leading: const Icon(Icons.mail_outline), title: const Text('Reacties op mijn woning'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenAanvragenPage(privateOffer: true)))),
     ]);
   });

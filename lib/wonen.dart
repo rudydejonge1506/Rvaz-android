@@ -1,5 +1,6 @@
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 part 'wonen_reader.dart';
 part 'wonen_private.dart';
+part 'wonen_coupon.dart';
 
 const wonenApi = 'https://www.regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
 
@@ -938,11 +940,12 @@ class WonenSubscriptionPage extends StatelessWidget {
 }
 
 class WonenInvoicesPage extends StatelessWidget {
-  const WonenInvoicesPage({super.key});
+  final bool privateOffer;
+  const WonenInvoicesPage({super.key, this.privateOffer = false});
   @override
-  Widget build(BuildContext context) => WonenDataPage(title: 'Mijn facturen', path: '/makelaar/facturen', content: (context, data, refresh) {
+  Widget build(BuildContext context) => WonenDataPage(title: 'Mijn facturen', path: privateOffer ? '/particulier/facturen' : '/makelaar/facturen', content: (context, data, refresh) {
     final map = Map<String, dynamic>.from(data as Map), items = wonenItems(data);
-    final billing = Map<String, dynamic>.from(map['billing'] as Map);
+    final billing = Map<String, dynamic>.from(map['billing'] is Map ? map['billing'] as Map : <String, dynamic>{});
     return ListView(padding: const EdgeInsets.all(16), children: [
       if (items.isEmpty) const Text('Nog geen facturen.'),
       for (final item in items) Card(child: ExpansionTile(title: Text(wonenText(item, 'invoice_no')),
@@ -954,7 +957,7 @@ class WonenInvoicesPage extends StatelessWidget {
           Text(wonenText(billing, 'account_name')), Text(wonenText(billing, 'note')),
           OutlinedButton.icon(icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('Factuur als PDF delen'), onPressed: () async {
             try {
-              final pdf = await wonenRequest('/makelaar/facturen/${wonenText(item, 'id')}/pdf');
+              final pdf = await wonenRequest('${privateOffer ? '/particulier' : '/makelaar'}/facturen/${wonenText(item, 'id')}/pdf');
               await SharePlus.instance.share(ShareParams(files: [XFile.fromData(base64Decode(pdf['pdf_base64'] as String),
                 mimeType: 'application/pdf', name: '${wonenText(item, 'invoice_no')}.pdf')],
                 fileNameOverrides: ['${wonenText(item, 'invoice_no')}.pdf'],
@@ -979,6 +982,7 @@ class WonenApplicationForm extends StatefulWidget {
 }
 class _WonenApplicationFormState extends State<WonenApplicationForm> {
   final office = TextEditingController(), name = TextEditingController(), phone = TextEditingController();
+  WonenCouponQuote coupon = const WonenCouponQuote('', null, true);
   String? plan;
   bool busy = false;
   @override
@@ -999,18 +1003,25 @@ class _WonenApplicationFormState extends State<WonenApplicationForm> {
         padding: const EdgeInsets.symmetric(vertical: 8), child: TextField(controller: entry.key, decoration: InputDecoration(labelText: entry.value))),
       DropdownButtonFormField<String>(isExpanded: true, initialValue: plan, decoration: const InputDecoration(labelText: 'Abonnement'), items: [
         for (final key in keys) DropdownMenuItem(value: key, child: Text('${plans[key]['name']} · eerste maand €${plans[key]['first_month_price'] ?? plans[key]['price']}; daarna €${plans[key]['price']}/maand', maxLines: 2, overflow: TextOverflow.ellipsis)),
-      ], onChanged: busy ? null : (value) => setState(() => plan = value)),
-      FilledButton(onPressed: busy || plan == null ? null : () async {
+      ], onChanged: busy ? null : (value) => setState(() { plan = value; coupon = WonenCouponQuote(coupon.code, null, false); })),
+      if (plan != null) WonenCouponField(audience: 'makelaar', plan: plan, normalPrice: plans[plan]['price'].toString(),
+        defaultPrice: (widget.returning ? plans[plan]['price'] : plans[plan]['first_month_price'] ?? plans[plan]['price']).toString(), returning: widget.returning,
+        onChanged: (value) { if (mounted) setState(() => coupon = value); }),
+      FilledButton(onPressed: busy || plan == null || !coupon.ready ? null : () async {
         if ([office, name, phone].any((field) => field.text.trim().isEmpty)) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vul alle verplichte velden in.'))); return;
         }
-        final selected = plan!, price = plans[selected]['price'].toString(), firstPrice = (plans[selected]['first_month_price'] ?? plans[selected]['price']).toString();
-        if (!await wonenConfirm(context, 'Abonnement aanvragen', 'Vraag ${plans[selected]['name']} aan: eerste maand €$firstPrice, daarna €$price per maand. RVAZ beoordeelt je aanvraag.')) return;
-        if (!context.mounted) return;
+        final selected = plan!, price = plans[selected]['price'].toString(), code = coupon.code;
         setState(() => busy = true);
         try {
+          String firstPrice = (widget.returning ? plans[selected]['price'] : plans[selected]['first_month_price'] ?? plans[selected]['price']).toString();
+          if (code.isNotEmpty) {
+            final quote = await wonenRequest('/kortingscode/controleren', body: {'audience': 'makelaar', 'plan': selected, 'code': code});
+            firstPrice = '${quote['total']}';
+          }
+          if (!context.mounted || !await wonenConfirm(context, 'Abonnement aanvragen', 'Vraag ${plans[selected]['name']} aan: eerste maand €$firstPrice, daarna €$price per maand. RVAZ beoordeelt je aanvraag.')) return;
           await wonenRequest(widget.returning ? '/makelaar/opnieuw-aanmelden' : '/makelaar/aanmelden', body: {'office': office.text.trim(), 'contact_name': name.text.trim(),
-            'phone': phone.text.trim(), 'plan': selected, 'expected_price': price, 'expected_first_month_price': firstPrice, 'confirm': true});
+            'phone': phone.text.trim(), 'plan': selected, 'expected_price': price, 'expected_first_month_price': firstPrice, 'coupon_code': code, 'confirm': true});
           if (mounted) widget.refresh();
         } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); }
         finally { if (mounted) setState(() => busy = false); }
