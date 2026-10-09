@@ -18,12 +18,25 @@ const assert=require('node:assert/strict');
   await page.addStyleTag({path:'website/rvaz-wonen-account-fix/private-website.css'});
   await page.addScriptTag({path:'website/rvaz-wonen-account-fix/private-website.js'});
   await page.getByRole('button',{name:'Nieuwe woning'}).click();
-  await page.getByLabel('Huur of koop',{exact:true}).selectOption('Huur');
-  await page.getByLabel('Woningtype (woning, appartement of kamer)',{exact:true}).fill('Kamer');
+  const transaction=page.getByLabel('Huur of koop',{exact:true});
+  assert.equal(await page.getByLabel('Borg bij verhuur',{exact:true}).isVisible(),false);
+  assert.equal(await page.getByLabel('Prijsconditie (koop)',{exact:true}).isVisible(),true);
+  await transaction.selectOption('Huur');
+  assert.equal(await page.getByLabel('Huurperiode / contractduur',{exact:true}).isVisible(),true);
+  assert.equal(await page.getByLabel('Inkomenseisen bij verhuur',{exact:true}).isVisible(),true);
+  assert.equal(await page.getByLabel('Prijsconditie (koop)',{exact:true}).isVisible(),false);
+  await page.getByLabel('Woningtype',{exact:true}).selectOption('Kamer');
   await page.getByLabel('Borg bij verhuur',{exact:true}).fill('650');
+  await page.getByLabel('Balkon',{exact:true}).selectOption('Ja');
+  await page.getByLabel('Status',{exact:true}).selectOption('Beschikbaar');
+  await transaction.selectOption('Koop');
+  assert.equal(await page.getByLabel('Borg bij verhuur',{exact:true}).isVisible(),false);
+  await transaction.selectOption('Huur');
+  assert.equal(await page.getByLabel('Borg bij verhuur',{exact:true}).inputValue(),'650','toggling retains entered values');
+  console.log('PASS: conditional rental fields and matching broker housing fields');
   for(const width of [1000,360]){
    await page.setViewportSize({width,height:900});
-   const boxes=await page.locator('.rvaz-private-fields > label').evaluateAll(labels=>labels.map(l=>{const r=l.getBoundingClientRect(),i=l.querySelector('input,textarea,select').getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,inputTop:i.top,inputRight:i.right};}));
+   const boxes=await page.locator('.rvaz-private-fields > label').evaluateAll(labels=>labels.filter(l=>!l.hidden).map(l=>{const r=l.getBoundingClientRect(),i=l.querySelector('input,textarea,select').getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,inputTop:i.top,inputRight:i.right};}));
    for(const b of boxes){assert.ok(b.inputTop>b.y+15,'label sits above input');assert.ok(b.right<=width&&b.inputRight<=width,'no horizontal overflow');}
    for(let a=0;a<boxes.length;a++)for(let b=a+1;b<boxes.length;b++){const x=boxes[a],y=boxes[b];assert.ok(x.right<=y.x||y.right<=x.x||x.bottom<=y.y||y.bottom<=x.y,'fields do not overlap');}
    if(width===360)assert.ok(boxes.every(b=>Math.abs(b.x-boxes[0].x)<1),'mobile uses one field column');
@@ -43,6 +56,9 @@ const assert=require('node:assert/strict');
   assert.equal(home.transactie,'Huur');
   assert.equal(home.woningtype,'Kamer');
   assert.equal(home.borg,'650');
+  assert.equal(home.balkon,'Ja');
+  assert.equal(home.status,'Beschikbaar');
+  assert.equal(home.prijstype,'');
   await page.getByRole('button',{name:'Als hoofdfoto'}).click();
   await page.waitForFunction(()=>document.querySelector('article img')?.src.endsWith('photo2.png'));
   assert.equal(home.photos[0].id,2,'chosen photo moves to cover');

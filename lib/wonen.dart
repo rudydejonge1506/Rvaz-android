@@ -63,6 +63,13 @@ class WonenApiException implements Exception {
   String toString() => message;
 }
 
+bool wonenFieldVisible(String field, String transaction) {
+  final rent = transaction.toLowerCase() == 'huur';
+  if (['borg', 'contractduur', 'inkomenseisen'].contains(field)) return rent;
+  if (field == 'prijstype') return transaction.toLowerCase() == 'koop';
+  return true;
+}
+
 const wonenFieldLabels = <String, String>{
   'title': 'Titel', 'description': 'Omschrijving', 'adres': 'Adres',
   'postcode': 'Postcode', 'plaats': 'Plaats', 'prijs': 'Prijs in euro',
@@ -406,6 +413,7 @@ class WoningDetailPage extends StatelessWidget {
       'tuin': 'Tuin', 'balkon': 'Balkon', 'garage': 'Garage',
       'aanvaarding': 'Aanvaarding', 'borg': 'Borg',
       'contractduur': 'Contractduur', 'inkomenseisen': 'Inkomenseisen',
+      'prijstype': 'Prijsconditie',
     };
     return Scaffold(
       appBar: AppBar(title: Text(title.isEmpty ? 'Woning' : title), actions: [if (int.tryParse(item['id'].toString()) != null) WonenFavoriteButton(id: int.parse(item['id'].toString()))]),
@@ -439,7 +447,7 @@ class WoningDetailPage extends StatelessWidget {
         const SizedBox(height: 18),
         Text('Kenmerken', style: Theme.of(context).textTheme.titleLarge),
         for (final entry in labels.entries)
-          if (wonenText(item, entry.key).isNotEmpty)
+          if (wonenText(item, entry.key).isNotEmpty && wonenFieldVisible(entry.key, wonenText(item, 'transactie')))
             ListTile(contentPadding: EdgeInsets.zero,
               title: Text(entry.value),
               trailing: ConstrainedBox(
@@ -598,7 +606,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
     setState(() => busy = true);
     try {
       final body = <String, dynamic>{
-        for (final entry in fields.entries) entry.key: entry.value.text,
+        for (final entry in fields.entries) entry.key: wonenFieldVisible(entry.key, fields['transactie']!.text) ? entry.value.text : '',
         'publication_status': publicationStatus,
       };
       final response = await wonenRequest(
@@ -698,7 +706,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
               onChanged: busy ? null : (value) => setState(() => fields['transactie']!.text = value ?? ''),
             ),
           ),
-          for (final entry in fields.entries.where((entry) => entry.key != 'transactie' && (!widget.privateOffer || !['makelaar_url'].contains(entry.key))))
+          for (final entry in fields.entries.where((entry) => entry.key != 'transactie' && wonenFieldVisible(entry.key, fields['transactie']!.text) && (!widget.privateOffer || !['makelaar_url'].contains(entry.key))))
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TextField(
@@ -853,7 +861,7 @@ class _WonenProfileFormState extends State<WonenProfileForm> {
     setState(() => busy = true);
     try {
       await wonenRequest(widget.settings ? '/makelaar/instellingen' : '/makelaar/kantoor', body: {
-        for (final entry in fields.entries) entry.key: entry.value.text.trim(),
+        for (final entry in fields.entries) entry.key: wonenFieldVisible(entry.key, fields['transactie']!.text) ? entry.value.text : ''.trim(),
         if (widget.settings) 'email_notifications': notify,
       });
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gegevens opgeslagen.')));

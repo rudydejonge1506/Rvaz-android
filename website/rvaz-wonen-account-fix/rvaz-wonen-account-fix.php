@@ -2,13 +2,13 @@
 /**
  * Plugin Name: RVAZ Wonen Account Herstel
  * Description: Rustige Mijn Wonen-pagina, makelaarsaccount deactiveren en opnieuw een pakket aanvragen. Behoudt Wonen API en kortingscodes.
- * Version: 1.0.1
+ * Version: 1.0.2
  */
 if(!defined('ABSPATH'))exit;
 require_once __DIR__.'/portal-focus.php';
 require_once __DIR__.'/private-ui.php';
+require_once __DIR__.'/housing-fields.php';
 require_once __DIR__.'/subscription-access.php';
-require_once __DIR__.'/newsletter-template.php';
 final class RVAZ_Wonen_Account_Fix {
  static function subscription($uid){global $wpdb;return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}rvaz_wonen_subscriptions WHERE user_id=%d ORDER BY id DESC LIMIT 1",$uid));}
  static function pending($uid){global $wpdb;return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}rvaz_wonen_applications WHERE user_id=%d AND status IN ('email_pending','pending') ORDER BY id DESC LIMIT 1",$uid));}

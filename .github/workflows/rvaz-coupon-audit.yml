@@ -2,7 +2,7 @@ name: Audit live Wonen coupon snapshots without sending mail
 on:
   push:
     branches: [ios-current-features-safe]
-    paths: ['verification/coupon-audit/**', 'website/rvaz-wonen-account-fix/**', '.github/workflows/rvaz-coupon-audit.yml']
+    paths: ['verification/coupon-audit/**', 'website/rvaz-wonen-account-fix/**', 'website/newsletter-source/**', '.github/workflows/rvaz-coupon-audit.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,10 +24,12 @@ jobs:
       - name: Website JavaScript syntax
         run: |
           node --check website/rvaz-wonen-account-fix/reapply.js
+          node --check website/rvaz-wonen-account-fix/private-website.js
+          node --check website/rvaz-wonen-account-fix/housing-fields.js
           node --check backend/rvaz-wonen-native-api/private-website.js
           node --check backend/rvaz-wonen-native-api/account-dashboard.js
       - name: PHP syntax
-        run: find backend website/rvaz-wonen-account-fix verification/coupon-audit -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find backend website/rvaz-wonen-account-fix website/newsletter-source verification/coupon-audit -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Account dashboard browser checks
         run: |
           npm install --no-save playwright
@@ -52,8 +54,15 @@ jobs:
       - name: Isolated coupon, quota, invoice and second month checks
         run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/verification/coupon-audit/audit.php" --path=/tmp/rvaz-wp
 
+      - name: Newsletter templates, separated recipients and zero outgoing mail
+        run: |
+          php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/verification/coupon-audit/newsletter.php" --path=/tmp/rvaz-wp
+          node verification/coupon-audit/newsletter-ui.cjs
+
       - name: Upload layout verification screenshots
         uses: actions/upload-artifact@v4
         with:
           name: RVAZ-private-account-layout
-          path: /tmp/rvaz-private-form-*.png
+          path: |
+            /tmp/rvaz-private-form-*.png
+            /tmp/rvaz-newsletter-*.png

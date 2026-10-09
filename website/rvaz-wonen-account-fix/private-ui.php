@@ -21,6 +21,6 @@ add_filter('rest_endpoints',function($routes){
 add_action('wp_enqueue_scripts',function(){
  if(!class_exists('RVAZ_Wonen_Private')||!is_page(['account','mijn-account','mijn-rvaz']))return;
  // Keep the original handle and inline API/nonce configuration; replace only its asset URL.
- $scripts=wp_scripts();if(isset($scripts->registered['rvaz-private'])){$scripts->registered['rvaz-private']->src=plugins_url('private-website.js',__FILE__);$scripts->registered['rvaz-private']->ver='1.0.1';}
- wp_enqueue_style('rvaz-private-account-fix',plugins_url('private-website.css',__FILE__),[],'1.0.1');
+ $scripts=wp_scripts();if(isset($scripts->registered['rvaz-private'])){$scripts->registered['rvaz-private']->src=plugins_url('private-website.js',__FILE__);$scripts->registered['rvaz-private']->ver='1.0.2';}
+ wp_enqueue_style('rvaz-private-account-fix',plugins_url('private-website.css',__FILE__),[],'1.0.2');
 },999);

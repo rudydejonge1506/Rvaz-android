@@ -16,3 +16,5 @@
 #rvaz-private-root h3 { margin-top: 26px; }
 #rvaz-private-root > p:empty { display: none; }
 @media (max-width: 640px) { #rvaz-private-root .rvaz-private-fields { grid-template-columns: minmax(0, 1fr); gap: 16px; } #rvaz-private-root button { width: 100%; margin-right: 0; } }
+
+#rvaz-private-root .rvaz-private-fields > label[hidden] { display: none !important; }

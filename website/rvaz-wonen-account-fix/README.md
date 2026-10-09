@@ -1,4 +1,4 @@
-# RVAZ Wonen Account Herstel 1.0.1
+# RVAZ Wonen Account Herstel 1.0.2
 
 Aanvullende plugin voor RVAZ Wonen 1.0.6 en RVAZ Wonen Native API 1.2.4 met kortingscodes. Vervangt geen bestaande plugin.
 
@@ -18,3 +18,6 @@ Niet op de live website geïnstalleerd tijdens deze controle. Geen mails verzond
 
 ## 1.0.1
 Particuliere formulieren krijgen een responsive indeling, huur/koopkeuze en huurkenmerken; bestaande kortingscode-invoer blijft behouden. Het opslaan gebruikt de oorspronkelijke eigenaar-, concept- en limietcontroles. Na makelaarsopzegging wordt de nieuwe-woningwizard vervangen door een pakketkeuze en worden API-schrijfacties geblokkeerd. Wonen → Makelaarsmailing bevat een verbeterd HTML-template en voorbeeld; niets wordt verzonden.
+
+## 1.0.2
+Borg, contractduur en inkomenseisen verschijnen uitsluitend bij Huur; prijsconditie uitsluitend bij Koop. Het particuliere formulier heeft dezelfde woningkenmerken als het makelaarsformulier, inclusief balkon, status en prijsconditie. Het nieuwsbriefmenu wordt nu door RVAZ Nieuwsbrief 1.10.0 geleverd; het losse kopieertemplate uit 1.0.1 wordt niet meer geladen. De bestaande kortingscodemodule wordt niet vervangen.
