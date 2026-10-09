@@ -32,7 +32,7 @@ print('APPLE_EUR25_PRICE_POINT='+json.dumps({'id':match[0]['id'],'price':match[0
 # No availability change, review submission, or release publication is performed.
 localizations=request('/v2/inAppPurchases/'+pid+'/inAppPurchaseLocalizations?limit=50')['data']
 if not any(x['attributes']['locale']=='nl-NL' for x in localizations):
- request('/v2/inAppPurchaseLocalizations','POST',{'data':{'type':'inAppPurchaseLocalizations','attributes':{'name':'Woning of kamer: één maand','description':'Eén plaatsing voor één maand. Eenmalig.','locale':'nl-NL'},'relationships':{'inAppPurchaseV2':{'data':{'type':'inAppPurchases','id':pid}}}}})
+ request('/v1/inAppPurchaseLocalizations','POST',{'data':{'type':'inAppPurchaseLocalizations','attributes':{'name':'Woning of kamer: één maand','description':'Eén plaatsing voor één maand. Eenmalig.','locale':'nl-NL'},'relationships':{'inAppPurchaseV2':{'data':{'type':'inAppPurchases','id':pid}}}}})
 print('APPLE_DUTCH_LOCALIZATION_PREPARED',flush=True)
 schedule=request('/v2/inAppPurchases/'+pid+'/iapPriceSchedule',allow_missing=True)
 if schedule is None or not schedule.get('data'):
