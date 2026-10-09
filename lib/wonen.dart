@@ -575,7 +575,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       ])
         key: TextEditingController(text: wonenText(item, key)),
     };
-    if (widget.privateOffer) { fields['transactie']!.text = 'Koop'; publicationStatus = 'draft'; }
+    if (widget.privateOffer) { publicationStatus = 'draft'; }
     final transaction = fields['transactie']!.text.toLowerCase();
     fields['transactie']!.text = transaction == 'huur' ? 'Huur' : transaction == 'koop' ? 'Koop' : '';
   }
@@ -682,8 +682,8 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (widget.privateOffer) const Text('Particuliere verkoopwoning. Na elke wijziging is opnieuw beoordeling door RVAZ nodig.'),
-          if (!widget.privateOffer) Padding(
+          if (widget.privateOffer) const Text('Particulier aanbod: koopwoning, huurwoning of kamer. Na elke wijziging is opnieuw beoordeling door RVAZ nodig.'),
+          Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: DropdownButtonFormField<String>(
               key: const ValueKey('wonen-transactie'),
@@ -697,7 +697,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
               onChanged: busy ? null : (value) => setState(() => fields['transactie']!.text = value ?? ''),
             ),
           ),
-          for (final entry in fields.entries.where((entry) => entry.key != 'transactie' && (!widget.privateOffer || !['makelaar_url', 'borg', 'contractduur', 'inkomenseisen', 'prijstype'].contains(entry.key))))
+          for (final entry in fields.entries.where((entry) => entry.key != 'transactie' && (!widget.privateOffer || !['makelaar_url'].contains(entry.key))))
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TextField(
@@ -705,6 +705,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
                 maxLines: entry.key == 'description' ? 4 : 1,
                 decoration: InputDecoration(
                   labelText: wonenFieldLabels[entry.key] ?? entry.key,
+                  helperText: entry.key == 'woningtype' ? 'Bijvoorbeeld woning, appartement, studio of kamer' : null,
                   border: const OutlineInputBorder(),
                 ),
               ),

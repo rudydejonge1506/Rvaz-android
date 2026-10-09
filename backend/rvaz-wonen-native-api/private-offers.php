@@ -32,12 +32,12 @@ final class RVAZ_Wonen_Private {
   $id=absint($r['id']);if($id){$ok=self::require_owner($r);if(is_wp_error($ok))return $ok;}
   if(!$id&&self::own())return RVAZ_Wonen_Native_API::error('limit','Je kunt één particuliere woning tegelijk aanbieden. Archiveer eerst je vorige woning.',409);
   if($r->has_param('publication_status')&&$r['publication_status']!=='draft')return RVAZ_Wonen_Native_API::error('review','Particulier aanbod wordt eerst door RVAZ beoordeeld.');
-  if($r->has_param('transactie')&&$r['transactie']!=='Koop')return RVAZ_Wonen_Native_API::error('sale','Particulier aanbod is voorlopig alleen voor verkoop.');
+  if($r->has_param('transactie')&&!in_array($r['transactie'],['Koop','Huur'],true))return RVAZ_Wonen_Native_API::error('transaction','Kies huur of koop.');
   foreach(array_merge(RVAZ_Wonen_Native_API::FIELDS,['title','description']) as $k)if($r->has_param($k)&&!is_scalar($r[$k]))return RVAZ_Wonen_Native_API::error('field','Ongeldige woninggegevens.');
   $post=['post_status'=>'draft'];if($id)$post['ID']=$id;else $post+=['post_type'=>RVAZ_Wonen::TYPE,'post_author'=>get_current_user_id(),'post_title'=>'Mijn woning'];
   if($r->has_param('title'))$post['post_title']=sanitize_text_field($r['title']);if($r->has_param('description'))$post['post_content']=wp_kses_post($r['description']);
   $result=$id?wp_update_post($post,true):wp_insert_post($post,true);if(is_wp_error($result))return $result;$id=(int)$result;update_post_meta($id,self::FLAG,'1');
-  foreach(RVAZ_Wonen_Native_API::FIELDS as $k)if($k!=='makelaar_url'&&$r->has_param($k))update_post_meta($id,'_rvaz_wonen_'.$k,sanitize_text_field($r[$k]));update_post_meta($id,'_rvaz_wonen_transactie','Koop');
+  foreach(RVAZ_Wonen_Native_API::FIELDS as $k)if($k!=='makelaar_url'&&$r->has_param($k))update_post_meta($id,'_rvaz_wonen_'.$k,sanitize_text_field($r[$k]));if(!get_post_meta($id,'_rvaz_wonen_transactie',true))update_post_meta($id,'_rvaz_wonen_transactie','Koop');
   delete_post_meta($id,'_rvaz_wonen_private_approved');delete_post_meta($id,'_rvaz_wonen_private_reviewed');return RVAZ_Wonen_Native_API::listing($id,true);
  }
  static function photo($r){$ok=self::require_owner($r);if(is_wp_error($ok))return $ok;$id=absint($r['id']);$aid=RVAZ_Wonen_Native_API::upload($r,$id);if(is_wp_error($aid))return $aid;self::edited($id);$gallery=array_filter(array_map('absint',(array)get_post_meta($id,'_rvaz_wonen_gallery',true)));$gallery[]=$aid;update_post_meta($id,'_rvaz_wonen_gallery',array_values(array_unique($gallery)));if(!has_post_thumbnail($id))set_post_thumbnail($id,$aid);return RVAZ_Wonen_Native_API::listing($id,true);}

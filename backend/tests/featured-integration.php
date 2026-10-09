@@ -2,6 +2,9 @@
 if(!defined('ABSPATH'))exit;
 $featured_agent=wp_create_user('featured-agent','test-only-password','featured-agent@example.invalid');
 (new WP_User($featured_agent))->set_role(RVAZ_Wonen::ROLE);
+$broker_room=call_api('POST','/makelaar/woningen',['transactie'=>'Huur','woningtype'=>'Kamer','prijs'=>'750','borg'=>'750','contractduur'=>'12 maanden'],$featured_agent)->get_data();
+check($broker_room['transactie']==='Huur'&&$broker_room['woningtype']==='Kamer'&&$broker_room['borg']==='750','broker can save a rental room with rental terms');
+wp_delete_post($broker_room['id'],true);
 $featured_id=reader_property($featured_agent);
 check(!in_array($featured_id,array_column(call_api('GET','/uitgelicht')->get_data(),'id'),true),'unpaid broker cannot appear on home');
 $wpdb->insert($wpdb->prefix.'rvaz_wonen_subscriptions',['user_id'=>$featured_agent,'plan'=>'basis','status'=>'active','start_date'=>current_time('Y-m-d'),'end_date'=>wp_date('Y-m-d',time()+20*DAY_IN_SECONDS)]);

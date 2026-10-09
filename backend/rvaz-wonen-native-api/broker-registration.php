@@ -26,4 +26,4 @@ add_action('init',['RVAZ_Wonen_Broker_Registration','normalize'],0);
 add_action('plugins_loaded',['RVAZ_Wonen_Broker_Registration','normalize'],0);
 add_action('user_register',['RVAZ_Wonen_Broker_Registration','remember'],30);
 add_filter('the_content',['RVAZ_Wonen_Broker_Registration','content'],90);
-add_action('wp_enqueue_scripts',function(){if(is_page('registreren'))wp_enqueue_script('rvaz-broker-registration',plugins_url('broker-registration.js',__FILE__),[],'1.2.3',true);});
+add_action('wp_enqueue_scripts',function(){if(is_page('registreren'))wp_enqueue_script('rvaz-broker-registration',plugins_url('broker-registration.js',__FILE__),[],'1.2.4',true);});

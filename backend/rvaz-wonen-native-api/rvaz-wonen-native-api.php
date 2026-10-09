@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RVAZ Wonen Native API
  * Description: Native Flutter API naast RVAZ Wonen; behoudt website, accounts en bestaande facturen.
- * Version: 1.2.3
+ * Version: 1.2.4
  */
 if (!defined('ABSPATH')) exit;
 final class RVAZ_Wonen_Native_API {
@@ -237,12 +237,12 @@ final class RVAZ_Wonen_Native_API {
    'subscriptions'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\nplan varchar(20) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'active',\nstart_date date NULL,\nend_date date NULL,\nnext_invoice_date date NULL,\ncancelled_date date NULL,\nPRIMARY KEY  (id)",
    'invoices'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\ninvoice_no varchar(50) NOT NULL,\nperiod varchar(100) NOT NULL,\nsubtotal decimal(10,2) NOT NULL,\nvat decimal(10,2) NOT NULL,\ntotal decimal(10,2) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'open',\ninvoice_date date NULL,\ndue_date date NULL,\ntikkie_url text NULL,\npdf_url text NULL,\npaid_date date NULL,\nPRIMARY KEY  (id),\nUNIQUE KEY invoice_no (invoice_no)",
    'messages'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nproperty_id bigint unsigned NOT NULL,\nagent_user_id bigint unsigned NOT NULL,\nname varchar(190) NOT NULL,\nemail varchar(190) NOT NULL,\nphone varchar(60) NOT NULL DEFAULT '',\nmessage text NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'new',\ncreated datetime NOT NULL,\nPRIMARY KEY  (id),\nKEY agent_user_id (agent_user_id),\nKEY property_id (property_id)"
-  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.2.3');
+  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.2.4');
  }
 }
 add_action('rest_api_init',['RVAZ_Wonen_Native_API','register'],20);
 register_activation_hook(__FILE__,['RVAZ_Wonen_Native_API','install']);
-add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.2.3')RVAZ_Wonen_Native_API::install();});
+add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.2.4')RVAZ_Wonen_Native_API::install();});
 
 require_once __DIR__.'/reader-features.php';
 
