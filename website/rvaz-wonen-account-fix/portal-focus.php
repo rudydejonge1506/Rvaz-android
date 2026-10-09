@@ -1,5 +1,6 @@
 <?php
-if(!defined('ABSPATH')||function_exists('rvaz_wonen_portal_focus_20261009'))return;
+if(!defined('ABSPATH'))return;
+if(!function_exists('rvaz_wonen_portal_focus_20261009')){
 function rvaz_wonen_portal_focus_20261009($html,$tag){
  if($tag!=='rvaz_wonen_portal'||!class_exists('RVAZ_Wonen'))return $html;
  $view=sanitize_key($_GET['wonen_portal']??'dashboard');
@@ -17,6 +18,7 @@ function rvaz_wonen_portal_focus_20261009($html,$tag){
   $node->parentNode->replaceChild($details,$node);$details->appendChild($node);
  }
  $root=$dom->getElementById('rvaz-portal-focus');$output='';foreach($root->childNodes as $node)$output.=$dom->saveHTML($node);return $output;
+}
 }
 add_filter('do_shortcode_tag','rvaz_wonen_portal_focus_20261009',999,2);
 add_action('wp_head',function(){if(!is_page('mijn-wonen'))return;
