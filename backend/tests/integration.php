@@ -54,4 +54,7 @@ check(!in_array(RVAZ_Wonen::ROLE,(new WP_User($regular))->roles,true),'applicati
 require __DIR__.'/reader-integration.php';
 require __DIR__.'/private-integration.php';
 require __DIR__.'/invoice-tools-integration.php';
+require __DIR__/'broker-registration-integration.php';
+require __DIR__.'/private-account-integration.php';
+require __DIR__.'/invoice-mail-integration.php';
 echo "All WordPress integration checks passed.\n";

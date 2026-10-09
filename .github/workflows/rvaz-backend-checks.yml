@@ -33,6 +33,7 @@ jobs:
           npx playwright install --with-deps chromium
           node backend/tests/account-dashboard.cjs
           node backend/tests/private-photos.cjs
+          node backend/tests/broker-registration.cjs
       - name: Install disposable WordPress
         run: |
           curl --fail --location --silent https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp-cli.phar
@@ -61,9 +62,9 @@ jobs:
       - name: Build installable additive plugin
         run: |
           cd backend
-          zip -r /tmp/RVAZ-Wonen-Native-API-1.2.1.zip rvaz-wonen-native-api
+          zip -r /tmp/RVAZ-Wonen-Native-API-1.2.2.zip rvaz-wonen-native-api
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Wonen-Native-API-1.2.1
-          path: /tmp/RVAZ-Wonen-Native-API-1.2.1.zip
+          name: RVAZ-Wonen-Native-API-1.2.2
+          path: /tmp/RVAZ-Wonen-Native-API-1.2.2.zip
           if-no-files-found: error

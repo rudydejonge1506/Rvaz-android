@@ -54,7 +54,7 @@ add_action('admin_post_rvaz_wonen_test_invoice',function(){
 add_action('admin_footer',function(){
  if(!current_user_can('manage_options')||($_GET['page']??'')!=='rvaz-wonen-facturen')return;global $wpdb;
  $numbers=[];foreach($wpdb->get_results("SELECT id,invoice_no,status,paid_date FROM {$wpdb->prefix}rvaz_wonen_invoices") as $r)if(RVAZ_Wonen_Invoice_Tools::removed($r->id)&&$r->status!=='paid'&&empty($r->paid_date))$numbers[]=$r->invoice_no;
- echo '<p><a class="button" href="'.esc_url(admin_url('admin.php?page=rvaz-wonen-testfacturen')).'">Testfacturen beheren</a></p><script>const rvazRemovedInvoices='.wp_json_encode($numbers).';document.querySelectorAll("table tr").forEach(row=>{const number=row.querySelector("td strong");if(number&&rvazRemovedInvoices.includes(number.textContent.trim()))row.hidden=true;});</script>';
+ echo '<p><a class="button" href="'.esc_url(admin_url('admin.php?page=rvaz-wonen-testfacturen')).'">Testfacturen beheren</a> <a class="button" href="'.esc_url(admin_url('admin.php?page=rvaz-wonen-factuur-mail')).'">Factuur + Tikkie mailen</a></p><script>const rvazRemovedInvoices='.wp_json_encode($numbers).';document.querySelectorAll("table tr").forEach(row=>{const number=row.querySelector("td strong");if(number&&rvazRemovedInvoices.includes(number.textContent.trim()))row.hidden=true;});</script>';
 });
 add_filter('do_shortcode_tag',function($output,$tag){
  if($tag!=='rvaz_wonen_portal'||!is_user_logged_in())return $output;global $wpdb;$numbers=[];
