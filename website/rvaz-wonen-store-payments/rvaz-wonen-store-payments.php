@@ -32,6 +32,7 @@ final class RVAZ_Wonen_Store {
   if(!in_array($provider,['apple','google'],true))return self::error('Onbekende betaalwinkel.');
   if($provider==='google'&&!self::catalog()['google'])return self::error('Google Play-betaling is nog niet gekoppeld.',503);
   $ok=self::eligible($id);if(is_wp_error($ok))return $ok;
+  if($provider==='google'){try{RVAZ_Store_Google::product();}catch(Throwable $e){return self::error('Google Play-product of serverrechten zijn nog niet correct ingesteld. Er is niets afgeschreven.',503);}}
   $key='rvaz_store_pending_'.get_current_user_id().'_'.$id.'_'.$provider;$existing=get_option($key);
   if($existing){$data=get_option('rvaz_store_intent_'.$existing);if($data&&!isset($data['completed']))return self::public_intent($data);}
   $data=['id'=>wp_generate_uuid4(),'owner'=>get_current_user_id(),'property_id'=>$id,'provider'=>$provider,'product'=>RVAZ_Store_Contract::PRODUCT,'amount'=>'25.00','currency'=>'EUR','period'=>'1_month','created'=>time(),'reviewer'=>(int)get_post_meta($id,'_rvaz_wonen_private_reviewed',true),'generation'=>(int)get_post_meta($id,'_rvaz_wonen_private_invoice_generation',true)];

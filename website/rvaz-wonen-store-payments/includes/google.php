@@ -28,6 +28,16 @@ final class RVAZ_Store_Google {
   $data=self::response(wp_remote_post('https://oauth2.googleapis.com/token',['timeout'=>20,'redirection'=>0,'body'=>['grant_type'=>'urn:ietf:params:oauth:grant-type:jwt-bearer','assertion'=>$unsigned.'.'.self::encode($signature)]]));
   if(!is_string($data['access_token']??null)||$data['access_token']==='')throw new RuntimeException('Google authorization failed');return $data['access_token'];
  }
+ static function product(){
+  $url='https://androidpublisher.googleapis.com/androidpublisher/v3/applications/'.RVAZ_Store_Contract::GOOGLE_PACKAGE.'/oneTimeProducts/'.RVAZ_Store_Contract::PRODUCT;
+  $data=self::response(wp_remote_get($url,['timeout'=>20,'redirection'=>0,'headers'=>['Authorization'=>'Bearer '.self::token(),'Accept'=>'application/json']]));
+  if(($data['packageName']??'')!==RVAZ_Store_Contract::GOOGLE_PACKAGE||($data['productId']??'')!==RVAZ_Store_Contract::PRODUCT)throw new RuntimeException('Google product does not match RVAZ');
+  $options=array_values(array_filter($data['purchaseOptions']??[],function($o){return ($o['state']??'')==='ACTIVE'&&isset($o['buyOption'])&&($o['buyOption']['legacyCompatible']??false)===true;}));
+  if(count($options)!==1||!empty($options[0]['buyOption']['multiQuantityEnabled']))throw new RuntimeException('Google one-month product is not configured');
+  $regions=array_values(array_filter($options[0]['regionalPricingAndAvailabilityConfigs']??[],function($r){return ($r['regionCode']??'')==='NL';}));
+  if(count($regions)!==1||($regions[0]['availability']??'')!=='AVAILABLE'||($regions[0]['price']['currencyCode']??'')!=='EUR'||(string)($regions[0]['price']['units']??'')!=='25'||(int)($regions[0]['price']['nanos']??0)!==0)throw new RuntimeException('Google product must cost exactly EUR25 in the Netherlands');
+  return $options[0]['purchaseOptionId'];
+ }
  static function verify($purchaseToken){
   if(!is_string($purchaseToken)||strlen($purchaseToken)<10||strlen($purchaseToken)>4096)throw new RuntimeException('Invalid Google purchase token');
   $url='https://androidpublisher.googleapis.com/androidpublisher/v3/applications/'.RVAZ_Store_Contract::GOOGLE_PACKAGE.'/purchases/productsv2/tokens/'.rawurlencode($purchaseToken);
