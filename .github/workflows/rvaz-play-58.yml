@@ -1,4 +1,4 @@
-name: RVAZ Google Play version 59 candidate
+name: RVAZ Google Play version 60 candidate
 # Trigger Google Play build 2026-10-01
 on:
   push:
@@ -69,7 +69,7 @@ jobs:
           calendar_query = '<queries><intent><action android:name="android.intent.action.INSERT"/><data android:mimeType="vnd.android.cursor.item/event"/></intent></queries>'
           if 'vnd.android.cursor.item/event' not in m:
               m = m.replace('<application', calendar_query + '\n    <application', 1)
-          meta = '<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1599023671130671~2667109012"/>'
+          meta = '<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1609023671130671~2667109012"/>'
           if 'com.google.android.gms.ads.APPLICATION_ID' not in m:
               close = m.find('>', m.find('<application'))
               m = m[:close+1] + '\n        ' + meta + m[close+1:]
@@ -112,10 +112,10 @@ jobs:
           Path('android/app/proguard-rules.pro').write_text('-keep class * extends androidx.work.ListenableWorker { public <init>(...); }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-keep class **_Impl { *; }\n-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*\n')
           p.write_text(s)
           PY
-      - name: Build signed version 59 candidate
+      - name: Build signed version 60 candidate
         run: |
-          flutter build appbundle --release --build-name 0.6.9 --build-number 59
-          flutter build apk --release --target-platform android-x64 --build-name 0.6.9 --build-number 59
+          flutter build appbundle --release --build-name 0.6.10 --build-number 60
+          flutter build apk --release --target-platform android-x64 --build-name 0.6.10 --build-number 60
       - name: Verify signing and Android version
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
@@ -123,7 +123,7 @@ jobs:
           jarsigner -verify build/app/outputs/bundle/release/app-release.aab
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee build/package.txt
-          grep "name='nl.regiovoorneaanzee.rvaz_android' versionCode='59' versionName='0.6.9'" build/package.txt
+          grep "name='nl.regiovoorneaanzee.rvaz_android' versionCode='60' versionName='0.6.10'" build/package.txt
           test -s build/app/outputs/mapping/release/mapping.txt
       - name: Verify optimized APK launcher pixels
         run: |
@@ -174,7 +174,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Google-Play-59-candidate
+          name: RVAZ-Google-Play-60-candidate
           path: |
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/mapping/release/mapping.txt

@@ -502,8 +502,9 @@ class _MijnWonenPageState extends State<MijnWonenPage> {
       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
       final data = snapshot.data!, me = Map<String, dynamic>.from(data['me'] as Map);
       if (me['blocked'] == true) return const Center(child: Text('Je makelaarstoegang is geblokkeerd. Neem contact op met RVAZ.'));
-      if (me['makelaar'] != true) return ListView(padding: const EdgeInsets.all(16), children: [Text('Mijn Wonen', style: Theme.of(context).textTheme.titleLarge), ListTile(leading: const Icon(Icons.add_home_outlined), title: const Text('Zelf mijn woning aanbieden'), subtitle: const Text('Particulier verkopen en reacties beheren'), onTap: () => open(const WonenPrivatePage())), ListTile(leading: const Icon(Icons.favorite_border), title: const Text('Favorieten en zoekmeldingen'), onTap: () => open(const WonenReaderPage())), ListTile(leading: const Icon(Icons.business_outlined), title: const Text('Makelaarsaccount aanvragen'), onTap: () => open(Scaffold(appBar: AppBar(title: const Text('Makelaarsaccount')), body: WonenApplicationForm(me: me, refresh: () => setState(refresh)))))]);
+      if (me['makelaar'] != true) return ListView(padding: const EdgeInsets.all(16), children: [Text('Mijn Wonen', style: Theme.of(context).textTheme.titleLarge), ListTile(leading: const Icon(Icons.add_home_outlined), title: const Text('Zelf mijn woning aanbieden'), subtitle: const Text('Verkopen, verhuren of een kamer aanbieden'), onTap: () => open(const WonenPrivatePage())), ListTile(leading: const Icon(Icons.favorite_border), title: const Text('Favorieten en zoekmeldingen'), onTap: () => open(const WonenReaderPage())), ListTile(leading: const Icon(Icons.business_outlined), title: const Text('Makelaarsaccount aanvragen'), onTap: () => open(Scaffold(appBar: AppBar(title: const Text('Makelaarsaccount')), body: WonenApplicationForm(me: me, refresh: () => setState(refresh)))))]);
       final stats = Map<String, dynamic>.from(data['stats'] as Map);
+      final canManage = stats['subscription_active'] != false;
       return ListView(padding: const EdgeInsets.all(16), children: [
         Text('Welkom ${wonenText(me, 'name')}', style: Theme.of(context).textTheme.titleLarge),
         WonenDashboardSummary(stats: stats),
@@ -511,14 +512,14 @@ class _MijnWonenPageState extends State<MijnWonenPage> {
         ListTile(leading: const Icon(Icons.mail_outline), title: const Text('Berichten en aanvragen'), onTap: () => open(const WonenAanvragenPage())),
         ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Abonnement en facturen'), onTap: () => open(const WonenSubscriptionPage())),
         ListTile(leading: const Icon(Icons.settings_outlined), title: const Text('Instellingen'), onTap: () => open(const WonenProfilePage(settings: true))),
-        FilledButton.icon(onPressed: () => open(const WoningEditorPage()), icon: const Icon(Icons.add), label: const Text('Woning toevoegen')),
+        FilledButton.icon(onPressed: () => open(canManage ? const WoningEditorPage() : const WonenSubscriptionPage()), icon: Icon(canManage ? Icons.add : Icons.subscriptions_outlined), label: Text(canManage ? 'Woning toevoegen' : 'Opnieuw een pakket kiezen')),
         const SizedBox(height: 16),
         Text('Mijn woningen', style: Theme.of(context).textTheme.titleLarge),
         if (wonenItems(data['items']).isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Je hebt nog geen woningen toegevoegd.')),
         for (final item in wonenItems(data['items'])) Card(child: ListTile(
           title: Text(wonenText(item, 'title')),
           subtitle: Text(wonenText(item, 'publication_status') == 'publish' ? 'Gepubliceerd' : 'Concept'),
-          trailing: const Icon(Icons.edit_outlined), onTap: () => open(WoningEditorPage(item: item)),
+          trailing: Icon(canManage ? Icons.edit_outlined : Icons.lock_outline), onTap: () => open(canManage ? WoningEditorPage(item: item) : const WonenSubscriptionPage()),
         )),
       ]);
     }),
@@ -911,6 +912,13 @@ class WonenSubscriptionPage extends StatelessWidget {
           }, child: Text(sub['plan'] == key ? 'Huidig pakket' : 'Wijzig pakket')),
         ])));
       }),
+      if (!active) FilledButton.icon(icon: const Icon(Icons.subscriptions_outlined), label: const Text('Opnieuw een pakket kiezen'), onPressed: () async {
+        try {
+          final me = Map<String, dynamic>.from(await wonenRequest('/makelaar/me') as Map);
+          if (!context.mounted) return;
+          await Navigator.push(context, MaterialPageRoute(builder: (formContext) => Scaffold(appBar: AppBar(title: const Text('Nieuw abonnement')), body: WonenApplicationForm(me: me, returning: true, refresh: () { Navigator.pop(formContext); refresh(); }))));
+        } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); }
+      }),
       ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Mijn facturen'), trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenInvoicesPage()))),
       if (active) TextButton(onPressed: () async {
@@ -956,7 +964,8 @@ class WonenInvoicesPage extends StatelessWidget {
 class WonenApplicationForm extends StatefulWidget {
   final Map<String, dynamic> me;
   final VoidCallback refresh;
-  const WonenApplicationForm({super.key, required this.me, required this.refresh});
+  final bool returning;
+  const WonenApplicationForm({super.key, required this.me, required this.refresh, this.returning = false});
   @override
   State<WonenApplicationForm> createState() => _WonenApplicationFormState();
 }
@@ -992,7 +1001,7 @@ class _WonenApplicationFormState extends State<WonenApplicationForm> {
         if (!context.mounted) return;
         setState(() => busy = true);
         try {
-          await wonenRequest('/makelaar/aanmelden', body: {'office': office.text.trim(), 'contact_name': name.text.trim(),
+          await wonenRequest(widget.returning ? '/makelaar/opnieuw-aanmelden' : '/makelaar/aanmelden', body: {'office': office.text.trim(), 'contact_name': name.text.trim(),
             'phone': phone.text.trim(), 'plan': selected, 'expected_price': price, 'expected_first_month_price': firstPrice, 'confirm': true});
           if (mounted) widget.refresh();
         } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); }
