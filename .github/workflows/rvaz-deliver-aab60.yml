@@ -31,7 +31,7 @@ jobs:
           print('Verified original AdMob application ID inside signed AAB')
           PYVERIFY
           jarsigner -verify RVAZ-0.6.10-60.aab
-          sha260sum RVAZ-0.6.10-60.aab
+          sha256sum RVAZ-0.6.10-60.aab
       - name: Attach AAB to unpublished GitHub draft only
         run: |
           if gh release view rvaz-android-test-60 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft > /tmp/rvaz-draft-status; then
