@@ -1,0 +1,18 @@
+(()=>{
+ 'use strict';const c=window.rvazWonenReapply;if(!c||document.getElementById('rvaz-wonen-reapply'))return;
+ const root=document.querySelector('.rvw');if(!root)return;
+ const el=(tag,text)=>{const n=document.createElement(tag);if(text)n.textContent=text;return n;};
+ const panel=el('section');panel.id='rvaz-wonen-reapply';panel.className='rvw-panel';panel.append(el('h2','Opnieuw een pakket kiezen'),el('p','Je vorige abonnement is gestopt. Kies een pakket om opnieuw aan te vragen. Je eerdere facturen en woningen blijven bewaard. De 50% introductiekorting geldt niet opnieuw.'));
+ if(c.pending){panel.replaceChildren(el('h2','Nieuwe abonnementsaanvraag'),el('p','Je aanvraag staat klaar voor beoordeling door RVAZ. Je hoeft geen tweede aanvraag te doen.'));root.prepend(panel);return;}
+ const form=el('form'),select=el('select'),label=el('label','Abonnement');select.name='plan';select.setAttribute('aria-label','Abonnement');
+ for(const [key,p]of Object.entries(c.plans)){if(!p.enabled)continue;const option=el('option',`${p.name} · €${Number(p.price).toFixed(2).replace('.',',')} per maand`);option.value=key;select.append(option);}label.append(select);form.append(label);
+ for(const [name,text,value]of [['office','Kantoornaam',c.office],['contact_name','Contactpersoon',c.contact],['phone','Telefoon',c.phone],['coupon_code','Kortingscode (optioneel)','']]){const wrap=el('label',text),input=el('input');input.name=name;input.setAttribute('aria-label',text);input.required=name!=='coupon_code';input.value=value||'';wrap.append(input);form.append(wrap);}
+ const price=el('p'),feedback=el('p');feedback.setAttribute('aria-live','polite');price.setAttribute('aria-live','polite');
+ const request=async(path,data)=>{const r=await fetch(c.api+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-WP-Nonce':c.nonce},body:JSON.stringify(data)});const body=await r.json();if(!r.ok)throw Error(body.message||'Probeer opnieuw.');return body;};
+ const quote=async()=>{const p=c.plans[select.value],code=form.elements.coupon_code.value.trim();if(code.toUpperCase()==='MAKELAAR')throw Error('MAKELAAR geldt alleen bij een eerste nieuw makelaarsabonnement.');const q=code?await request('/kortingscode/controleren',{audience:'makelaar',plan:select.value,code}):{total:String(p.price)};price.textContent=`Eerste maand: €${Number(q.total).toFixed(2).replace('.',',')} · daarna €${Number(p.price).toFixed(2).replace('.',',')} per maand`;return q.total;};
+ const refresh=()=>quote().catch(e=>{price.textContent=e.message;});select.onchange=refresh;form.elements.coupon_code.onchange=refresh;
+ const confirm=el('input');confirm.type='checkbox';confirm.required=true;const terms=el('label','Ik bevestig het gekozen pakket en de getoonde maandprijs.');terms.append(confirm);
+ const submit=el('button','Pakket opnieuw aanvragen');submit.type='submit';submit.className='rvw-btn';form.append(price,terms,submit,feedback);
+ form.onsubmit=async e=>{e.preventDefault();submit.disabled=true;try{const amount=await quote();const data={};for(const name of ['office','contact_name','phone','coupon_code'])data[name]=form.elements[name].value;await request('/makelaar/opnieuw-aanmelden',{...data,plan:select.value,confirm:confirm.checked,expected_price:String(c.plans[select.value].price),expected_first_month_price:String(amount)});feedback.textContent='Je aanvraag is ontvangen en staat klaar voor beoordeling door RVAZ.';form.querySelectorAll('input,select').forEach(n=>n.disabled=true);}catch(error){feedback.textContent=error.message;submit.disabled=false;}};
+ panel.append(form);root.prepend(panel);refresh();
+})();
