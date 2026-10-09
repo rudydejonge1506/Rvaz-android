@@ -104,3 +104,10 @@ audit_check(!RVAZ_Wonen_Subscription_Access::writable($officeA),'administrator w
 wp_set_current_user($admin->ID);audit_check(RVAZ_Wonen_Subscription_Access::writable($admin->ID),'administrator without own broker history retains administrative access');
 $template=file_get_contents(dirname(__DIR__,2).'/website/rvaz-wonen-account-fix/makelaars-uitnodiging.html');
 audit_check(strpos($template,'{{unsubscribe}}')!==false&&strpos($template,'{unsubscribe_url}')===false,'newsletter preserves actual plugin unsubscribe placeholder');
+wp_set_current_user($officeA);
+$write=new WP_REST_Request('POST','/rvaz-wonen/v1/makelaar/woningen');$write->set_body_params(['title'=>'Cannot create','publication_status'=>'draft','transactie'=>'Koop']);
+$denied=rest_do_request($write);audit_check($denied->get_status()===403&&$denied->get_data()['code']==='subscription_required','actual broker REST route blocks cancelled property writes');
+$reapply=new WP_REST_Request('POST','/rvaz-wonen/v1/makelaar/aanmelden');$reapply->set_body_params(['office'=>'Audit Office A','contact_name'=>'CI native return','phone'=>'000','plan'=>'basis','expected_price'=>$prices['basis']['price'],'expected_first_month_price'=>$prices['basis']['price'],'confirm'=>true]);
+$nativeReturn=rest_do_request($reapply);audit_check($nativeReturn->get_status()===200&&$nativeReturn->get_data()['status']==='pending','existing native signup route creates fresh returning application');
+wp_set_current_user($officeC);$rent=new WP_REST_Request('POST','/rvaz-wonen/v1/particulier/woningen/'.$room['id']);$rent->set_body_params(['transactie'=>'Huur','woningtype'=>'Kamer','title'=>'Native rental edit']);
+$actualRent=rest_do_request($rent);audit_check($actualRent->get_status()===200&&$actualRent->get_data()['transactie']==='Huur','actual private REST route retains rental transaction');
