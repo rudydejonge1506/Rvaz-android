@@ -6,6 +6,14 @@ bool wonenStorePriceValid(ProductDetails product) =>
     product.id == wonenStoreProduct && product.currencyCode == 'EUR' &&
     (product.rawPrice - 25).abs() < 0.001;
 
+bool wonenStoreCheckoutVisible(Map<String, dynamic> row, {int? now}) {
+  if (wonenText(row, 'publication_status') != 'pending') return false;
+  final payment = wonenText(row, 'payment_status');
+  if (['not_ordered', 'cancelled', 'open', ''].contains(payment)) return true;
+  final end = int.tryParse('${row['placement_expires']}') ?? 0;
+  return payment == 'paid' && end > 0 && end <= (now ?? DateTime.now().millisecondsSinceEpoch ~/ 1000);
+}
+
 class WonenStorePayments extends ChangeNotifier {
   static final instance = WonenStorePayments();
   final storage = const FlutterSecureStorage();
@@ -123,8 +131,9 @@ class _WonenStoreCheckoutState extends State<WonenStoreCheckout> {
   }
   Future<void> load() async {
     try {
-      final catalog = await wonenRequest('/winkel/catalogus');
+      final catalog = await wonenRequest('/winkel/catalogus?property_id=${widget.id}');
       if (catalog is! Map || catalog[payments.provider] != true) throw StateError('Betalen via deze winkel is nog niet beschikbaar.');
+      if (catalog['eligible'] != true) throw StateError('${catalog['message'] ?? 'RVAZ moet deze woning eerst goedkeuren.'}');
       testOnly = catalog['test_only'] == true;
       final result = await payments.product();
       if (mounted) setState(() => details = result);

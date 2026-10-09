@@ -11,9 +11,11 @@ foreach(['adres'=>'Teststraat 1','postcode'=>'3231AA','plaats'=>'Brielle','prijs
 $aid=wp_insert_attachment(['post_title'=>'Testfoto','post_mime_type'=>'image/jpeg','post_author'=>$owner,'post_status'=>'inherit']);update_post_meta($aid,'_wp_attached_file','2026/10/test.jpg');set_post_thumbnail($id,$aid);
 $r=new WP_REST_Request('POST');$r->set_body_params(['property_id'=>$id,'provider'=>'apple']);
 store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'unsubmitted/unchecked property cannot start payment');
+store_assert(RVAZ_Wonen_Store::catalog($r)['eligible']===false,'catalog hides checkout for an unreviewed property');
 update_post_meta($id,'_rvaz_wonen_private_authority','confirmed');update_post_meta($id,'_rvaz_wonen_private_reviewed',$owner);
 store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'owner cannot fake administrator approval');
 update_post_meta($id,'_rvaz_wonen_private_reviewed',$admin->ID);
+store_assert(RVAZ_Wonen_Store::catalog($r)['eligible']===true,'catalog exposes checkout only after real administrator review');
 $intent=RVAZ_Wonen_Store::intent($r);store_assert(!is_wp_error($intent)&&$intent['amount']==='25.00'&&$intent['period']==='1_month','reviewed rental room gets fixed one-month EUR25 intent');
 store_assert(RVAZ_Wonen_Store::intent($r)['id']===$intent['id'],'intent retry returns same pending intent');
 wp_set_current_user($other);store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'other user cannot buy someone else’s listing');

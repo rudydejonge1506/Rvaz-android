@@ -19,6 +19,6 @@ Verwacht: één serverbevestiging, geen echte publicatie of factuur in testmodus
 
 ## Productievoorwaarden
 
-Geen productieactivering vóór echte aankoopt tests, controle van de live API-installatie, configuratie van Apple-servermeldingen voor terugbetalingen, en controle van Google-serverrechten en terugbetalingscontrole. Apple-meldingen gaan naar `/wp-json/rvaz-wonen/v1/winkel/apple-melding` en moeten cryptografisch geldig zijn. Google-terugbetalingen worden dagelijks opnieuw bij Google gecontroleerd. De bestaande websitefacturen, Tikkie-links en makelaarskortingen worden niet vervangen.
+Geen productieactivering vóór echte aankooptests, controle van de live API-installatie, configuratie van Apple-servermeldingen voor terugbetalingen, en controle van Google-serverrechten en terugbetalingscontrole. Apple-meldingen gaan naar `/wp-json/rvaz-wonen/v1/winkel/apple-melding` en moeten cryptografisch geldig zijn. Google-terugbetalingen worden dagelijks opnieuw bij Google gecontroleerd. De bestaande websitefacturen, Tikkie-links en makelaarskortingen worden niet vervangen.
 
 De backendtests gebruiken een wegwerp-WordPress-database en synthetische Google-antwoorden; die tests vervangen geen echte winkeltest.

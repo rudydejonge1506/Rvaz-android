@@ -15,7 +15,11 @@ final class RVAZ_Wonen_Store {
   register_rest_route(RVAZ_Wonen_Native_API::NS,'/winkel/apple-melding',['methods'=>'POST','callback'=>[__CLASS__,'apple_notification'],'permission_callback'=>'__return_true']);
   foreach(['/winkel/catalogus'=>['GET','catalog'],'/winkel/intentie'=>['POST','intent'],'/winkel/bevestigen'=>['POST','confirm']] as $path=>$route)register_rest_route(RVAZ_Wonen_Native_API::NS,$path,['methods'=>$route[0],'callback'=>[__CLASS__,$route[1]],'permission_callback'=>['RVAZ_Wonen_Private','allowed']]);
  }
- static function catalog(){return ['product_id'=>RVAZ_Store_Contract::PRODUCT,'price'=>'25.00','currency'=>'EUR','period'=>'1_month','automatic_renewal'=>false,'review_required'=>true,'test_only'=>!get_option('rvaz_store_production',false),'apple'=>true,'google'=>(bool)get_option('rvaz_store_google_credentials','')];}
+ static function catalog($r=null){
+  $data=['product_id'=>RVAZ_Store_Contract::PRODUCT,'price'=>'25.00','currency'=>'EUR','period'=>'1_month','automatic_renewal'=>false,'review_required'=>true,'test_only'=>!get_option('rvaz_store_production',false),'apple'=>true,'google'=>(bool)get_option('rvaz_store_google_credentials','')];
+  if($r instanceof WP_REST_Request&&$r->has_param('property_id')){$ok=self::eligible(absint($r['property_id']));$data['eligible']=!is_wp_error($ok);$data['message']=is_wp_error($ok)?$ok->get_error_message():'Goedgekeurd voor plaatsing.';}
+  return $data;
+ }
  static function eligible($id,$paidRetry=false){
   if(!RVAZ_Wonen_Private::owns($id))return self::error('Deze woning hoort niet bij jouw account.',403);
   if(get_post_status($id)!=='pending'||!get_post_meta($id,'_rvaz_wonen_private_authority',true))return self::error('Dien eerst je complete woning in voor beoordeling.');
