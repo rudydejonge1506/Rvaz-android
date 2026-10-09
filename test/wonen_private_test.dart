@@ -7,9 +7,9 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: WoningEditorPage(privateOffer: true, item: {'id': 12, 'title': 'Mijn woning', 'transactie': 'Koop', 'publication_status': 'publish'})));
     await tester.pumpAndSettle();
     expect(find.text('Particulier aanbod: koopwoning, huurwoning of kamer. Na elke wijziging is opnieuw beoordeling door RVAZ nodig.'), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Woning opslaan'), 500, scrollable: find.byType(Scrollable).first);
     expect(find.text('Publiceren'), findsNothing);
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     expect(find.text('Promoot als nieuws (€29)'), findsNothing);
     expect(tester.takeException(), isNull);
   });
