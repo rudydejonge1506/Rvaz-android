@@ -12,17 +12,18 @@ final class RVAZ_Wonen_Store {
  static function error($message,$status=409){return new WP_Error('rvaz_store',$message,['status'=>$status]);}
  static function register(){
   if(!class_exists('RVAZ_Wonen_Private'))return;
+  register_rest_route(RVAZ_Wonen_Native_API::NS,'/winkel/apple-melding',['methods'=>'POST','callback'=>[__CLASS__,'apple_notification'],'permission_callback'=>'__return_true']);
   foreach(['/winkel/catalogus'=>['GET','catalog'],'/winkel/intentie'=>['POST','intent'],'/winkel/bevestigen'=>['POST','confirm']] as $path=>$route)register_rest_route(RVAZ_Wonen_Native_API::NS,$path,['methods'=>$route[0],'callback'=>[__CLASS__,$route[1]],'permission_callback'=>['RVAZ_Wonen_Private','allowed']]);
  }
  static function catalog(){return ['product_id'=>RVAZ_Store_Contract::PRODUCT,'price'=>'25.00','currency'=>'EUR','period'=>'1_month','automatic_renewal'=>false,'review_required'=>true,'test_only'=>!get_option('rvaz_store_production',false),'apple'=>true,'google'=>(bool)get_option('rvaz_store_google_credentials','')];}
- static function eligible($id){
+ static function eligible($id,$paidRetry=false){
   if(!RVAZ_Wonen_Private::owns($id))return self::error('Deze woning hoort niet bij jouw account.',403);
   if(get_post_status($id)!=='pending'||!get_post_meta($id,'_rvaz_wonen_private_authority',true))return self::error('Dien eerst je complete woning in voor beoordeling.');
   $reviewer=(int)get_post_meta($id,'_rvaz_wonen_private_reviewed',true);
   if(!$reviewer||!user_can($reviewer,'manage_options'))return self::error('RVAZ moet je woning eerst goedkeuren. Je hoeft daarvoor nog niet te betalen.');
   $ok=RVAZ_Wonen_Private::complete($id);if(is_wp_error($ok))return $ok;
   $invoice=RVAZ_Wonen_Private::invoice($id);$end=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);
-  if($invoice&&$invoice['status']==='paid'&&(!$end||$end>time()))return self::error('Deze plaatsing is al betaald.');
+  if(!$paidRetry&&$invoice&&$invoice['status']==='paid'&&(!$end||$end>time()))return self::error('Deze plaatsing is al betaald.');
   if($invoice&&$invoice['status']==='open'&&(float)$invoice['total']!==25.0)return self::error('Voor deze woning bestaat al een factuur met een andere prijs. Betaal niet nogmaals via de winkel.');
   return true;
  }
@@ -52,17 +53,19 @@ final class RVAZ_Wonen_Store {
   try{
    $orderKey='rvaz_store_order_'.hash('sha256',$verified['provider'].':'.$verified['transaction']);$order=get_option($orderKey);
    if($order&&($order['intent_id']!==$uuid||(int)$order['owner']!==get_current_user_id()))return self::error('Deze betaling hoort al bij een andere plaatsing.',403);
+   if($order&&($order['status']??'')==='refunded')return self::error('Deze aankoop is terugbetaald en kan niet opnieuw worden gebruikt.');
    if($order&&($order['status']??'')==='completed')return $order['result'];
-   if(!$order){$order=['intent_id'=>$uuid,'owner'=>get_current_user_id(),'property_id'=>$intent['property_id'],'status'=>'verified','test'=>$verified['test'],'provider'=>$verified['provider'],'transaction'=>$verified['transaction']];if(!add_option($orderKey,$order,'',false))return self::error('Betaling wordt al verwerkt. Probeer opnieuw.',503);}
+   if(!$order){$order=['intent_id'=>$uuid,'owner'=>get_current_user_id(),'property_id'=>$intent['property_id'],'status'=>'verified','test'=>$verified['test'],'provider'=>$verified['provider'],'transaction'=>$verified['transaction']];if($intent['provider']==='google')$order['token_sealed']=RVAZ_Store_Google::seal($r['verification_data'],'rvaz-google-purchase');if(!add_option($orderKey,$order,'',false))return self::error('Betaling wordt al verwerkt. Probeer opnieuw.',503);}
    if($verified['test']){$result=['verified'=>true,'test'=>true,'published'=>false,'message'=>'Testbetaling bevestigd. Er is geen echte woning gepubliceerd of factuur aangemaakt.'];}
    else{
-    $id=(int)$intent['property_id'];$ok=self::eligible($id);if(is_wp_error($ok))return $ok;
+    $id=(int)$intent['property_id'];$paidRetry=get_post_meta($id,'_rvaz_wonen_store_order',true)===$orderKey;$ok=self::eligible($id,$paidRetry);if(is_wp_error($ok))return $ok;
     if((int)get_post_meta($id,'_rvaz_wonen_private_reviewed',true)!==(int)$intent['reviewer'])return self::error('Woning is opnieuw beoordeeld. Laat de betaalde aankoop door RVAZ controleren.');
     $request=new WP_REST_Request('POST');$request->set_param('id',$id);$request->set_param('confirm',true);$request->set_param('expected_price','25.00');$request->set_param('expected_period','1_month');
+    if((int)get_post_meta($id,'_rvaz_wonen_private_invoice_generation',true)!==(int)$intent['generation']&&!$paidRetry)return self::error('De plaatsing is gewijzigd sinds de aankoop. Laat de betaling door RVAZ controleren.');
     $created=RVAZ_Wonen_Private::order($request);if(is_wp_error($created))return $created;$iid=(int)$created['invoice_id'];
     $invoice=RVAZ_Wonen_Private::invoice($id);if(!$invoice||(int)$invoice['id']!==$iid||(float)$invoice['total']!==25.0)return self::error('Factuur past niet bij de winkelbetaling.',409);
-    if($wpdb->update($wpdb->prefix.'rvaz_wonen_invoices',['status'=>'paid','tikkie_url'=>''],['id'=>$iid,'user_id'=>get_current_user_id()])===false)return self::error('Betaling opslaan is niet gelukt. Probeer opnieuw.',500);
     update_post_meta($id,'_rvaz_wonen_store_order',$orderKey);
+    if($wpdb->update($wpdb->prefix.'rvaz_wonen_invoices',['status'=>'paid','tikkie_url'=>''],['id'=>$iid,'user_id'=>get_current_user_id()])===false)return self::error('Betaling opslaan is niet gelukt. Probeer opnieuw.',500);
     // The original administrator review remains authoritative; owners cannot publish.
     $uid=get_current_user_id();wp_set_current_user((int)$intent['reviewer']);
     try{$review=new WP_REST_Request('POST');$review->set_param('id',$id);$review->set_param('decision','approve');$review->set_param('authority_checked',true);$published=RVAZ_Wonen_Private::review($review);}finally{wp_set_current_user($uid);}
@@ -71,6 +74,30 @@ final class RVAZ_Wonen_Store {
    }
    $order['status']='completed';$order['result']=$result;update_option($orderKey,$order,false);$intent['completed']=time();update_option('rvaz_store_intent_'.$uuid,$intent,false);delete_option('rvaz_store_pending_'.$intent['owner'].'_'.$intent['property_id'].'_'.$intent['provider']);return $result;
   }finally{$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$lock));}
+ }
+ static function revoke($orderKey){
+  $order=get_option($orderKey);if(!$order)return;
+  $order['status']='refunded';$order['refunded']=time();update_option($orderKey,$order,false);
+  if(!empty($order['test']))return;
+  $id=(int)$order['property_id'];$iid=(int)($order['result']['invoice_id']??0);
+  global $wpdb;if($iid)$wpdb->update($wpdb->prefix.'rvaz_wonen_invoices',['status'=>'cancelled'],['id'=>$iid,'user_id'=>(int)$order['owner']]);
+  if(get_post_meta($id,'_rvaz_wonen_store_order',true)===$orderKey){delete_post_meta($id,'_rvaz_wonen_private_approved');wp_update_post(['ID'=>$id,'post_status'=>'draft']);}
+ }
+ static function apple_notification($r){
+  try{
+   $notice=RVAZ_Store_Apple::verify($r['signedPayload']);
+   if(!in_array($notice['notificationType']??'',['REFUND','REVOKE'],true))return ['received'=>true];
+   $transaction=RVAZ_Store_Apple::verify($notice['data']['signedTransactionInfo']??'');
+   if(($transaction['bundleId']??'')!==RVAZ_Store_Contract::APPLE_BUNDLE||($transaction['productId']??'')!==RVAZ_Store_Contract::PRODUCT||empty($transaction['revocationDate'])||empty($transaction['transactionId']))throw new RuntimeException('Invalid refund');
+   self::revoke('rvaz_store_order_'.hash('sha256','apple:'.$transaction['transactionId']));return ['received'=>true];
+  }catch(Throwable $e){return self::error('Ongeldige ondertekende winkelmelding.',422);}
+ }
+ static function google_refunds(){
+  if(!get_option('rvaz_store_google_credentials'))return;
+  global $wpdb;$names=$wpdb->get_col($wpdb->prepare("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",$wpdb->esc_like('rvaz_store_order_').'%'));
+  foreach($names as $name){$order=get_option($name);if(($order['provider']??'')!=='google'||($order['status']??'')!=='completed'||!empty($order['test'])||empty($order['token_sealed']))continue;
+   try{$receipt=RVAZ_Store_Google::verify(RVAZ_Store_Google::open($order['token_sealed'],'rvaz-google-purchase'));$state=$receipt['purchaseStateContext']['purchaseState']??'';$items=$receipt['productLineItem']??[];if($state==='CANCELLED'||(count($items)===1&&($items[0]['productId']??'')===RVAZ_Store_Contract::PRODUCT&&($items[0]['productOfferDetails']['refundableQuantity']??null)===0))self::revoke($name);}catch(Throwable $e){/* Network failure grants nothing and does not withdraw a valid paid listing. Retry at next scan. */}
+  }
  }
  static function menu(){add_options_page('Wonen winkelbetalingen','Wonen winkelbetalingen','manage_options','rvaz-wonen-store',[__CLASS__,'settings']);}
  static function settings(){
@@ -84,3 +111,7 @@ final class RVAZ_Wonen_Store {
 }
 add_action('rest_api_init',['RVAZ_Wonen_Store','register'],60);
 add_action('admin_menu',['RVAZ_Wonen_Store','menu']);
+
+add_action('rvaz_store_google_refunds',['RVAZ_Wonen_Store','google_refunds']);
+register_activation_hook(__FILE__,function(){if(!wp_next_scheduled('rvaz_store_google_refunds'))wp_schedule_event(time()+HOUR_IN_SECONDS,'daily','rvaz_store_google_refunds');});
+register_deactivation_hook(__FILE__,function(){wp_clear_scheduled_hook('rvaz_store_google_refunds');});

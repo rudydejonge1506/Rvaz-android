@@ -2,16 +2,17 @@
 /** Google purchases are read from the Publisher API, never trusted from the app. */
 final class RVAZ_Store_Google {
  static function encode($value){return rtrim(strtr(base64_encode($value),'+/','-_'),'=');}
- static function seal($json){
+ static function seal($json,$purpose='rvaz-google-service-account'){
   $key=hash('sha256',wp_salt('auth').wp_salt('secure_auth'),true);$iv=random_bytes(12);$tag='';
-  $cipher=openssl_encrypt($json,'aes-256-gcm',$key,OPENSSL_RAW_DATA,$iv,$tag,'rvaz-google-service-account');
+  $cipher=openssl_encrypt($json,'aes-256-gcm',$key,OPENSSL_RAW_DATA,$iv,$tag,$purpose);
   if($cipher===false)throw new RuntimeException('Credential encryption failed');return base64_encode($iv.$tag.$cipher);
  }
- static function credentials(){
-  $data=base64_decode(get_option('rvaz_store_google_credentials',''),true);if(!$data||strlen($data)<29)throw new RuntimeException('Google Play server connection is not configured');
-  $json=openssl_decrypt(substr($data,28),'aes-256-gcm',hash('sha256',wp_salt('auth').wp_salt('secure_auth'),true),OPENSSL_RAW_DATA,substr($data,0,12),substr($data,12,16),'rvaz-google-service-account');
-  if(!$json)throw new RuntimeException('Google Play credentials cannot be opened');return self::validate_credentials($json);
+ static function open($encrypted,$purpose='rvaz-google-service-account'){
+  $data=base64_decode($encrypted,true);if(!$data||strlen($data)<29)throw new RuntimeException('Encrypted Google connection is not configured');
+  $json=openssl_decrypt(substr($data,28),'aes-256-gcm',hash('sha256',wp_salt('auth').wp_salt('secure_auth'),true),OPENSSL_RAW_DATA,substr($data,0,12),substr($data,12,16),$purpose);
+  if(!$json)throw new RuntimeException('Google server data cannot be opened');return $json;
  }
+ static function credentials(){return self::validate_credentials(self::open(get_option('rvaz_store_google_credentials','')));}
  static function validate_credentials($json){
   $data=json_decode($json,true,16,JSON_THROW_ON_ERROR);
   if(($data['type']??'')!=='service_account'||!preg_match('/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.iam\.gserviceaccount\.com$/D',$data['client_email']??'')||!openssl_pkey_get_private($data['private_key']??''))throw new RuntimeException('Invalid Google service account');return $data;

@@ -37,6 +37,22 @@ $result=RVAZ_Wonen_Store::confirm($c);store_assert(!is_wp_error($result)&&$resul
 store_assert(get_post_status($id)==='pending'&&!RVAZ_Wonen_Private::invoice($id)&&!get_post_meta($id,'_rvaz_wonen_private_started',true),'sandbox creates no real invoice, publication or paid period');
 store_assert(RVAZ_Wonen_Store::confirm($c)===$result,'same receipt retry is idempotent');
 store_assert(!in_array('https://attacker.invalid',$storeURLs,true),'untrusted credential token_uri cannot redirect authorization');
+// Production fulfillment is exercised only in this disposable CI database with synthetic Google responses.
+update_option('rvaz_store_production',true,false);
+$intent=RVAZ_Wonen_Store::intent($r);$storeReceipt['obfuscatedExternalAccountId']=$intent['id'];$storeReceipt['orderId']='GPA.synthetic-production';unset($storeReceipt['testPurchaseContext']);
+$c->set_body_params(['intent_id'=>$intent['id'],'verification_data'=>'synthetic-production-token-not-valid-outside-ci']);
+$result=RVAZ_Wonen_Store::confirm($c);
+store_assert(!is_wp_error($result)&&$result['published']&&!$result['test']&&get_post_status($id)==='publish','synthetic production receipt fulfills previously moderated listing in disposable database');
+store_assert(RVAZ_Wonen_Private::paid($id)&&(int)get_post_meta($id,'_rvaz_wonen_private_expires',true)>time()+27*DAY_IN_SECONDS,'paid invoice and calendar month recorded upon publication');
+store_assert(RVAZ_Wonen_Store::confirm($c)===$result,'production retry does not create another invoice or extend period');
+$end=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);RVAZ_Wonen_Private::edited($id);
+store_assert(get_post_status($id)==='pending'&&!get_post_meta($id,'_rvaz_wonen_private_reviewed',true)&&(int)get_post_meta($id,'_rvaz_wonen_private_expires',true)===$end,'editing withdraws listing for re-review without extending paid period');
+$key=get_post_meta($id,'_rvaz_wonen_store_order',true);RVAZ_Wonen_Store::revoke($key);
+store_assert(get_post_status($id)==='draft'&&!RVAZ_Wonen_Private::paid($id),'refund withdraws only corresponding listing and cancels its invoice');
+store_assert(is_wp_error(RVAZ_Wonen_Store::confirm($c)),'old signed transaction cannot reactivate refunded order');
+$n=new WP_REST_Request('POST');$n->set_param('signedPayload','forged-refund');store_assert(is_wp_error(RVAZ_Wonen_Store::apple_notification($n)),'unsigned public refund notification rejected');
+update_post_meta($id,'_rvaz_wonen_store_order','different-new-month');wp_update_post(['ID'=>$id,'post_status'=>'pending']);RVAZ_Wonen_Store::revoke($key);store_assert(get_post_status($id)==='pending','refund of old order cannot withdraw a different newer order');
+delete_option('rvaz_store_production');
 store_assert($mailCount===0,'no emails sent during payment tests');
 remove_filter('pre_http_request',$hook,10);delete_option('rvaz_store_google_credentials');
 foreach(['2027-01-31 12:15'=>'2027-02-28 12:15','2028-01-31 12:15'=>'2028-02-29 12:15','2026-10-09 12:15'=>'2026-11-09 12:15'] as $start=>$end){$timestamp=(new DateTimeImmutable($start,wp_timezone()))->getTimestamp();store_assert(wp_date('Y-m-d H:i',RVAZ_Wonen_Private::month_end($timestamp))===$end,'calendar month clamps and preserves local time: '.$start);}
