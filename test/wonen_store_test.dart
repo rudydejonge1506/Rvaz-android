@@ -3,6 +3,11 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:rvaz_android/wonen.dart';
 
 void main() {
+  test('Submitted or published adverts cannot be submitted again and erase review', () {
+    expect(wonenPrivateSubmissionVisible({'publication_status': 'draft'}), isTrue);
+    expect(wonenPrivateSubmissionVisible({'publication_status': 'pending'}), isFalse);
+    expect(wonenPrivateSubmissionVisible({'publication_status': 'publish'}), isFalse);
+  });
   ProductDetails product({String id = wonenStoreProduct, String currency = 'EUR', double price = 25}) =>
       ProductDetails(id: id, title: 'Woning of kamer', description: 'Eén maand', price: '€25',
           rawPrice: price, currencyCode: currency);

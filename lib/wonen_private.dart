@@ -1,5 +1,8 @@
 part of 'wonen.dart';
 
+bool wonenPrivateSubmissionVisible(Map<String, dynamic> row) =>
+    wonenText(row, 'publication_status') == 'draft';
+
 class WonenPrivatePage extends StatefulWidget {
   const WonenPrivatePage({super.key});
   @override
@@ -23,10 +26,11 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
         if ((int.tryParse('${row['placement_expires']}') ?? 0) > 0) Text('Einddatum: ${DateTime.fromMillisecondsSinceEpoch(int.parse('${row['placement_expires']}') * 1000).toLocal().toString().substring(0, 16)}'),
         if (wonenText(row, 'review_reason').isNotEmpty) Text('Beoordeling: ${wonenText(row, 'review_reason')}'),
         if (wonenStoreCheckoutVisible(row))
-          WonenStoreCheckout(id: int.parse('${row['id']}'), refresh: refresh),
+          WonenStoreCheckout(key: ObjectKey(row), id: int.parse('${row['id']}'), refresh: refresh),
         OutlinedButton.icon(icon: const Icon(Icons.edit_outlined), label: const Text('Woning en foto’s bewerken'), onPressed: busy ? null : () async {
           await Navigator.push(context, MaterialPageRoute(builder: (_) => WoningEditorPage(item: row, privateOffer: true))); refresh();
         }),
+        if (wonenPrivateSubmissionVisible(row)) ...[
         CheckboxListTile(contentPadding: EdgeInsets.zero, title: const Text('Ik ben bevoegd deze woning aan te bieden.'), value: authority, onChanged: busy ? null : (v) => setState(() => authority = v ?? false)),
         CheckboxListTile(contentPadding: EdgeInsets.zero, title: const Text('Ik mag deze foto’s gebruiken.'), value: photos, onChanged: busy ? null : (v) => setState(() => photos = v ?? false)),
         FilledButton(onPressed: busy || !authority || !photos ? null : () async {
@@ -35,6 +39,8 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
           catch (e) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
           finally { if (mounted) setState(() => busy = false); }
         }, child: const Text('Indienen voor beoordeling')),
+        ] else if (wonenText(row, 'publication_status') == 'pending')
+          const Text('Je advertentie is ingediend. Controleer hierboven de beoordeling en betaalstatus. Opnieuw indienen is niet nodig.'),
       ]))),
       ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Mijn facturen'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenInvoicesPage(privateOffer: true)))),
       ListTile(leading: const Icon(Icons.mail_outline), title: const Text('Reacties op mijn woning'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenAanvragenPage(privateOffer: true)))),

@@ -130,6 +130,8 @@ class _WonenStoreCheckoutState extends State<WonenStoreCheckout> {
     if (verified != payments.verified) { verified = payments.verified; widget.refresh(); }
   }
   Future<void> load() async {
+    if (!mounted || payments.busy) return;
+    setState(() { loading = true; error = null; details = null; });
     try {
       final catalog = await wonenRequest('/winkel/catalogus?property_id=${widget.id}');
       if (catalog is! Map || catalog[payments.provider] != true) throw StateError('Betalen via deze winkel is nog niet beschikbaar.');
@@ -145,6 +147,7 @@ class _WonenStoreCheckoutState extends State<WonenStoreCheckout> {
     const Text('€25 voor één woning of kamer, één kalendermaand vanaf publicatie. Geen automatische verlenging. RVAZ beoordeelt eerst je advertentie.'),
     if (loading) const Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()),
     if (error != null) Text(error!),
+    TextButton.icon(onPressed: loading || payments.busy ? null : load, icon: const Icon(Icons.refresh), label: const Text('Beoordeling en betaling vernieuwen')),
     if (details != null) ...[
       if (testOnly) const Text('Testmodus: testbetalingen publiceren geen echte advertentie.'),
       FilledButton.icon(icon: const Icon(Icons.payment), label: Text('Plaatsing kopen · ${details!.price}'),
