@@ -42,3 +42,21 @@ actual=[x for x in prices.get('included',[]) if x['type']=='inAppPurchasePricePo
 assert actual and all(Decimal(x['attributes']['customerPrice'])==Decimal('25.00') for x in actual),'Draft price must be exactly EUR25; do not change any established schedule'
 print('APPLE_INITIAL_NLD_PRICE_VERIFIED=25.00',flush=True)
 print('APPLE_DRAFT_REMAINS_UNSUBMITTED='+request('/v2/inAppPurchases/'+pid)['data']['attributes']['state'],flush=True)
+
+# Configure only this unsubmitted test product and the sandbox callback.
+availability=request('/v2/inAppPurchases/'+pid+'/inAppPurchaseAvailability',allow_missing=True)
+if availability is None or not availability.get('data'):
+ availability=request('/v1/inAppPurchaseAvailabilities','POST',{'data':{'type':'inAppPurchaseAvailabilities','attributes':{'availableInNewTerritories':False},'relationships':{'inAppPurchase':{'data':{'type':'inAppPurchases','id':pid}},'availableTerritories':{'data':[{'type':'territories','id':'NLD'}]}}}})
+territories=request('/v1/inAppPurchaseAvailabilities/'+availability['data']['id']+'/availableTerritories?limit=200')['data']
+assert any(x['id']=='NLD' for x in territories),'Netherlands purchase availability missing'
+print('APPLE_TEST_PRODUCT_NLD_AVAILABILITY_VERIFIED',flush=True)
+callback='https://www.regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1/winkel/apple-melding'
+app=request('/v1/apps/6817375521?fields[apps]=subscriptionStatusUrlForSandbox,subscriptionStatusUrlVersionForSandbox')['data']
+current=app['attributes'].get('subscriptionStatusUrlForSandbox')
+assert current in [None,'',callback],'Never overwrite another sandbox callback'
+if current!=callback or app['attributes'].get('subscriptionStatusUrlVersionForSandbox')!='V2':
+ request('/v1/apps/6817375521','PATCH',{'data':{'type':'apps','id':'6817375521','attributes':{'subscriptionStatusUrlForSandbox':callback,'subscriptionStatusUrlVersionForSandbox':'V2'}}})
+after=request('/v1/apps/6817375521?fields[apps]=subscriptionStatusUrlForSandbox,subscriptionStatusUrlVersionForSandbox')['data']['attributes']
+assert after['subscriptionStatusUrlForSandbox']==callback and after['subscriptionStatusUrlVersionForSandbox']=='V2'
+print('APPLE_SANDBOX_CALLBACK_V2_VERIFIED',flush=True)
+print('APPLE_TEST_PRODUCT_STILL_UNSUBMITTED='+request('/v2/inAppPurchases/'+pid)['data']['attributes']['state'],flush=True)
