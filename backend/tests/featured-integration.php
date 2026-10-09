@@ -24,3 +24,6 @@ $wpdb->update($wpdb->prefix.'rvaz_wonen_invoices',['invoice_date'=>current_time(
 $wpdb->update($wpdb->prefix.'rvaz_wonen_subscriptions',['status'=>'cancelled'],['id'=>$featured_sub]);
 check(!in_array($featured_id,array_column(call_api('GET','/uitgelicht')->get_data(),'id'),true),'cancelled subscription excluded');
 wp_delete_post($featured_id,true);
+
+$room_form=apply_filters('do_shortcode_tag','<select name="woningtype"><option value="Woning">Woning</option></select>','rvaz_wonen_portal');
+check(strpos($room_form,'value="Kamer"')!==false&&strpos($room_form,'value="Studio"')!==false,'broker website wizard offers rooms and studios');

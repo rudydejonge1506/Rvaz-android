@@ -322,7 +322,7 @@ class _WonenPageState extends State<WonenPage> {
                         onSelected: (_) => setState(() => filter = choice))),
                 ])),
               DropdownButton<String>(value: type, isExpanded: true,
-                items: ['Alle woningtypen', 'Woning', 'Appartement',
+                items: ['Alle woningtypen', 'Woning', 'Appartement', 'Kamer', 'Studio',
                   'Nieuwbouw', 'Bedrijfspand']
                   .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                   .toList(),

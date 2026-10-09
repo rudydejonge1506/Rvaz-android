@@ -258,3 +258,5 @@ require_once __DIR__.'/private-account.php';
 require_once __DIR__.'/invoice-mail.php';
 
 require_once __DIR__.'/featured-homes.php';
+
+require_once __DIR__.'/room-types.php';
