@@ -49,7 +49,11 @@ $result=RVAZ_Wonen_Store::confirm($c);
 store_assert(!is_wp_error($result)&&$result['published']&&!$result['test']&&get_post_status($id)==='publish','synthetic production receipt fulfills previously moderated listing in disposable database');
 store_assert(RVAZ_Wonen_Private::paid($id)&&(int)get_post_meta($id,'_rvaz_wonen_private_expires',true)>time()+27*DAY_IN_SECONDS,'paid invoice and calendar month recorded upon publication');
 store_assert(RVAZ_Wonen_Store::confirm($c)===$result,'production retry does not create another invoice or extend period');
-$end=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);RVAZ_Wonen_Private::edited($id);
+$end=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);
+update_post_meta($id,'_rvaz_wonen_private_expires',time()-1);RVAZ_Wonen_Private::expires();
+store_assert(get_post_status($id)==='draft'&&!RVAZ_Wonen_Reader::visible($id),'expired paid store listing disappears from public stock without requiring cron');
+update_post_meta($id,'_rvaz_wonen_private_expires',$end);wp_set_current_user($admin->ID);wp_update_post(['ID'=>$id,'post_status'=>'publish']);wp_set_current_user($owner);
+RVAZ_Wonen_Private::edited($id);
 store_assert(get_post_status($id)==='pending'&&!get_post_meta($id,'_rvaz_wonen_private_reviewed',true)&&(int)get_post_meta($id,'_rvaz_wonen_private_expires',true)===$end,'editing withdraws listing for re-review without extending paid period');
 $key=get_post_meta($id,'_rvaz_wonen_store_order',true);RVAZ_Wonen_Store::revoke($key);
 store_assert(get_post_status($id)==='draft'&&!RVAZ_Wonen_Private::paid($id),'refund withdraws only corresponding listing and cancels its invoice');
@@ -59,6 +63,7 @@ update_post_meta($id,'_rvaz_wonen_store_order','different-new-month');wp_update_
 delete_option('rvaz_store_production');
 store_assert($mailCount===0,'no emails sent during payment tests');
 remove_filter('pre_http_request',$hook,10);delete_option('rvaz_store_google_credentials');
-foreach(['2027-01-31 12:15'=>'2027-02-28 12:15','2028-01-31 12:15'=>'2028-02-29 12:15','2026-10-09 12:15'=>'2026-11-09 12:15'] as $start=>$end){$timestamp=(new DateTimeImmutable($start,wp_timezone()))->getTimestamp();store_assert(wp_date('Y-m-d H:i',RVAZ_Wonen_Private::month_end($timestamp))===$end,'calendar month clamps and preserves local time: '.$start);}
+update_option('timezone_string','Europe/Amsterdam');
+foreach(['2026-03-28 12:15'=>'2026-04-28 12:15','2027-01-31 12:15'=>'2027-02-28 12:15','2028-01-31 12:15'=>'2028-02-29 12:15','2026-10-09 12:15'=>'2026-11-09 12:15'] as $start=>$end){$timestamp=(new DateTimeImmutable($start,wp_timezone()))->getTimestamp();store_assert(wp_date('Y-m-d H:i',RVAZ_Wonen_Private::month_end($timestamp))===$end,'calendar month clamps and preserves local time: '.$start);}
 store_assert(RVAZ_Wonen_Store::catalog()['test_only']===true&&RVAZ_Wonen_Private::tariff()['automatic_renewal']===false,'production is blocked and private placement never auto-renews');
 echo "All isolated WordPress store tests passed. Google responses were synthetic; no live store purchase claimed.\n";
