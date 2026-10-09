@@ -1,0 +1,43 @@
+name: Deliver signed AAB 65 as draft attachment
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['.github/workflows/rvaz-deliver-aab65.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download verified candidate
+        run: |
+          gh run watch 37943330212 --repo "$GITHUB_REPOSITORY" --exit-status
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/37943330212 --jq .conclusion)" = success
+          gh run download 37943330212 --repo "$GITHUB_REPOSITORY" --name RVAZ-Google-Play-65-candidate --dir candidate
+          AAB=$(find candidate -name app-release.aab)
+          test -n "$AAB"
+          cp "$AAB" RVAZ-0.6.15-65.aab
+          python3 - <<'PYVERIFY'
+          import zipfile
+          with zipfile.ZipFile('RVAZ-0.6.15-65.aab') as bundle:
+              manifest=bundle.read('base/manifest/AndroidManifest.xml')
+          assert b'ca-app-pub-1599023671130671~2667109012' in manifest
+          assert b'ca-app-pub-1609023671130671~2667109012' not in manifest
+          print('Verified original AdMob application ID inside signed AAB')
+          PYVERIFY
+          jarsigner -verify RVAZ-0.6.15-65.aab
+          sha256sum RVAZ-0.6.15-65.aab
+      - name: Attach AAB to unpublished GitHub draft only
+        run: |
+          if gh release view rvaz-android-test-65 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft > /tmp/rvaz-draft-status; then
+            test "$(cat /tmp/rvaz-draft-status)" = true
+          else
+            gh release create rvaz-android-test-65 --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title 'RVAZ Android 0.6.15 (65) — signed test AAB' --notes 'Unpublished file delivery only. Verified original Android icon, Flutter tests including paid native housing home cards and Android 15 startup and clearer discovery button and returning subscription flow. Not submitted to Google Play; existing public Android and iOS releases unchanged.'
+          fi
+          gh release upload rvaz-android-test-65 RVAZ-0.6.15-65.aab --clobber --repo "$GITHUB_REPOSITORY"
+          gh release view rvaz-android-test-65 --repo "$GITHUB_REPOSITORY" --json isDraft,url,assets
