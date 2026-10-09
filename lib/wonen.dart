@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 
+part 'wonen_reader.dart';
+
 const wonenApi = 'https://www.regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
 
 Future<Map<String, String>> wonenHeaders() async {
@@ -281,6 +283,7 @@ class _WonenPageState extends State<WonenPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Wonen op Voorne'), actions: [
+      IconButton(tooltip: 'Favorieten en zoekmeldingen', icon: const Icon(Icons.favorite_border), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenReaderPage()))),
       IconButton(tooltip: 'Vernieuwen', onPressed: reload,
         icon: const Icon(Icons.refresh)),
     ]),
@@ -403,7 +406,7 @@ class WoningDetailPage extends StatelessWidget {
       'contractduur': 'Contractduur', 'inkomenseisen': 'Inkomenseisen',
     };
     return Scaffold(
-      appBar: AppBar(title: Text(title.isEmpty ? 'Woning' : title)),
+      appBar: AppBar(title: Text(title.isEmpty ? 'Woning' : title), actions: [if (int.tryParse(item['id'].toString()) != null) WonenFavoriteButton(id: int.parse(item['id'].toString()))]),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         if (image.isNotEmpty) ClipRRect(
           borderRadius: BorderRadius.circular(12),
@@ -488,6 +491,7 @@ class _MijnWonenPageState extends State<MijnWonenPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Mijn Wonen'), actions: [
+      IconButton(tooltip: 'Favorieten en zoekmeldingen', icon: const Icon(Icons.favorite_border), onPressed: () => open(const WonenReaderPage())),
       IconButton(tooltip: 'Vernieuwen', icon: const Icon(Icons.refresh), onPressed: () => setState(refresh)),
     ]),
     body: FutureBuilder<Map<String, dynamic>>(future: future, builder: (context, snapshot) {
@@ -499,11 +503,7 @@ class _MijnWonenPageState extends State<MijnWonenPage> {
       final stats = Map<String, dynamic>.from(data['stats'] as Map);
       return ListView(padding: const EdgeInsets.all(16), children: [
         Text('Welkom ${wonenText(me, 'name')}', style: Theme.of(context).textTheme.titleLarge),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final entry in {'published':'Actief', 'draft':'Concept', 'sold':'Verkocht/verhuurd',
-            'views':'Weergaven', 'contact_clicks':'Contactklikken', 'agent_clicks':'Makelaar-klikken'}.entries)
-            Chip(label: Text('${entry.value}: ${stats[entry.key] ?? 0}')),
-        ]),
+        WonenDashboardSummary(stats: stats),
         ListTile(leading: const Icon(Icons.business_outlined), title: const Text('Mijn kantoor'), onTap: () => open(const WonenProfilePage())),
         ListTile(leading: const Icon(Icons.mail_outline), title: const Text('Berichten en aanvragen'), onTap: () => open(const WonenAanvragenPage())),
         ListTile(leading: const Icon(Icons.receipt_long_outlined), title: const Text('Abonnement en facturen'), onTap: () => open(const WonenSubscriptionPage())),

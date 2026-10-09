@@ -51,4 +51,5 @@ check(call_api('POST','/makelaar/abonnement/opzeggen',['confirm'=>true],$agent)-
 check(call_api('POST',"/makelaar/woningen/$id/verwijderen",['confirm'=>true],$agent)->get_status()===200&&get_post_status($id)==='trash','property deletion uses recoverable trash');
 check(call_api('POST','/makelaar/aanmelden',['office'=>'Office','contact_name'=>'Agent','phone'=>'0612345678','plan'=>'basis','expected_price'=>'49','confirm'=>true],$regular)->get_status()===200,'regular account can request reviewed realtor application');
 check(!in_array(RVAZ_Wonen::ROLE,(new WP_User($regular))->roles,true),'application does not self-grant realtor role');
+require __DIR__.'/reader-integration.php';
 echo "All WordPress integration checks passed.\n";

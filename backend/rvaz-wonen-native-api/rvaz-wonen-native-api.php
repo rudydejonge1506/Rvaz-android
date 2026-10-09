@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RVAZ Wonen Native API
  * Description: Native Flutter API naast RVAZ Wonen; behoudt website, accounts en bestaande facturen.
- * Version: 1.0.0
+ * Version: 1.1.0
  */
 if (!defined('ABSPATH')) exit;
 final class RVAZ_Wonen_Native_API {
@@ -163,7 +163,13 @@ final class RVAZ_Wonen_Native_API {
   if($r['action']==='read')$wpdb->update($table,['status'=>'read'],['id'=>$id]);elseif($r['action']==='delete'&&$r['confirm']===true)$wpdb->delete($table,['id'=>$id]);else return self::error('action','Ongeldige berichtactie.');return ['success'=>true];
  }
  static function dashboard() {
-  $data=['published'=>0,'draft'=>0,'sold'=>0,'views'=>0,'contact_clicks'=>0,'agent_clicks'=>0];foreach(self::own_posts() as $p){$data[$p->post_status==='publish'?'published':'draft']++;$status=strtolower((string)get_post_meta($p->ID,'_rvaz_wonen_status',true));if(in_array($status,['verkocht','verhuurd'],true))$data['sold']++;foreach(['views','contact_clicks','agent_clicks'] as $key)$data[$key]+=(int)get_post_meta($p->ID,'_rvaz_wonen_'.$key,true);}return $data;
+  $data=['published'=>0,'draft'=>0,'sold'=>0,'views'=>0,'contact_clicks'=>0,'agent_clicks'=>0];foreach(self::own_posts() as $p){$data[$p->post_status==='publish'?'published':'draft']++;$status=strtolower((string)get_post_meta($p->ID,'_rvaz_wonen_status',true));if(in_array($status,['verkocht','verhuurd'],true))$data['sold']++;foreach(['views','contact_clicks','agent_clicks'] as $key)$data[$key]+=(int)get_post_meta($p->ID,'_rvaz_wonen_'.$key,true);}
+  global $wpdb;$uid=get_current_user_id();$data['unread_messages']=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}rvaz_wonen_messages WHERE agent_user_id=%d AND status='new'",$uid));
+  $sub=self::subscription();$active=($sub['subscription']['status']??'')==='active';$plan=$sub['subscription']['plan']??'';$price=$sub['plans'][$plan]??[];
+  $data['subscription_active']=$active;$data['plan_name']=$price['name']??'Geen actief abonnement';$data['limit']=$active?($sub['limit_override']!==''?(int)$sub['limit_override']:(int)($price['limit']??0)):0;
+  $data['remaining']=$active?($data['limit']===0?null:max(0,$data['limit']-$data['published'])):0;
+  $data['attention']=[];foreach(self::own_posts() as $p){$d=self::listing($p->ID,true);$missing=[];foreach(['adres'=>'Adres','plaats'=>'Plaats','prijs'=>'Prijs','transactie'=>'Koop/huur'] as $key=>$label)if(empty($d[$key]))$missing[]=$label;if(empty($d['image']))$missing[]='Hoofdfoto';if($missing)$data['attention'][]=['id'=>$p->ID,'title'=>$p->post_title,'missing'=>$missing];}
+  return $data;
  }
  static function subscription() {
   global $wpdb;return ['subscription'=>$wpdb->get_row($wpdb->prepare("SELECT id,plan,status,start_date,end_date,next_invoice_date,cancelled_date FROM {$wpdb->prefix}rvaz_wonen_subscriptions WHERE user_id=%d ORDER BY id DESC LIMIT 1",get_current_user_id()),ARRAY_A),'plans'=>RVAZ_Wonen::prices(),'limit_override'=>get_user_meta(get_current_user_id(),'rvaz_wonen_limit_override',true)];
@@ -223,9 +229,11 @@ final class RVAZ_Wonen_Native_API {
    'subscriptions'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\nplan varchar(20) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'active',\nstart_date date NULL,\nend_date date NULL,\nnext_invoice_date date NULL,\ncancelled_date date NULL,\nPRIMARY KEY  (id)",
    'invoices'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\ninvoice_no varchar(50) NOT NULL,\nperiod varchar(100) NOT NULL,\nsubtotal decimal(10,2) NOT NULL,\nvat decimal(10,2) NOT NULL,\ntotal decimal(10,2) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'open',\ninvoice_date date NULL,\ndue_date date NULL,\ntikkie_url text NULL,\npdf_url text NULL,\npaid_date date NULL,\nPRIMARY KEY  (id),\nUNIQUE KEY invoice_no (invoice_no)",
    'messages'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nproperty_id bigint unsigned NOT NULL,\nagent_user_id bigint unsigned NOT NULL,\nname varchar(190) NOT NULL,\nemail varchar(190) NOT NULL,\nphone varchar(60) NOT NULL DEFAULT '',\nmessage text NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'new',\ncreated datetime NOT NULL,\nPRIMARY KEY  (id),\nKEY agent_user_id (agent_user_id),\nKEY property_id (property_id)"
-  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.0.0');
+  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.1.0');
  }
 }
 add_action('rest_api_init',['RVAZ_Wonen_Native_API','register'],20);
 register_activation_hook(__FILE__,['RVAZ_Wonen_Native_API','install']);
-add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.0.0')RVAZ_Wonen_Native_API::install();});
+add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.1.0')RVAZ_Wonen_Native_API::install();});
+
+require_once __DIR__.'/reader-features.php';
