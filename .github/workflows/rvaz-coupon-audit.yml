@@ -51,3 +51,9 @@ jobs:
           php /tmp/wp-cli.phar plugin activate rvaz-wonen-native-api --path=/tmp/rvaz-wp
       - name: Isolated coupon, quota, invoice and second month checks
         run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/verification/coupon-audit/audit.php" --path=/tmp/rvaz-wp
+
+      - name: Upload layout verification screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: RVAZ-private-account-layout
+          path: /tmp/rvaz-private-form-*.png
