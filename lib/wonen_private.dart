@@ -23,7 +23,7 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
         if ((int.tryParse('${row['placement_expires']}') ?? 0) > 0) Text('Einddatum: ${DateTime.fromMillisecondsSinceEpoch(int.parse('${row['placement_expires']}') * 1000).toLocal().toString().substring(0, 16)}'),
         if (wonenText(row, 'review_reason').isNotEmpty) Text('Beoordeling: ${wonenText(row, 'review_reason')}'),
         if (wonenText(row, 'publication_status') == 'pending' && ['not_ordered', 'cancelled', ''].contains(wonenText(row, 'payment_status')))
-          WonenPrivateOrder(id: int.parse('${row['id']}'), refresh: refresh),
+          WonenStoreCheckout(id: int.parse('${row['id']}'), refresh: refresh),
         OutlinedButton.icon(icon: const Icon(Icons.edit_outlined), label: const Text('Woning en foto’s bewerken'), onPressed: busy ? null : () async {
           await Navigator.push(context, MaterialPageRoute(builder: (_) => WoningEditorPage(item: row, privateOffer: true))); refresh();
         }),

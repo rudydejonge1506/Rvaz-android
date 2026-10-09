@@ -1,0 +1,23 @@
+name: RVAZ store payment security and test-mode checks
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['website/rvaz-wonen-store-payments/**','verification/store-payments/**','.github/workflows/rvaz-store-checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: find website/rvaz-wonen-store-payments verification/store-payments -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Price, account, replay prerequisites and sandbox isolation policy
+        run: php verification/store-payments/contract_test.php
+      - name: Reject invalid Apple signed payments
+        run: php verification/store-payments/apple_test.php
+      - name: Verify public Apple trust anchor
+        run: |
+          openssl x509 -in website/rvaz-wonen-store-payments/certs/AppleRootCA-G3.pem -noout -subject -dates
+          test "$(openssl x509 -in website/rvaz-wonen-store-payments/certs/AppleRootCA-G3.pem -outform DER | sha256sum | cut -d' ' -f1)" = '63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f3017b3a8c488c3653e9179'

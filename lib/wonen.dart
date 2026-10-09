@@ -2,6 +2,10 @@ import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,6 +15,7 @@ import 'package:share_plus/share_plus.dart';
 part 'wonen_reader.dart';
 part 'wonen_private.dart';
 part 'wonen_coupon.dart';
+part 'wonen_store.dart';
 
 const wonenApi = 'https://www.regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
 
@@ -964,7 +969,7 @@ class WonenInvoicesPage extends StatelessWidget {
                 sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1)));
             } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); }
           }),
-          if (wonenText(item, 'tikkie_url').isNotEmpty && wonenText(item, 'status') == 'open')
+          if (!privateOffer && wonenText(item, 'tikkie_url').isNotEmpty && wonenText(item, 'status') == 'open')
             FilledButton(onPressed: () => wonenOpenLink(context, wonenText(item, 'tikkie_url')), child: const Text('Betalen')),
         ],
       )),

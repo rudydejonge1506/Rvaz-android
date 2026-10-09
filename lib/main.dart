@@ -292,6 +292,7 @@ Future<void> main() async {
   // Render eerst de app (en een eventuele P2000-push) en doe netwerk/configuratie daarna.
   // Zo blokkeert een cold start niet op config, topic-abonnementen of tokenregistratie.
   runApp(const RvazApp());
+  unawaited(WonenStorePayments.instance.initialize());
   unawaited(initializeAdMob());
   unawaited(setupVoucherAppLinks());
   FirebaseMessaging.onMessageOpenedApp.listen(openPushMessage);
