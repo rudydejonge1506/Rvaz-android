@@ -9,7 +9,7 @@ check(RVAZ_Wonen_Invoice_Tools::change($test_invoice,'remove')['status']==='remo
 check($wpdb->get_var($wpdb->prepare("SELECT status FROM $table WHERE id=%d",$test_invoice))==='cancelled','removed test invoice cannot remain an open bill');
 check((int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table WHERE id=%d",$test_invoice))===1,'removal retains invoice number and recovery data');
 wp_set_current_user($agent);check(!in_array($test_invoice,array_column(RVAZ_Wonen_Native_API::invoices()['items'],'id')),'removed test invoice hidden from native invoice overview');
-$portal=apply_filters('do_shortcode_tag','<table><tr><td>CI-REMOVABLE</td><td>test</td></tr><tr><td>PROTECTED-OLD</td><td>paid</td></tr></table>','rvaz_wonen_portal');check(strpos($portal,'CI-REMOVABLE')===false&&strpos($portal,'PROTECTED-OLD')!==false,'legacy website hides only removed test invoice');
+$_GET['wonen_portal']='facturen';$portal=apply_filters('do_shortcode_tag','<table><tr><td>CI-REMOVABLE</td><td>test</td></tr><tr><td>PROTECTED-OLD</td><td>paid</td></tr></table>','rvaz_wonen_portal');unset($_GET['wonen_portal']);check(strpos($portal,'CI-REMOVABLE')===false&&strpos($portal,'PROTECTED-OLD')!==false,'legacy website hides only removed test invoice');
 wp_set_current_user(1);check(RVAZ_Wonen_Invoice_Tools::change($test_invoice,'restore')['status']==='restored','administrator restores test invoice');
 check($wpdb->get_var($wpdb->prepare("SELECT status FROM $table WHERE id=%d",$test_invoice))==='open','restore recovers original open status');
 check(!RVAZ_Wonen_Invoice_Tools::removed($test_invoice),'restored invoice reappears');
