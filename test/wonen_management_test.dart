@@ -17,7 +17,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets('saved search editor exposes consent and rejects invalid prices', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: WonenSearchEditor(search: {'plaats': 'Rockanje', 'transactie': 'Huur', 'max_prijs': -1, 'enabled': false}))));
+    await tester.pumpWidget(const MaterialApp(home: WonenSearchEditor(search: {'plaats': 'Rockanje', 'transactie': 'Huur', 'max_prijs': -1, 'enabled': false}))); 
     expect(find.text('Huur'), findsOneWidget);
     expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, isFalse);
     await tester.tap(find.text('Zoekopdracht opslaan'));
