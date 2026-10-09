@@ -2,7 +2,7 @@ name: Audit live Wonen coupon snapshots without sending mail
 on:
   push:
     branches: [ios-current-features-safe]
-    paths: ['verification/coupon-audit/**', 'website/rvaz-wonen-account-fix/**', 'website/newsletter-source/**', '.github/workflows/rvaz-coupon-audit.yml']
+    paths: ['verification/coupon-audit/**', 'website/rvaz-wonen-account-fix/**', 'website/newsletter-source/**', 'website/rvaz-wonen-store-payments/**', 'verification/store-payments/**', '.github/workflows/rvaz-coupon-audit.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -53,6 +53,9 @@ jobs:
           php /tmp/wp-cli.phar plugin activate rvaz-wonen-native-api --path=/tmp/rvaz-wp
       - name: Isolated coupon, quota, invoice and second month checks
         run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/verification/coupon-audit/audit.php" --path=/tmp/rvaz-wp
+
+      - name: Store purchase ownership, moderation, idempotence and test isolation
+        run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/verification/store-payments/wordpress_test.php" --path=/tmp/rvaz-wp
 
       - name: Newsletter templates, separated recipients and zero outgoing mail
         run: |

@@ -1,0 +1,44 @@
+<?php
+if(!defined('ABSPATH'))exit;
+require dirname(__DIR__,2).'/website/rvaz-wonen-store-payments/rvaz-wonen-store-payments.php';
+function store_assert($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
+$mailCount=0;add_filter('pre_wp_mail',function()use(&$mailCount){$mailCount++;return true;});
+$owner=wp_create_user('store-owner','test-only-password','store-owner@example.invalid');$other=wp_create_user('store-other','test-only-password','store-other@example.invalid');$admin=get_user_by('login','ci_admin');
+wp_set_current_user($owner);
+$id=wp_insert_post(['post_type'=>RVAZ_Wonen::TYPE,'post_status'=>'pending','post_title'=>'Testkamer','post_content'=>'Complete kamerbeschrijving','post_author'=>$owner]);
+update_post_meta($id,RVAZ_Wonen_Private::FLAG,'1');
+foreach(['adres'=>'Teststraat 1','postcode'=>'3231AA','plaats'=>'Brielle','prijs'=>'650','woningtype'=>'Kamer','woonoppervlak'=>'20','energielabel'=>'A','transactie'=>'Huur'] as $key=>$value)update_post_meta($id,'_rvaz_wonen_'.$key,$value);
+$aid=wp_insert_attachment(['post_title'=>'Testfoto','post_mime_type'=>'image/jpeg','post_author'=>$owner,'post_status'=>'inherit']);update_post_meta($aid,'_wp_attached_file','2026/10/test.jpg');set_post_thumbnail($id,$aid);
+$r=new WP_REST_Request('POST');$r->set_body_params(['property_id'=>$id,'provider'=>'apple']);
+store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'unsubmitted/unchecked property cannot start payment');
+update_post_meta($id,'_rvaz_wonen_private_authority','confirmed');update_post_meta($id,'_rvaz_wonen_private_reviewed',$owner);
+store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'owner cannot fake administrator approval');
+update_post_meta($id,'_rvaz_wonen_private_reviewed',$admin->ID);
+$intent=RVAZ_Wonen_Store::intent($r);store_assert(!is_wp_error($intent)&&$intent['amount']==='25.00'&&$intent['period']==='1_month','reviewed rental room gets fixed one-month EUR25 intent');
+store_assert(RVAZ_Wonen_Store::intent($r)['id']===$intent['id'],'intent retry returns same pending intent');
+wp_set_current_user($other);store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'other user cannot buy someone else’s listing');
+$c=new WP_REST_Request('POST');$c->set_body_params(['intent_id'=>$intent['id'],'verification_data'=>'forged']);store_assert(is_wp_error(RVAZ_Wonen_Store::confirm($c)),'other user cannot confirm owner purchase');
+wp_set_current_user($owner);store_assert(is_wp_error(RVAZ_Wonen_Store::confirm($c)),'unsigned Apple receipt grants no entitlement');
+store_assert(get_post_status($id)==='pending'&&!RVAZ_Wonen_Private::invoice($id),'invalid receipt creates neither publication nor invoice');
+$r->set_param('provider','google');store_assert(is_wp_error(RVAZ_Wonen_Store::intent($r)),'missing Google credentials prevents opening a charge');
+$key=openssl_pkey_new(['private_key_type'=>OPENSSL_KEYTYPE_RSA,'private_key_bits'=>2048]);openssl_pkey_export($key,$private);
+$json=wp_json_encode(['type'=>'service_account','client_email'=>'ci@test-only.iam.gserviceaccount.com','private_key'=>$private,'token_uri'=>'https://attacker.invalid']);
+$sealed=RVAZ_Store_Google::seal($json);store_assert(strpos($sealed,'PRIVATE KEY')===false,'Google credentials stored encrypted');update_option('rvaz_store_google_credentials',$sealed,false);
+$intent=RVAZ_Wonen_Store::intent($r);store_assert(!is_wp_error($intent),'configured Google server creates reviewed intent');
+global $storeReceipt,$storeURLs;
+$storeURLs=[];$storeReceipt=['purchaseStateContext'=>['purchaseState'=>'PURCHASED'],'obfuscatedExternalAccountId'=>$intent['id'],'productLineItem'=>[['productId'=>RVAZ_Store_Contract::PRODUCT,'productOfferDetails'=>['quantity'=>1,'refundableQuantity'=>1]]],'regionCode'=>'NL','orderId'=>'GPA.synthetic-test','purchaseCompletionTime'=>gmdate('c'),'testPurchaseContext'=>['fopType'=>'TEST']];
+$hook=function($pre,$args,$url){global $storeReceipt,$storeURLs;$storeURLs[]=$url;if($url==='https://oauth2.googleapis.com/token')$body=['access_token'=>'ci-synthetic-no-real-access'];elseif(strpos($url,'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/'.RVAZ_Store_Contract::GOOGLE_PACKAGE.'/purchases/productsv2/tokens/')===0)$body=$storeReceipt;else throw new RuntimeException('Unexpected external request: '.$url);return ['headers'=>[],'body'=>wp_json_encode($body),'response'=>['code'=>200,'message'=>'OK'],'cookies'=>[]];};
+add_filter('pre_http_request',$hook,10,3);
+$c->set_body_params(['intent_id'=>$intent['id'],'verification_data'=>'synthetic-google-token-not-valid-outside-ci']);
+$storeReceipt['purchaseStateContext']['purchaseState']='PENDING';store_assert(is_wp_error(RVAZ_Wonen_Store::confirm($c)),'pending Google payment cannot activate property');
+$storeReceipt['purchaseStateContext']['purchaseState']='PURCHASED';$storeReceipt['productLineItem'][0]['productOfferDetails']['refundableQuantity']=0;store_assert(is_wp_error(RVAZ_Wonen_Store::confirm($c)),'refunded Google payment cannot activate property');
+$storeReceipt['productLineItem'][0]['productOfferDetails']['refundableQuantity']=1;
+$result=RVAZ_Wonen_Store::confirm($c);store_assert(!is_wp_error($result)&&$result['verified']&&$result['test']&&!$result['published'],'verified Google sandbox receipt has test-only result');
+store_assert(get_post_status($id)==='pending'&&!RVAZ_Wonen_Private::invoice($id)&&!get_post_meta($id,'_rvaz_wonen_private_started',true),'sandbox creates no real invoice, publication or paid period');
+store_assert(RVAZ_Wonen_Store::confirm($c)===$result,'same receipt retry is idempotent');
+store_assert(!in_array('https://attacker.invalid',$storeURLs,true),'untrusted credential token_uri cannot redirect authorization');
+store_assert($mailCount===0,'no emails sent during payment tests');
+remove_filter('pre_http_request',$hook,10);delete_option('rvaz_store_google_credentials');
+foreach(['2027-01-31 12:15'=>'2027-02-28 12:15','2028-01-31 12:15'=>'2028-02-29 12:15','2026-10-09 12:15'=>'2026-11-09 12:15'] as $start=>$end){$timestamp=(new DateTimeImmutable($start,wp_timezone()))->getTimestamp();store_assert(wp_date('Y-m-d H:i',RVAZ_Wonen_Private::month_end($timestamp))===$end,'calendar month clamps and preserves local time: '.$start);}
+store_assert(RVAZ_Wonen_Store::catalog()['test_only']===true&&RVAZ_Wonen_Private::tariff()['automatic_renewal']===false,'production is blocked and private placement never auto-renews');
+echo "All isolated WordPress store tests passed. Google responses were synthetic; no live store purchase claimed.\n";
