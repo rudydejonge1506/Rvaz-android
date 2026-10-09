@@ -19,7 +19,7 @@ final class RVAZ_Wonen_Subscription_Access {
  }
 }
 add_filter('rest_endpoints',function($routes){foreach($routes as $path=>&$endpoints){if(!preg_match('#^/rvaz-wonen/v1/makelaar/woningen(?:$|/\(\?P<id>.+)#',$path)||strpos($path,'verwijderen')!==false)continue;
- foreach($endpoints as &$endpoint){if(!is_array($endpoint)||empty($endpoint['permission_callback'])||empty($endpoint['methods']))continue;$writes=false;foreach(['POST','PUT','PATCH'] as $method)if(!empty($endpoint['methods'][$method]))$writes=true;if(!$writes)continue;
+ foreach($endpoints as &$endpoint){if(!is_array($endpoint)||empty($endpoint['permission_callback'])||empty($endpoint['methods']))continue;$methods=$endpoint['methods'];if(is_string($methods))$methods=explode(',',$methods);$allowed=[];foreach($methods as $key=>$value)$allowed[]=strtoupper(trim(is_int($key)?(string)$value:(string)$key));if(!array_intersect($allowed,['POST','PUT','PATCH']))continue;
   $original=$endpoint['permission_callback'];$endpoint['permission_callback']=function($r)use($original){return RVAZ_Wonen_Subscription_Access::permission($r,$original);};
  }unset($endpoint);
 }unset($endpoints);return $routes;},1100);
