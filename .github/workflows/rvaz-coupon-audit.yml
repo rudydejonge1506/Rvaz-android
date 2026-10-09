@@ -1,0 +1,51 @@
+name: Audit live Wonen coupon snapshots without sending mail
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['verification/coupon-audit/**', '.github/workflows/rvaz-coupon-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wordpress:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only
+          MYSQL_DATABASE: rvaz_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -pci-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Website JavaScript syntax
+        run: |
+          node --check backend/rvaz-wonen-native-api/private-website.js
+          node --check backend/rvaz-wonen-native-api/account-dashboard.js
+      - name: PHP syntax
+        run: find backend -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Account dashboard browser checks
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+          node backend/tests/account-dashboard.cjs
+          node backend/tests/private-photos.cjs
+          node backend/tests/broker-registration.cjs
+      - name: Install disposable WordPress
+        run: |
+          curl --fail --location --silent https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp-cli.phar
+          mkdir /tmp/rvaz-wp
+          php /tmp/wp-cli.phar core download --path=/tmp/rvaz-wp
+          php /tmp/wp-cli.phar config create --path=/tmp/rvaz-wp --dbname=rvaz_test --dbuser=root --dbpass=ci-only --dbhost=127.0.0.1:3306
+          php /tmp/wp-cli.phar core install --path=/tmp/rvaz-wp --url=http://localhost --title=CI --admin_user=ci_admin --admin_password=ci-only --admin_email=ci@example.invalid --skip-email
+          mkdir -p /tmp/rvaz-wp/wp-content/plugins/rvaz-wonen
+          cp backend/tests/fixtures/rvaz-wonen.php /tmp/rvaz-wp/wp-content/plugins/rvaz-wonen/
+          cp backend/tests/fixtures/mobile-api.php /tmp/rvaz-wp/wp-content/plugins/rvaz-wonen/
+          cp -r backend/rvaz-wonen-native-api /tmp/rvaz-wp/wp-content/plugins/
+          php /tmp/wp-cli.phar plugin activate rvaz-wonen --path=/tmp/rvaz-wp
+          php /tmp/wp-cli.phar plugin activate rvaz-wonen-native-api --path=/tmp/rvaz-wp
+      - name: Isolated coupon, quota, invoice and second month checks
+        run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/verification/coupon-audit/audit.php" --path=/tmp/rvaz-wp
