@@ -21,8 +21,17 @@ jobs:
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
       - uses: actions/checkout@v4
+      - name: Website JavaScript syntax
+        run: |
+          node --check backend/rvaz-wonen-native-api/private-website.js
+          node --check backend/rvaz-wonen-native-api/account-dashboard.js
       - name: PHP syntax
         run: find backend -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Account dashboard browser checks
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+          node backend/tests/account-dashboard.cjs
       - name: Install disposable WordPress
         run: |
           curl --fail --location --silent https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp-cli.phar
@@ -51,9 +60,9 @@ jobs:
       - name: Build installable additive plugin
         run: |
           cd backend
-          zip -r /tmp/RVAZ-Wonen-Native-API-1.1.0.zip rvaz-wonen-native-api
+          zip -r /tmp/RVAZ-Wonen-Native-API-1.2.0.zip rvaz-wonen-native-api
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Wonen-Native-API-1.1.0
-          path: /tmp/RVAZ-Wonen-Native-API-1.1.0.zip
+          name: RVAZ-Wonen-Native-API-1.2.0
+          path: /tmp/RVAZ-Wonen-Native-API-1.2.0.zip
           if-no-files-found: error

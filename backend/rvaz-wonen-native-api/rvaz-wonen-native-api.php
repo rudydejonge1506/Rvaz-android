@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RVAZ Wonen Native API
  * Description: Native Flutter API naast RVAZ Wonen; behoudt website, accounts en bestaande facturen.
- * Version: 1.1.0
+ * Version: 1.2.0
  */
 if (!defined('ABSPATH')) exit;
 final class RVAZ_Wonen_Native_API {
@@ -31,6 +31,7 @@ final class RVAZ_Wonen_Native_API {
  static function allowed($r) {
   $ok=self::authenticated($r);if(is_wp_error($ok))return $ok;
   $u=wp_get_current_user();
+  if(strpos($r->get_route(),'/makelaar/woningen/')!==false&&get_post_meta(absint($r['id']),'_rvaz_wonen_private',true)==='1')return self::error('private','Gebruik particulier woningbeheer.',403);
   if(RVAZ_Wonen::blocked($u->ID))return self::error('rvaz_blocked','Je makelaarstoegang is geblokkeerd. Neem contact op met RVAZ.',403);
   if(!in_array(RVAZ_Wonen::ROLE,(array)$u->roles,true)&&!current_user_can('manage_options'))return self::error('rvaz_forbidden','Dit account heeft geen makelaarstoegang.',403);
   return true;
@@ -40,6 +41,7 @@ final class RVAZ_Wonen_Native_API {
  }
  static function listing($id,$private=false) {
   $id=absint(is_object($id)?$id->ID:$id);$d=RVAZ_Wonen::fields($id);$d['id']=$id;
+  $private_offer=get_post_meta($id,'_rvaz_wonen_private',true)==='1';$d['aanbieder_type']=$private_offer?'Particulier':'Makelaar';
   $uid=(int)get_post_field('post_author',$id);
   $d['title']=$d['adres']?:$d['title'];
   $d['makelaar_naam']=(string)get_user_meta($uid,'rvaz_wonen_office_name',true);
@@ -53,6 +55,7 @@ final class RVAZ_Wonen_Native_API {
   }
   if($private){$d['publication_status']=get_post_status($id);$d['photos']=$photos;$d['news_promo']=(string)get_post_meta($id,'_rvaz_wonen_news_promo',true);}
   else foreach(['views','contact_clicks','agent_clicks'] as $key)unset($d[$key]);
+  if($private_offer){$d['makelaar_naam']='Particulier aanbod';$d['makelaar_telefoon']='';$d['makelaar_url']='';if($private){$d['placement_expires']=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);$invoice=RVAZ_Wonen_Private::invoice($id);$d['payment_status']=$invoice['status']??'not_ordered';$d['review_reason']=(string)get_post_meta($id,'_rvaz_wonen_private_reason',true);}}
   return $d;
  }
  static function route($path,$methods,$callback,$permission='allowed') {
@@ -86,12 +89,13 @@ final class RVAZ_Wonen_Native_API {
   foreach(self::$routes as $path=>$endpoints)register_rest_route(self::NS,$path,$endpoints,true);
  }
  static function public_list() {
+  if(class_exists('RVAZ_Wonen_Private'))RVAZ_Wonen_Private::expires();
   $args=['post_type'=>RVAZ_Wonen::TYPE,'post_status'=>'publish','numberposts'=>100,'author__not_in'=>array_map('intval',get_users(['meta_key'=>'rvaz_wonen_blocked','meta_value'=>'1','fields'=>'ID']))];
   return array_map([__CLASS__,'listing'],get_posts($args));
  }
  static function me() {
   global $wpdb;$u=wp_get_current_user();$blocked=RVAZ_Wonen::blocked($u->ID);
-  return ['user_id'=>$u->ID,'name'=>$u->display_name,'makelaar'=>!$blocked&&(in_array(RVAZ_Wonen::ROLE,(array)$u->roles,true)||current_user_can('manage_options')),'blocked'=>$blocked,'plans'=>RVAZ_Wonen::prices(),'application'=>$wpdb->get_row($wpdb->prepare("SELECT id,office,plan,status FROM {$wpdb->prefix}rvaz_wonen_applications WHERE user_id=%d ORDER BY id DESC LIMIT 1",$u->ID),ARRAY_A)];
+  return ['user_id'=>$u->ID,'name'=>$u->display_name,'makelaar'=>!$blocked&&(in_array(RVAZ_Wonen::ROLE,(array)$u->roles,true)||current_user_can('manage_options')),'blocked'=>$blocked,'plans'=>RVAZ_Wonen_Intro::plans($u->ID),'application'=>$wpdb->get_row($wpdb->prepare("SELECT id,office,plan,status FROM {$wpdb->prefix}rvaz_wonen_applications WHERE user_id=%d ORDER BY id DESC LIMIT 1",$u->ID),ARRAY_A)];
  }
  static function own_posts() {return get_posts(['post_type'=>RVAZ_Wonen::TYPE,'post_status'=>['publish','draft','pending'],'numberposts'=>-1,'author'=>get_current_user_id()]);}
  static function list_own() {return array_map(function($p){return self::listing($p->ID,true);},self::own_posts());}
@@ -214,10 +218,11 @@ final class RVAZ_Wonen_Native_API {
   if(RVAZ_Wonen::blocked(get_current_user_id()))return self::error('blocked','Neem contact op met RVAZ.',403);
   global $wpdb;$uid=get_current_user_id();$plan=sanitize_key($r['plan']);$prices=RVAZ_Wonen::prices();if(!in_array($plan,['basis','plus','pro'],true)||empty($prices[$plan]['enabled']))return self::error('plan','Ongeldig abonnement.');
   if($r['confirm']!==true||(string)$r['expected_price']!==(string)$prices[$plan]['price'])return self::error('confirm','Bevestig het abonnement en de actuele maandprijs.');
+  $quote=RVAZ_Wonen_Intro::plans($uid)[$plan];if($r->has_param('expected_first_month_price')&&(string)$r['expected_first_month_price']!==(string)$quote['first_month_price'])return self::error('quote','De introductieprijs is gewijzigd. Vernieuw de tarieven.',409);
   $values=[];foreach(['office','contact_name','phone'] as $key){$values[$key]=sanitize_text_field($r[$key]);if($values[$key]==='')return self::error('required','Vul alle verplichte velden in.');}
   $table=$wpdb->prefix.'rvaz_wonen_applications';$existing=$wpdb->get_row($wpdb->prepare("SELECT id,status FROM $table WHERE user_id=%d AND status IN ('email_pending','pending','approved') ORDER BY id DESC LIMIT 1",$uid));if($existing)return ['status'=>$existing->status,'id'=>(int)$existing->id];
   if(!$wpdb->insert($table,$values+['user_id'=>$uid,'plan'=>$plan,'status'=>'email_pending','created'=>current_time('mysql')]))return self::error('database','Aanvraag opslaan is niet gelukt.',500);
-  $id=$wpdb->insert_id;$token=wp_generate_password(32,false,false);update_user_meta($uid,'rvaz_wonen_verify_token',wp_hash_password($token));$url=add_query_arg(['action'=>'rvaz_wonen_verify_agent','uid'=>$uid,'app'=>$id,'token'=>$token],admin_url('admin-post.php'));
+  $id=$wpdb->insert_id;update_user_meta($uid,'rvaz_wonen_intro_quote_'.$id,['regular'=>(string)$quote['price'],'first'=>(string)$quote['first_month_price']]);$token=wp_generate_password(32,false,false);update_user_meta($uid,'rvaz_wonen_verify_token',wp_hash_password($token));$url=add_query_arg(['action'=>'rvaz_wonen_verify_agent','uid'=>$uid,'app'=>$id,'token'=>$token],admin_url('admin-post.php'));
   if(!wp_mail(wp_get_current_user()->user_email,'Bevestig je RVAZ Wonen makelaarsaanvraag',"Bevestig je e-mailadres:\n$url\n\nDaarna moet RVAZ je aanvraag nog goedkeuren."))return self::error('email','Aanvraag opgeslagen, maar de bevestigingsmail kon niet worden verstuurd. Neem contact op met RVAZ.',500);
   return ['id'=>$id,'status'=>'email_pending'];
  }
@@ -229,11 +234,15 @@ final class RVAZ_Wonen_Native_API {
    'subscriptions'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\nplan varchar(20) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'active',\nstart_date date NULL,\nend_date date NULL,\nnext_invoice_date date NULL,\ncancelled_date date NULL,\nPRIMARY KEY  (id)",
    'invoices'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\ninvoice_no varchar(50) NOT NULL,\nperiod varchar(100) NOT NULL,\nsubtotal decimal(10,2) NOT NULL,\nvat decimal(10,2) NOT NULL,\ntotal decimal(10,2) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'open',\ninvoice_date date NULL,\ndue_date date NULL,\ntikkie_url text NULL,\npdf_url text NULL,\npaid_date date NULL,\nPRIMARY KEY  (id),\nUNIQUE KEY invoice_no (invoice_no)",
    'messages'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nproperty_id bigint unsigned NOT NULL,\nagent_user_id bigint unsigned NOT NULL,\nname varchar(190) NOT NULL,\nemail varchar(190) NOT NULL,\nphone varchar(60) NOT NULL DEFAULT '',\nmessage text NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'new',\ncreated datetime NOT NULL,\nPRIMARY KEY  (id),\nKEY agent_user_id (agent_user_id),\nKEY property_id (property_id)"
-  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.1.0');
+  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.2.0');
  }
 }
 add_action('rest_api_init',['RVAZ_Wonen_Native_API','register'],20);
 register_activation_hook(__FILE__,['RVAZ_Wonen_Native_API','install']);
-add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.1.0')RVAZ_Wonen_Native_API::install();});
+add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.2.0')RVAZ_Wonen_Native_API::install();});
 
 require_once __DIR__.'/reader-features.php';
+
+require_once __DIR__.'/private-offers.php';
+require_once __DIR__.'/intro-offer.php';
+require_once __DIR__.'/account-dashboard.php';

@@ -1,4 +1,4 @@
-name: RVAZ iOS build88 and TestFlight only
+name: RVAZ iOS build89 and TestFlight only
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ios-current-features-safe
+          ref: ${{ github.sha }}
 
       - name: Select App Store supported Xcode and SDK
         run: |
@@ -94,7 +94,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=88
+        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=89
 
       - name: Archive with proven signing settings
         run: |
@@ -107,7 +107,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.4-build88-native-wonen
+          name: RVAZ-iOS-1.1.4-build89-native-wonen
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
@@ -123,12 +123,12 @@ jobs:
               assert len(names)==1
               info=plistlib.loads(z.read(names[0]))
               assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
-              assert info['CFBundleVersion']=='88'
+              assert info['CFBundleVersion']=='89'
               assert info['CFBundleShortVersionString']=='1.1.4'
               assert info.get('CFBundleIcons'), 'Compiled app icons missing'
           PY
 
-      - name: Validate and upload build 88 to TestFlight only
+      - name: Validate and upload build 89 to TestFlight only
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}

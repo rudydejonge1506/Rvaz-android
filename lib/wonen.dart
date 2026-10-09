@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 
 part 'wonen_reader.dart';
+part 'wonen_private.dart';
 
 const wonenApi = 'https://www.regiovoorneaanzee.nl/wp-json/rvaz-wonen/v1';
 
@@ -365,6 +366,7 @@ class _WonenPageState extends State<WonenPage> {
                           Padding(padding: const EdgeInsets.all(14),
                             child: Column(crossAxisAlignment:
                               CrossAxisAlignment.start, children: [
+                              if (wonenText(item, 'aanbieder_type') == 'Particulier') const Chip(label: Text('Particulier aanbod')),
                               Text(title, style: Theme.of(context).textTheme.titleLarge),
                               if (location.isNotEmpty) Text(location),
                               if (price.isNotEmpty)
@@ -445,6 +447,7 @@ class WoningDetailPage extends StatelessWidget {
                 child: Text(wonenText(item, entry.key),
                   textAlign: TextAlign.end))),
         const SizedBox(height: 12),
+        if (int.tryParse(item['id'].toString()) != null) FilledButton.icon(icon: const Icon(Icons.mail_outline), label: const Text('Neem contact op met de aanbieder'), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WonenContactPage(id: int.parse(item['id'].toString()))))),
         if (wonenText(item, 'makelaar_naam').isNotEmpty)
           ListTile(contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.real_estate_agent_outlined),
@@ -499,7 +502,7 @@ class _MijnWonenPageState extends State<MijnWonenPage> {
       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
       final data = snapshot.data!, me = Map<String, dynamic>.from(data['me'] as Map);
       if (me['blocked'] == true) return const Center(child: Text('Je makelaarstoegang is geblokkeerd. Neem contact op met RVAZ.'));
-      if (me['makelaar'] != true) return WonenApplicationForm(me: me, refresh: () => setState(refresh));
+      if (me['makelaar'] != true) return ListView(padding: const EdgeInsets.all(16), children: [Text('Mijn Wonen', style: Theme.of(context).textTheme.titleLarge), ListTile(leading: const Icon(Icons.add_home_outlined), title: const Text('Zelf mijn woning aanbieden'), subtitle: const Text('Particulier verkopen en reacties beheren'), onTap: () => open(const WonenPrivatePage())), ListTile(leading: const Icon(Icons.favorite_border), title: const Text('Favorieten en zoekmeldingen'), onTap: () => open(const WonenReaderPage())), ListTile(leading: const Icon(Icons.business_outlined), title: const Text('Makelaarsaccount aanvragen'), onTap: () => open(Scaffold(appBar: AppBar(title: const Text('Makelaarsaccount')), body: WonenApplicationForm(me: me, refresh: () => setState(refresh)))))]);
       final stats = Map<String, dynamic>.from(data['stats'] as Map);
       return ListView(padding: const EdgeInsets.all(16), children: [
         Text('Welkom ${wonenText(me, 'name')}', style: Theme.of(context).textTheme.titleLarge),
@@ -538,7 +541,8 @@ class WonenErrorView extends StatelessWidget {
 
 class WoningEditorPage extends StatefulWidget {
   final Map<String, dynamic>? item;
-  const WoningEditorPage({super.key, this.item});
+  final bool privateOffer;
+  const WoningEditorPage({super.key, this.item, this.privateOffer = false});
   @override
   State<WoningEditorPage> createState() => _WoningEditorPageState();
 }
@@ -550,6 +554,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
   String publicationStatus = 'draft';
   List<Map<String, dynamic>> photos = [];
   String newsPromo = '';
+  String get apiRoot => widget.privateOffer ? '/particulier/woningen' : '/makelaar/woningen';
 
   @override
   void initState() {
@@ -570,6 +575,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       ])
         key: TextEditingController(text: wonenText(item, key)),
     };
+    if (widget.privateOffer) { fields['transactie']!.text = 'Koop'; publicationStatus = 'draft'; }
     final transaction = fields['transactie']!.text.toLowerCase();
     fields['transactie']!.text = transaction == 'huur' ? 'Huur' : transaction == 'koop' ? 'Koop' : '';
   }
@@ -595,7 +601,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
         'publication_status': publicationStatus,
       };
       final response = await wonenRequest(
-        id == null ? '/makelaar/woningen' : '/makelaar/woningen/$id',
+        id == null ? apiRoot : '$apiRoot/$id',
         body: body,
       );
       final savedId = response is Map ? int.tryParse('${response['id']}') : null;
@@ -628,7 +634,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
     }
     setState(() => busy = true);
     try {
-      final data = await wonenUpload('/makelaar/woningen/$id/fotos');
+      final data = await wonenUpload('$apiRoot/$id/fotos');
       if (data.isEmpty) return;
       if (mounted) {
         setState(() => photos = wonenItems(data['photos']));
@@ -648,7 +654,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
   Future<void> updatePhotos(List<Map<String, dynamic>> next) async {
     setState(() => busy = true);
     try {
-      final data = await wonenRequest('/makelaar/woningen/$id/galerij', body: {
+      final data = await wonenRequest('$apiRoot/$id/galerij', body: {
         'photo_ids': next.map((photo) => int.parse(wonenText(photo, 'id'))).toList(),
       });
       if (mounted) setState(() => photos = wonenItems(data['photos']));
@@ -662,7 +668,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
     if (!mounted) return;
     setState(() => busy = true);
     try {
-      await wonenRequest('/makelaar/woningen/$id/verwijderen', body: {'confirm': true});
+      await wonenRequest('$apiRoot/$id/verwijderen', body: {'confirm': true});
       if (mounted) Navigator.pop(context);
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
@@ -676,7 +682,8 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Padding(
+          if (widget.privateOffer) const Text('Particuliere verkoopwoning. Na elke wijziging is opnieuw beoordeling door RVAZ nodig.'),
+          if (!widget.privateOffer) Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: DropdownButtonFormField<String>(
               key: const ValueKey('wonen-transactie'),
@@ -690,7 +697,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
               onChanged: busy ? null : (value) => setState(() => fields['transactie']!.text = value ?? ''),
             ),
           ),
-          for (final entry in fields.entries.where((entry) => entry.key != 'transactie'))
+          for (final entry in fields.entries.where((entry) => entry.key != 'transactie' && (!widget.privateOffer || !['makelaar_url', 'borg', 'contractduur', 'inkomenseisen', 'prijstype'].contains(entry.key))))
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TextField(
@@ -702,7 +709,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
                 ),
               ),
             ),
-          DropdownButtonFormField<String>(
+          if (!widget.privateOffer) DropdownButtonFormField<String>(
             initialValue: publicationStatus,
             items: const [
               DropdownMenuItem(value: 'draft', child: Text('Concept')),
@@ -735,7 +742,7 @@ class _WoningEditorPageState extends State<WoningEditorPage> {
               }),
             ]),
           )),
-          if (id != null) OutlinedButton.icon(icon: const Icon(Icons.campaign_outlined),
+          if (id != null && !widget.privateOffer) OutlinedButton.icon(icon: const Icon(Icons.campaign_outlined),
             label: Text(newsPromo == 'requested' ? 'Nieuwsbericht aangevraagd' : 'Promoot als nieuws (€29)'),
             onPressed: busy || newsPromo == 'requested' ? null : () async {
               if (!await wonenConfirm(context, 'Nieuwsbericht aanvragen', 'Vraag promotie van deze woning als nieuwsbericht aan voor €29. RVAZ verwerkt je aanvraag.')) return;
@@ -784,9 +791,10 @@ Future<void> wonenOpenLink(BuildContext context, String link) async {
 }
 
 class WonenAanvragenPage extends StatelessWidget {
-  const WonenAanvragenPage({super.key});
+  final bool privateOffer;
+  const WonenAanvragenPage({super.key, this.privateOffer = false});
   @override
-  Widget build(BuildContext context) => WonenDataPage(title: 'Berichten en aanvragen', path: '/makelaar/aanvragen', content: (context, data, refresh) {
+  Widget build(BuildContext context) => WonenDataPage(title: 'Berichten en aanvragen', path: privateOffer ? '/particulier/aanvragen' : '/makelaar/aanvragen', content: (context, data, refresh) {
     final items = wonenItems(data);
     return ListView(padding: const EdgeInsets.all(16), children: [
       if (items.isEmpty) const Text('Nog geen woningaanvragen.'),
@@ -798,10 +806,10 @@ class WonenAanvragenPage extends StatelessWidget {
         if (wonenText(item, 'phone').isNotEmpty) TextButton(onPressed: () => wonenOpenLink(context, 'tel:${wonenText(item, 'phone')}'), child: Text(wonenText(item, 'phone'))),
         Wrap(spacing: 8, children: [
           if (wonenText(item, 'status') == 'new') OutlinedButton(onPressed: () => wonenAction(context,
-            '/makelaar/aanvragen/${wonenText(item, 'id')}', {'action': 'read'}, refresh), child: const Text('Markeer gelezen')),
+            '${privateOffer ? '/particulier' : '/makelaar'}/aanvragen/${wonenText(item, 'id')}', {'action': 'read'}, refresh), child: const Text('Markeer gelezen')),
           TextButton(onPressed: () async {
             if (!await wonenConfirm(context, 'Bericht verwijderen', 'Dit bericht wordt definitief verwijderd.')) return;
-            if (context.mounted) await wonenAction(context, '/makelaar/aanvragen/${wonenText(item, 'id')}', {'action': 'delete', 'confirm': true}, refresh);
+            if (context.mounted) await wonenAction(context, '${privateOffer ? '/particulier' : '/makelaar'}/aanvragen/${wonenText(item, 'id')}', {'action': 'delete', 'confirm': true}, refresh);
           }, child: const Text('Verwijderen')),
         ]),
       ]))),
@@ -971,20 +979,20 @@ class _WonenApplicationFormState extends State<WonenApplicationForm> {
       const Text('Je aanvraag wordt eerst door RVAZ beoordeeld. Er wordt niet automatisch afgeschreven.'),
       for (final entry in {office:'Kantoornaam', name:'Contactpersoon', phone:'Telefoon'}.entries) Padding(
         padding: const EdgeInsets.symmetric(vertical: 8), child: TextField(controller: entry.key, decoration: InputDecoration(labelText: entry.value))),
-      DropdownButtonFormField<String>(initialValue: plan, decoration: const InputDecoration(labelText: 'Abonnement'), items: [
-        for (final key in keys) DropdownMenuItem(value: key, child: Text('${plans[key]['name']} · €${plans[key]['price']}/maand')),
+      DropdownButtonFormField<String>(isExpanded: true, initialValue: plan, decoration: const InputDecoration(labelText: 'Abonnement'), items: [
+        for (final key in keys) DropdownMenuItem(value: key, child: Text('${plans[key]['name']} · eerste maand €${plans[key]['first_month_price'] ?? plans[key]['price']}; daarna €${plans[key]['price']}/maand', maxLines: 2, overflow: TextOverflow.ellipsis)),
       ], onChanged: busy ? null : (value) => setState(() => plan = value)),
       FilledButton(onPressed: busy || plan == null ? null : () async {
         if ([office, name, phone].any((field) => field.text.trim().isEmpty)) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vul alle verplichte velden in.'))); return;
         }
-        final selected = plan!, price = plans[selected]['price'].toString();
-        if (!await wonenConfirm(context, 'Abonnement aanvragen', 'Vraag ${plans[selected]['name']} aan voor €$price per maand, na beoordeling door RVAZ.')) return;
+        final selected = plan!, price = plans[selected]['price'].toString(), firstPrice = (plans[selected]['first_month_price'] ?? plans[selected]['price']).toString();
+        if (!await wonenConfirm(context, 'Abonnement aanvragen', 'Vraag ${plans[selected]['name']} aan: eerste maand €$firstPrice, daarna €$price per maand. RVAZ beoordeelt je aanvraag.')) return;
         if (!context.mounted) return;
         setState(() => busy = true);
         try {
           await wonenRequest('/makelaar/aanmelden', body: {'office': office.text.trim(), 'contact_name': name.text.trim(),
-            'phone': phone.text.trim(), 'plan': selected, 'expected_price': price, 'confirm': true});
+            'phone': phone.text.trim(), 'plan': selected, 'expected_price': price, 'expected_first_month_price': firstPrice, 'confirm': true});
           if (mounted) widget.refresh();
         } catch (error) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); }
         finally { if (mounted) setState(() => busy = false); }

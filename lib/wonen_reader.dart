@@ -32,6 +32,7 @@ class WonenReaderPage extends StatelessWidget {
   const WonenReaderPage({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Mijn favoriete woningen')), body: ListView(children: [
+    ListTile(leading: const Icon(Icons.add_home_outlined), title: const Text('Zelf mijn woning aanbieden'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenPrivatePage()))),
     ListTile(leading: const Icon(Icons.favorite_border), title: const Text('Favorieten'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenFavoritesPage()))),
     ListTile(leading: const Icon(Icons.search), title: const Text('Opgeslagen zoekopdrachten'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenSearchesPage()))),
     ListTile(leading: const Icon(Icons.notifications_outlined), title: const Text('Zoekmeldingen'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenNoticesPage()))),
