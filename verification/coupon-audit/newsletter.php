@@ -3,6 +3,7 @@ if(!defined('ABSPATH'))exit;
 $mail_calls=0;
 add_filter('pre_wp_mail',function()use(&$mail_calls){$mail_calls++;return true;},-999);
 require dirname(__DIR__,2).'/website/newsletter-source/rvaz-nieuwsbrief/rvaz-nieuwsbrief.php';
+global $reflection,$newsletter;
 $reflection=new ReflectionClass('RVAZ_Nieuwsbrief_144');$newsletter=$reflection->newInstanceWithoutConstructor();
 function nl_call($method,...$args){global $reflection,$newsletter;return $reflection->getMethod($method)->invoke($newsletter,...$args);}
 function nl_check($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
