@@ -98,3 +98,9 @@ $room=RVAZ_Wonen_Private_UI::save($r,['RVAZ_Wonen_Audit_Private','save']);audit_
 $edit=new WP_REST_Request('POST');$edit->set_body_params(['id'=>$room['id'],'title'=>'Room updated']);$kept=RVAZ_Wonen_Private_UI::save($edit,['RVAZ_Wonen_Audit_Private','save']);audit_check($kept['transactie']==='Huur','editing without transaction retains existing rental type');
 wp_set_current_user($officeB);audit_check(is_wp_error(RVAZ_Wonen_Private_UI::save($edit,['RVAZ_Wonen_Audit_Private','save'])),'compatibility layer rejects editing another private owner room');
 echo "All subscription access and private rental compatibility checks passed.\n";
+
+wp_set_current_user($officeA);$wpdb->update($wpdb->prefix.'rvaz_wonen_subscriptions',['status'=>'cancelled'],['user_id'=>$officeA]);$u=get_userdata($officeA);$u->add_role('administrator');
+audit_check(!RVAZ_Wonen_Subscription_Access::writable($officeA),'administrator with own cancelled broker subscription also cannot publish');
+wp_set_current_user($admin->ID);audit_check(RVAZ_Wonen_Subscription_Access::writable($admin->ID),'administrator without own broker history retains administrative access');
+$template=file_get_contents(dirname(__DIR__,2).'/website/rvaz-wonen-account-fix/makelaars-uitnodiging.html');
+audit_check(strpos($template,'{{unsubscribe}}')!==false&&strpos($template,'{unsubscribe_url}')===false,'newsletter preserves actual plugin unsubscribe placeholder');

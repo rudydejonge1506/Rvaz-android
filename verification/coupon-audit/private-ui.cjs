@@ -50,5 +50,24 @@ const assert=require('node:assert/strict');
   await page.waitForFunction(()=>document.querySelectorAll('article img').length===1);
   assert.equal(home.photos.length,1,'photo removal persisted');
   console.log('PASS: private photo picker before save, multiple uploads, saved fields, cover selection and removal');
+
+  const couponPage=await browser.newPage();let ordered=null;
+  await couponPage.route('https://coupon.test/**',async route=>{
+   const path=new URL(route.request().url()).pathname;let data=[];
+   if(path==='/'){await route.fulfill({contentType:'text/html',body:'<div id="rvaz-private-root"></div><script>window.rvazPrivate={nonce:"test",api:"https://coupon.test/api",admin:false}</script>'});return;}
+   if(path==='/api/particulier/woningen')data=[{id:32,title:'Huurkamer',publication_status:'pending',payment_status:'not_ordered'}];
+   if(path==='/api/particulier/facturen')data={items:[]};
+   if(path==='/api/kortingscode/controleren')data={total:'15.00'};
+   if(path.endsWith('/bestellen')){ordered=route.request().postDataJSON();data={invoice_id:42,total:'15.00',status:'open'};}
+   await route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
+  });
+  couponPage.on('dialog',d=>d.accept());await couponPage.goto('https://coupon.test/');
+  await couponPage.addStyleTag({path:'website/rvaz-wonen-account-fix/private-website.css'});
+  await couponPage.addScriptTag({path:'website/rvaz-wonen-account-fix/private-website.js'});
+  const couponInput=couponPage.getByPlaceholder('Vul je kortingscode in');await couponInput.fill('PRIV10');await couponInput.press('Tab');
+  await couponPage.getByText('Prijs na korting: €15,00',{exact:true}).waitFor();
+  await couponPage.getByRole('button',{name:'Plaatsing aanvragen: €25 / één maand (vóór korting)',exact:true}).click();
+  await couponPage.waitForTimeout(100);assert.equal(ordered.coupon_code,'PRIV10');assert.equal(ordered.expected_price,'25.00');
+  console.log('PASS: private coupon preview and order retain existing code and tariff semantics');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});
