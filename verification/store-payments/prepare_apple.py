@@ -57,6 +57,11 @@ assert current in [None,'',callback],'Never overwrite another sandbox callback'
 if current!=callback or app['attributes'].get('subscriptionStatusUrlVersionForSandbox')!='V2':
  request('/v1/apps/6817375521','PATCH',{'data':{'type':'apps','id':'6817375521','attributes':{'subscriptionStatusUrlForSandbox':callback,'subscriptionStatusUrlVersionForSandbox':'V2'}}})
 after=request('/v1/apps/6817375521?fields[apps]=subscriptionStatusUrlForSandbox,subscriptionStatusUrlVersionForSandbox')['data']['attributes']
-assert after['subscriptionStatusUrlForSandbox']==callback and after['subscriptionStatusUrlVersionForSandbox']=='V2'
+for retry in range(5):
+ if after.get('subscriptionStatusUrlForSandbox')==callback and after.get('subscriptionStatusUrlVersionForSandbox')=='V2':break
+ time.sleep(2)
+ after=request('/v1/apps/6817375521?fields[apps]=subscriptionStatusUrlForSandbox,subscriptionStatusUrlVersionForSandbox')['data']['attributes']
+print('APPLE_SANDBOX_CALLBACK_READBACK='+json.dumps(after),flush=True)
+assert after.get('subscriptionStatusUrlForSandbox')==callback and after.get('subscriptionStatusUrlVersionForSandbox')=='V2'
 print('APPLE_SANDBOX_CALLBACK_V2_VERIFIED',flush=True)
 print('APPLE_TEST_PRODUCT_STILL_UNSUBMITTED='+request('/v2/inAppPurchases/'+pid)['data']['attributes']['state'],flush=True)
