@@ -66,8 +66,8 @@ final class RVAZ_Wonen_Private {
   if($r['decision']==='reject'){update_post_meta($id,'_rvaz_wonen_private_reason',sanitize_textarea_field($r['reason']??''));self::edited($id);wp_update_post(['ID'=>$id,'post_status'=>'draft']);return ['status'=>'rejected'];}
   if($r['decision']!=='approve'||$r['authority_checked']!==true)return RVAZ_Wonen_Native_API::error('review','Bevestig de beoordeling van de bevoegdheid en woninggegevens.');
   if(get_post_status($id)!=='pending')return RVAZ_Wonen_Native_API::error('review','De woning is niet ingediend.',409);
-  $ok=self::complete($id);if(is_wp_error($ok))return $ok;if(!get_post_meta($id,'_rvaz_wonen_private_authority',true))return RVAZ_Wonen_Native_API::error('rights','De verkoper heeft de bevoegdheid nog niet bevestigd.');update_post_meta($id,'_rvaz_wonen_private_reviewed',get_current_user_id());if(!self::paid($id))return ['status'=>'awaiting_payment'];
-  $end=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);if($end&&$end<=time())return RVAZ_Wonen_Native_API::error('expired','De plaatsingsperiode is afgelopen. Er is een nieuwe plaatsing nodig.',409);
+  $ok=self::complete($id);if(is_wp_error($ok))return $ok;if(!get_post_meta($id,'_rvaz_wonen_private_authority',true))return RVAZ_Wonen_Native_API::error('rights','De verkoper heeft de bevoegdheid nog niet bevestigd.');update_post_meta($id,'_rvaz_wonen_private_reviewed',get_current_user_id());
+  $end=(int)get_post_meta($id,'_rvaz_wonen_private_expires',true);if(!self::paid($id)||($end&&$end<=time()))return ['status'=>'awaiting_payment'];
   if(!$end){$start=time();update_post_meta($id,'_rvaz_wonen_private_started',$start);update_post_meta($id,'_rvaz_wonen_private_expires',self::month_end($start));}
   update_post_meta($id,'_rvaz_wonen_private_approved',get_current_user_id());delete_post_meta($id,'_rvaz_wonen_private_reason');wp_update_post(['ID'=>$id,'post_status'=>'publish']);return RVAZ_Wonen_Native_API::listing($id,true);
  }

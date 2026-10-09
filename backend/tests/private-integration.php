@@ -40,6 +40,12 @@ check((int)get_post_meta($pid,'_rvaz_wonen_private_expires',true)===$expiry,'edi
 call_api('POST',"/particulier/woningen/$pid/indienen",$terms,$seller);call_api('POST',"/beheer/particulier/$pid",['decision'=>'approve','authority_checked'=>true],1);check((int)get_post_meta($pid,'_rvaz_wonen_private_expires',true)===$expiry,'re-approval of paid advert preserves original end date');
 update_post_meta($pid,'_rvaz_wonen_private_expires',time()-1);call_api('GET','/woningen');check(get_post_status($pid)==='draft','expired private offer removed from public stock without relying on cron');
 check(call_api('POST',"/woningen/$pid/contact",$contact)->get_status()===404,'expired property cannot receive new inquiries');
+call_api('POST',"/particulier/woningen/$pid/indienen",$terms,$seller);
+check(call_api('POST',"/beheer/particulier/$pid",['decision'=>'approve','authority_checked'=>true],1)->get_data()['status']==='awaiting_payment','new reviewed placement after expiry needs a new payment');
+$renewal=call_api('POST',"/particulier/woningen/$pid/bestellen",$order,$seller)->get_data()['invoice_id'];
+check($renewal!==$private_invoice&&!RVAZ_Wonen_Private::paid($pid),'old paid invoice cannot fund a second month');
+$wpdb->update($wpdb->prefix.'rvaz_wonen_invoices',['status'=>'paid'],['id'=>$renewal]);
+check(call_api('POST',"/beheer/particulier/$pid",['decision'=>'approve','authority_checked'=>true],1)->get_status()===200&&(int)get_post_meta($pid,'_rvaz_wonen_private_expires',true)>time()+27*DAY_IN_SECONDS,'explicitly paid new placement starts a new calendar month');
 $jan=(new DateTimeImmutable('2027-01-31 12:15:00',wp_timezone()))->getTimestamp();check(wp_date('Y-m-d H:i',RVAZ_Wonen_Private::month_end($jan))==='2027-02-28 12:15','one calendar month clamps month end instead of overflowing into March');
 wp_delete_post($pid,true);wp_delete_attachment($aid,true);
 $intro_user=wp_create_user('intro-agent','test-only-password','intro@example.invalid');$wpdb->insert($wpdb->prefix.'rvaz_wonen_applications',['user_id'=>$intro_user,'office'=>'Intro kantoor','plan'=>'plus','contact_name'=>'New agent','phone'=>'123','status'=>'pending','created'=>current_time('mysql')]);$app=$wpdb->insert_id;
