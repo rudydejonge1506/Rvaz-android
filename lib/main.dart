@@ -1001,7 +1001,7 @@ class _HomePageState extends State<HomePage>{
         child:InkWell(
           borderRadius:BorderRadius.circular(14),
           onTap:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
-      const ListTile(title:Text('Meer functies',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy))),
+      const ListTile(title:Text('Ontdek Voorne aan Zee',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy))),
       ListTile(leading:const Icon(Icons.directions_car,color:Colors.orange),title:const Text('112 & Verkeer'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()));}),
       ListTile(leading:const Icon(Icons.calendar_today,color:Color(0xFF19A84A)),title:const Text('Afvalkalender'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));}),
       ListTile(leading:const Icon(Icons.location_on,color:Colors.blue),title:const Text('Plaatsen'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()));}),
@@ -1021,7 +1021,7 @@ class _HomePageState extends State<HomePage>{
             child:Row(children:[
               Icon(Icons.apps,color:navy),
               SizedBox(width:10),
-              Expanded(child:Text('Meer functies',style:TextStyle(color:navy,fontSize:16,fontWeight:FontWeight.w900))),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Ontdek Voorne aan Zee',style:TextStyle(color:navy,fontSize:16,fontWeight:FontWeight.w900)),SizedBox(height:4),Text('Wonen, bedrijven, vouchers en praktische info',style:TextStyle(color:navy,fontSize:12,height:1.3))])),
               Icon(Icons.chevron_right,color:navy),
             ]),
           ),
