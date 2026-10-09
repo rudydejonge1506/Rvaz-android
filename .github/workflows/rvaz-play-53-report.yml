@@ -1,0 +1,45 @@
+name: Inspect Google Play 53 candidate
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['.github/workflows/rvaz-play-53-report.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for candidate and download evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run watch 37881616661 --repo "$GITHUB_REPOSITORY" --interval 30
+          gh run download 37881616661 --repo "$GITHUB_REPOSITORY" --name RVAZ-Google-Play-53-candidate --dir verification/play53
+      - name: Extract actual bundle optimization metadata
+        run: |
+          python3 - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          root=Path('verification/play53')
+          bundle=next(root.rglob('app-release.aab'))
+          with zipfile.ZipFile(bundle) as z:
+              dex=[n for n in z.namelist() if n.endswith('.dex')]
+              meta='BUNDLE-METADATA/com.android.tools/r8.json'
+              report={'candidate_run':37881616661,'dex_bytes':sum(z.getinfo(n).file_size for n in dex),'r8':json.loads(z.read(meta)) if meta in z.namelist() else None}
+          print(json.dumps(report,indent=2))
+          (root/'optimization.json').write_text(json.dumps(report,indent=2)+'\n')
+          PY
+      - name: Record small verification evidence only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add verification/play53/optimization.json
+          find verification/play53 -name 'rvaz-startup.png' -exec git add '{}' \;
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record Google Play 53 optimization metadata and startup screenshot'
+            git pull --rebase origin ios-current-features-safe
+            git push origin HEAD:ios-current-features-safe
+          fi
