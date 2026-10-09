@@ -1,0 +1,30 @@
+name: Deliver signed AAB 53 as draft attachment
+on:
+  push:
+    branches: [ios-current-features-safe]
+    paths: ['.github/workflows/rvaz-deliver-aab53.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download verified candidate
+        run: |
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/37881616661 --jq .conclusion)" = success
+          gh run download 37881616661 --repo "$GITHUB_REPOSITORY" --name RVAZ-Google-Play-53-candidate --dir candidate
+          AAB=$(find candidate -name app-release.aab)
+          test -n "$AAB"
+          cp "$AAB" RVAZ-0.6.3-53.aab
+          jarsigner -verify RVAZ-0.6.3-53.aab
+          sha256sum RVAZ-0.6.3-53.aab
+      - name: Attach AAB to unpublished GitHub draft only
+        run: |
+          gh release create rvaz-android-test-53 --repo "$GITHUB_REPOSITORY" --draft --target 1553fa2b78d61a34a7fe0294357435b6972cfa03 --title 'RVAZ Android 0.6.3 (53) — signed test AAB' --notes 'Unpublished file delivery only. Verified original Android icon, 15 Flutter tests and Android 15 startup. Not submitted to Google Play; existing public Android and iOS releases unchanged.'
+          gh release upload rvaz-android-test-53 RVAZ-0.6.3-53.aab --repo "$GITHUB_REPOSITORY"
+          gh release view rvaz-android-test-53 --repo "$GITHUB_REPOSITORY" --json isDraft,url,assets
