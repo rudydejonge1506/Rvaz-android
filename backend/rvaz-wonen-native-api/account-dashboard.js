@@ -13,7 +13,7 @@
    if (/uitloggen|afmelden/.test(label)) groups.get('Account').push(link);
    else if (/dashboard|overzicht|mijn rvaz/.test(label) || /^\W*mijn wonen\s*$/.test(label)) main.push(link);
    else if (/woning|wonen|makelaar|zoekmelding|favoriet/.test(label)) groups.get('Wonen').push(link);
-   else if (/bedrijf|advertent|voucher|vacature|zakelijk|factuur|abonnement/.test(label)) groups.get('Zakelijk').push(link);
+   else if (/bedrij|advertent|voucher|vacature|zakelijk|factu|abonnement/.test(label)) groups.get('Zakelijk').push(link);
    else if (/profiel|account|wachtwoord|instelling|melding|nieuwsbrief/.test(label)) groups.get('Account').push(link);
    else if (/bericht|reactie|evenement|agenda|foto|nieuws|bijdrag|inzend/.test(label)) groups.get('Mijn bijdragen').push(link);
    else groups.get('Meer mogelijkheden').push(link);
