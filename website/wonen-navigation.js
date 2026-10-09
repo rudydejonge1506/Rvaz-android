@@ -30,7 +30,7 @@
     var toggle = el('button', 'rvaz-wonen-toggle', '▾');
     toggle.type = 'button'; toggle.setAttribute('aria-label', 'Wonen submenu'); toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', 'rvaz-wonen-submenu');
     var sub = el('div', 'submenu'); sub.id = 'rvaz-wonen-submenu'; sub.setAttribute('aria-label', 'Wonen');
-    sub.append(anchor('Woningen bekijken', '/wonen/'), anchor('Inloggen voor makelaars', '/mijn-wonen/'));
+    sub.append(anchor('Woningen bekijken', '/wonen/'), anchor('Aanmelden als makelaar', '/wonen-voor-makelaars/'), anchor('Abonnementen & tarieven', '/wonen-tarieven/'), anchor('Inloggen voor makelaars', '/mijn-wonen/'));
     toggle.addEventListener('click', function () { var opened = item.classList.toggle('open'); toggle.setAttribute('aria-expanded', String(opened)); });
     item.addEventListener('keydown', function (e) { if (e.key === 'Escape') { item.classList.remove('open'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
     item.append(link, toggle, sub); old.replaceWith(item);
