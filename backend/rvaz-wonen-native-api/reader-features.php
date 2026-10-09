@@ -15,7 +15,7 @@ final class RVAZ_Wonen_Reader {
  }
  static function visible($id) { $p=get_post($id);return $p&&$p->post_type===RVAZ_Wonen::TYPE&&$p->post_status==='publish'&&!RVAZ_Wonen::blocked((int)$p->post_author); }
  static function favorites() {
-  $ids=array_values(array_unique(array_map('absint',(array)get_user_meta(get_current_user_id(),self::FAVORITES,true))));
+  $stored=get_user_meta(get_current_user_id(),self::FAVORITES,true);$ids=array_values(array_filter(array_unique(array_map('absint',is_array($stored)?$stored:[]))));
   return ['ids'=>$ids,'items'=>array_map(['RVAZ_Wonen_Native_API','listing'],array_values(array_filter($ids,[__CLASS__,'visible'])))];
  }
  static function save_favorite($r) {
@@ -46,7 +46,7 @@ final class RVAZ_Wonen_Reader {
  static function save_search($r) {
   if(!is_bool($r['enabled']))return RVAZ_Wonen_Native_API::error('criteria','Bevestig of je zoekmeldingen wilt ontvangen.');
   $criteria=self::criteria($r);if(is_wp_error($criteria))return $criteria;
-  $uid=get_current_user_id();$rows=self::rows($uid);$id=sanitize_key($r['id']??'');
+  $uid=get_current_user_id();$rows=self::rows($uid);$raw_id=$r['id']??'';if(!is_scalar($raw_id))return RVAZ_Wonen_Native_API::error('search','Ongeldige zoekopdracht.');$id=sanitize_key($raw_id);
   if($id&&!isset($rows[$id]))return RVAZ_Wonen_Native_API::error('search','Deze zoekopdracht is niet van jou.',404);
   if(!$id&&count($rows)>=10)return RVAZ_Wonen_Native_API::error('limit','Je kunt maximaal 10 zoekopdrachten bewaren.');
   $id=$id?:wp_generate_uuid4();$seen=[];foreach(RVAZ_Wonen_Native_API::public_list() as $d)if(self::matches($d,$criteria))$seen[]=$d['id'];
