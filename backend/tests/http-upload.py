@@ -25,3 +25,12 @@ assert uploaded['image'], uploaded
 uploaded = request(f'/makelaar/woningen/{identifier}/galerij', json.dumps({'photo_ids': []}).encode())
 assert uploaded['photos'] == [] and uploaded['image'] == '', uploaded
 print('PASS: real authenticated multipart image upload and gallery removal')
+token = {'Authorization': 'Bearer VALID_PRIVATE_TOKEN'}
+item = request('/particulier/woningen', json.dumps({'title': 'CI private upload property'}).encode())
+identifier = item['id']
+uploaded = request(f'/particulier/woningen/{identifier}/fotos', body, f'multipart/form-data; boundary={boundary}')
+assert len(uploaded['photos']) == 1 and uploaded['image'], uploaded
+assert uploaded['publication_status'] == 'draft', uploaded
+uploaded = request(f'/particulier/woningen/{identifier}/galerij', json.dumps({'photo_ids': []}).encode())
+assert uploaded['photos'] == [] and uploaded['image'] == '', uploaded
+print('PASS: ordinary private account authenticated photo upload and gallery removal')

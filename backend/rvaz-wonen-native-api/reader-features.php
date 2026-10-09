@@ -13,7 +13,7 @@ final class RVAZ_Wonen_Reader {
    '/zoekmeldingen'=>[['GET','notices'],['POST','read_notices']],
   ] as $path=>$routes){$handlers=[];foreach($routes as $route)$handlers[]=['methods'=>$route[0],'callback'=>[__CLASS__,$route[1]],'permission_callback'=>['RVAZ_Wonen_Native_API','authenticated']];register_rest_route(RVAZ_Wonen_Native_API::NS,$path,$handlers);}
  }
- static function visible($id) { if(class_exists('RVAZ_Wonen_Private')&&RVAZ_Wonen_Private::is_private($id)&&(int)get_post_meta($id,'_rvaz_wonen_private_expires',true)<=time())return false;$p=get_post($id);return $p&&$p->post_type===RVAZ_Wonen::TYPE&&$p->post_status==='publish'&&!RVAZ_Wonen::blocked((int)$p->post_author); }
+ static function visible($id) { if(class_exists('RVAZ_Wonen_Private')&&RVAZ_Wonen_Private::is_private($id)&&((int)get_post_meta($id,'_rvaz_wonen_private_expires',true)<=time()||!get_post_meta($id,'_rvaz_wonen_private_approved',true)||!RVAZ_Wonen_Private::paid($id)))return false;$p=get_post($id);return $p&&$p->post_type===RVAZ_Wonen::TYPE&&$p->post_status==='publish'&&!RVAZ_Wonen::blocked((int)$p->post_author); }
  static function favorites() {
   $stored=get_user_meta(get_current_user_id(),self::FAVORITES,true);$ids=array_values(array_filter(array_unique(array_map('absint',is_array($stored)?$stored:[]))));
   return ['ids'=>$ids,'items'=>array_map(['RVAZ_Wonen_Native_API','listing'],array_values(array_filter($ids,[__CLASS__,'visible'])))];
