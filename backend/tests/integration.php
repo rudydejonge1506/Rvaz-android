@@ -53,4 +53,5 @@ check(call_api('POST','/makelaar/aanmelden',['office'=>'Office','contact_name'=>
 check(!in_array(RVAZ_Wonen::ROLE,(new WP_User($regular))->roles,true),'application does not self-grant realtor role');
 require __DIR__.'/reader-integration.php';
 require __DIR__.'/private-integration.php';
+require __DIR__.'/invoice-tools-integration.php';
 echo "All WordPress integration checks passed.\n";

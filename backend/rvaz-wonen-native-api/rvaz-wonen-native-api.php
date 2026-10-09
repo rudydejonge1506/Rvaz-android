@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RVAZ Wonen Native API
  * Description: Native Flutter API naast RVAZ Wonen; behoudt website, accounts en bestaande facturen.
- * Version: 1.2.0
+ * Version: 1.2.1
  */
 if (!defined('ABSPATH')) exit;
 final class RVAZ_Wonen_Native_API {
@@ -195,11 +195,11 @@ final class RVAZ_Wonen_Native_API {
   foreach(self::own_posts() as $p)if(in_array($p->post_status,['publish','pending'],true))wp_update_post(['ID'=>$p->ID,'post_status'=>'draft']);return self::subscription();
  }
  static function invoices() {
-  global $wpdb;$rows=$wpdb->get_results($wpdb->prepare("SELECT id,invoice_no,period,subtotal,vat,total,status,invoice_date,due_date,tikkie_url,pdf_url,paid_date FROM {$wpdb->prefix}rvaz_wonen_invoices WHERE user_id=%d ORDER BY id DESC",get_current_user_id()),ARRAY_A);return ['items'=>$rows,'billing'=>RVAZ_Wonen::billing()];
+  global $wpdb;$rows=$wpdb->get_results($wpdb->prepare("SELECT id,invoice_no,period,subtotal,vat,total,status,invoice_date,due_date,tikkie_url,pdf_url,paid_date FROM {$wpdb->prefix}rvaz_wonen_invoices WHERE user_id=%d ORDER BY id DESC",get_current_user_id()),ARRAY_A);return ['items'=>RVAZ_Wonen_Invoice_Tools::visible($rows),'billing'=>RVAZ_Wonen::billing()];
  }
  static function invoice_pdf($r) {
   global $wpdb;$row=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}rvaz_wonen_invoices WHERE id=%d AND user_id=%d",absint($r['id']),get_current_user_id()));
-  if(!$row)return self::error('forbidden','Geen toegang tot deze factuur.',403);
+  if(!$row||RVAZ_Wonen_Invoice_Tools::removed(absint($r['id'])))return self::error('forbidden','Geen toegang tot deze factuur.',403);
   $b=RVAZ_Wonen::billing();$u=wp_get_current_user();$office=get_user_meta($u->ID,'rvaz_wonen_office_name',true);
   $lines=['RVAZ Wonen','FACTUUR '.$row->invoice_no,'','Aan: '.($office?:$u->display_name),$u->user_email,'','Factuurdatum: '.$row->invoice_date,'Vervaldatum: '.$row->due_date,'Periode: '.$row->period,'',
     'Subtotaal: EUR '.number_format((float)$row->subtotal,2,',','.'),'BTW: EUR '.number_format((float)$row->vat,2,',','.'),'Totaal: EUR '.number_format((float)$row->total,2,',','.'),'Status: '.$row->status,'',
@@ -234,15 +234,17 @@ final class RVAZ_Wonen_Native_API {
    'subscriptions'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\nplan varchar(20) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'active',\nstart_date date NULL,\nend_date date NULL,\nnext_invoice_date date NULL,\ncancelled_date date NULL,\nPRIMARY KEY  (id)",
    'invoices'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nuser_id bigint unsigned NOT NULL,\ninvoice_no varchar(50) NOT NULL,\nperiod varchar(100) NOT NULL,\nsubtotal decimal(10,2) NOT NULL,\nvat decimal(10,2) NOT NULL,\ntotal decimal(10,2) NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'open',\ninvoice_date date NULL,\ndue_date date NULL,\ntikkie_url text NULL,\npdf_url text NULL,\npaid_date date NULL,\nPRIMARY KEY  (id),\nUNIQUE KEY invoice_no (invoice_no)",
    'messages'=>"id bigint unsigned NOT NULL AUTO_INCREMENT,\nproperty_id bigint unsigned NOT NULL,\nagent_user_id bigint unsigned NOT NULL,\nname varchar(190) NOT NULL,\nemail varchar(190) NOT NULL,\nphone varchar(60) NOT NULL DEFAULT '',\nmessage text NOT NULL,\nstatus varchar(20) NOT NULL DEFAULT 'new',\ncreated datetime NOT NULL,\nPRIMARY KEY  (id),\nKEY agent_user_id (agent_user_id),\nKEY property_id (property_id)"
-  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.2.0');
+  ];foreach($schemas as $table=>$schema)dbDelta("CREATE TABLE {$wpdb->prefix}rvaz_wonen_$table (\n$schema\n) $c;");update_option('rvaz_wonen_native_api_version','1.2.1');
  }
 }
 add_action('rest_api_init',['RVAZ_Wonen_Native_API','register'],20);
 register_activation_hook(__FILE__,['RVAZ_Wonen_Native_API','install']);
-add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.2.0')RVAZ_Wonen_Native_API::install();});
+add_action('admin_init',function(){if(get_option('rvaz_wonen_native_api_version')!=='1.2.1')RVAZ_Wonen_Native_API::install();});
 
 require_once __DIR__.'/reader-features.php';
 
 require_once __DIR__.'/private-offers.php';
 require_once __DIR__.'/intro-offer.php';
 require_once __DIR__.'/account-dashboard.php';
+
+require_once __DIR__.'/invoice-tools.php';
