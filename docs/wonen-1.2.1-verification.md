@@ -7,3 +7,5 @@ Beheer: WordPress → Wonen → Testfacturen beheren. Markeer een onbetaalde fac
 Toegang vereist een beheeraccount, een geldige WordPress-nonce en expliciete bevestiging. Verwijderde testfacturen zijn verborgen in de bestaande websiteoverzichten, administratie en native facturenlijsten. De bestaande bedragen, factuurnummerteller en abonnementen blijven behouden.
 
 Installeer RVAZ-Wonen-Native-API-1.2.1.zip als vervanging van de bestaande RVAZ Wonen Native API-plugin. De bestaande RVAZ Wonen-plugin blijft actief. De productie-installatie rapporteerde vóór deze update versie 1.2.0. Het screenshot uit de chat was niet beschikbaar op het opgegeven pad; de diagnose kwam uit de bestaande broncode.
+
+Validatie: 125 website/API-controles geslaagd (Actions 37892446474), inclusief een Chromium-test voor de volledige nieuwe fotobediening en tests voor verwijderen, verbergen, herstellen en bescherming van betaalde facturen. Flutter-analyse en alle 20 tests geslaagd (Actions 37892446445). ZIP-inhoud exact vergeleken met de 13 geteste GitHub-bronbestanden; integriteit geslaagd. ZIP SHA256: 9756a5d91b8dc8b2d781a1458426376bf9cc2cdac7d621ce63f8d9ebdf543884.
