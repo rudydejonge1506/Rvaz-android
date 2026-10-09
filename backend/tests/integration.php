@@ -57,4 +57,5 @@ require __DIR__.'/invoice-tools-integration.php';
 require __DIR__.'/broker-registration-integration.php';
 require __DIR__.'/private-account-integration.php';
 require __DIR__.'/invoice-mail-integration.php';
+require __DIR__.'/featured-integration.php';
 echo "All WordPress integration checks passed.\n";

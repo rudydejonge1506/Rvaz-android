@@ -62,9 +62,9 @@ jobs:
       - name: Build installable additive plugin
         run: |
           cd backend
-          zip -r /tmp/RVAZ-Wonen-Native-API-1.2.2.zip rvaz-wonen-native-api
+          zip -r /tmp/RVAZ-Wonen-Native-API-1.2.3.zip rvaz-wonen-native-api
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Wonen-Native-API-1.2.2
-          path: /tmp/RVAZ-Wonen-Native-API-1.2.2.zip
+          name: RVAZ-Wonen-Native-API-1.2.3
+          path: /tmp/RVAZ-Wonen-Native-API-1.2.3.zip
           if-no-files-found: error

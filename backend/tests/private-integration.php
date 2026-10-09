@@ -32,6 +32,7 @@ $wpdb->update($wpdb->prefix.'rvaz_wonen_invoices',['status'=>'paid'],['id'=>$pri
 check(call_api('POST',"/beheer/particulier/$pid",['decision'=>'approve','authority_checked'=>true],1)->get_status()===200&&get_post_status($pid)==='publish','paid reviewed property is published by administrator');
 $expiry=(int)get_post_meta($pid,'_rvaz_wonen_private_expires',true);check($expiry>time()+27*DAY_IN_SECONDS,'calendar-month period starts upon publication');
 $public=call_api('GET','/woningen')->get_data();$property=current(array_filter($public,function($d)use($pid){return $d['id']===$pid;}));check($property['aanbieder_type']==='Particulier'&&$property['makelaar_naam']==='Particulier aanbod'&&strpos(wp_json_encode($property),'seller@example.invalid')===false,'public private offer is labeled without seller email');
+check(in_array($pid,array_column(call_api('GET','/uitgelicht')->get_data(),'id'),true),'paid approved private advert featured on app home');
 $contact=['name'=>'Buyer','email'=>'buyer@example.invalid','message'=>'Interesse in deze woning'];check(call_api('POST',"/woningen/$pid/contact",$contact)->get_status()===200,'visitor can contact private seller natively');
 call_api('POST',"/woningen/$pid/contact",$contact);check(count(call_api('GET','/particulier/aanvragen',[],$seller)->get_data())===1,'contact retries create a single private lead');
 check(call_api('GET','/particulier/aanvragen',[],$buyer)->get_data()===[],'seller inquiry inbox cannot leak to another account');
@@ -39,6 +40,7 @@ check(call_api('POST',"/particulier/woningen/$pid",['title'=>'Aangepast'],$selle
 check((int)get_post_meta($pid,'_rvaz_wonen_private_expires',true)===$expiry,'editing cannot silently extend purchased period');
 call_api('POST',"/particulier/woningen/$pid/indienen",$terms,$seller);call_api('POST',"/beheer/particulier/$pid",['decision'=>'approve','authority_checked'=>true],1);check((int)get_post_meta($pid,'_rvaz_wonen_private_expires',true)===$expiry,'re-approval of paid advert preserves original end date');
 update_post_meta($pid,'_rvaz_wonen_private_expires',time()-1);call_api('GET','/woningen');check(get_post_status($pid)==='draft','expired private offer removed from public stock without relying on cron');
+check(!in_array($pid,array_column(call_api('GET','/uitgelicht')->get_data(),'id'),true),'expired private advert excluded from home');
 check(call_api('POST',"/woningen/$pid/contact",$contact)->get_status()===404,'expired property cannot receive new inquiries');
 call_api('POST',"/particulier/woningen/$pid/indienen",$terms,$seller);
 check(call_api('POST',"/beheer/particulier/$pid",['decision'=>'approve','authority_checked'=>true],1)->get_data()['status']==='awaiting_payment','new reviewed placement after expiry needs a new payment');

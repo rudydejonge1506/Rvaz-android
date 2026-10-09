@@ -18,6 +18,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:app_links/app_links.dart';
 import 'vouchers_business.dart';
 import 'wonen.dart';
+import 'wonen_featured.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -1041,6 +1042,7 @@ class _HomePageState extends State<HomePage>{
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Uitgelichte PRO-bedrijven',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage())),child:const Text('Bekijk alle →'))]),
       SizedBox(height:142,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:pros.length,separatorBuilder:(_,__)=>const SizedBox(width:8),itemBuilder:(c,i){final e=pros[i];String bv(String k)=>e is Map?(e[k]?.toString()??''):'';final img=bv('image');return SizedBox(width:145,child:Card(clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>BusinessDetailPage(item:e))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Stack(fit:StackFit.expand,children:[img.isEmpty?const Center(child:Icon(Icons.storefront,size:36)):Image.network(img,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.storefront,size:36))),Positioned(top:5,right:5,child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(5)),child:const Text('PRO',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))))])),Padding(padding:const EdgeInsets.all(7),child:Text(clean(bv('title')),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:navy)))]))));})),
     ]));}),
+    const FeaturedHomes(),
     Padding(padding:const EdgeInsets.fromLTRB(16,10,16,22),child:Column(children:[RotatingAppAd(future:ads),const SizedBox(height:10),Card(child:ListTile(leading:const Icon(Icons.photo_camera_outlined,color:navy),title:const Text('Tip de redactie',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))))]))
   ]));
 }
