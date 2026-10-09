@@ -34,6 +34,7 @@ jobs:
           npx playwright install --with-deps chromium
           node backend/tests/account-dashboard.cjs
           node backend/tests/private-photos.cjs
+          node verification/coupon-audit/private-ui.cjs
           node backend/tests/broker-registration.cjs
       - name: Install disposable WordPress
         run: |

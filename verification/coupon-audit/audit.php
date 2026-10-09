@@ -87,3 +87,14 @@ $approve=RVAZ_Wonen_Audit_Intro::approve($return['id'],'approve');audit_check(!i
 audit_check(!RVAZ_Wonen_Account_Fix::inactive($officeA)&&in_array(RVAZ_Wonen::ROLE,get_userdata($officeA)->roles,true),'approval restores broker role and active subscription');
 audit_check(is_wp_error(RVAZ_Wonen_Account_Fix::apply($r)),'active subscription cannot create another subscription request');
 echo "All account deactivation and returning subscription checks passed.\n";
+wp_set_current_user($officeA);$wpdb->update($wpdb->prefix.'rvaz_wonen_subscriptions',['status'=>'cancelled'],['user_id'=>$officeA]);
+audit_check(!RVAZ_Wonen_Subscription_Access::writable($officeA),'cancelled broker cannot write properties');
+$wizard='<div class="rvw"><div class="rvw-layout"><nav>Facturen</nav><main><form><input name="adres"><button>Publiceren</button></form></main></div></div>';$_GET['wonen_portal']='nieuw';
+$gated=RVAZ_Wonen_Subscription_Access::portal($wizard,'rvaz_wonen_portal');audit_check(strpos($gated,'name="adres"')===false&&strpos($gated,'Nieuw pakket kiezen')!==false,'cancelled portal replaces property form with package link');
+$req=new WP_REST_Request('POST');audit_check(is_wp_error(RVAZ_Wonen_Subscription_Access::permission($req,'__return_true')),'cancelled broker API write denied');
+$wpdb->update($wpdb->prefix.'rvaz_wonen_subscriptions',['status'=>'active'],['user_id'=>$officeA]);audit_check(RVAZ_Wonen_Subscription_Access::writable($officeA),'active broker keeps property write access');
+wp_set_current_user($officeC);$r=new WP_REST_Request('POST');$r->set_body_params(['title'=>'Room for rent','transactie'=>'Huur','woningtype'=>'Kamer','prijs'=>'650','borg'=>'650','publication_status'=>'draft']);
+$room=RVAZ_Wonen_Private_UI::save($r,['RVAZ_Wonen_Audit_Private','save']);audit_check(!is_wp_error($room)&&$room['transactie']==='Huur'&&$room['woningtype']==='Kamer','compatibility layer allows private room rental using original owner validation');
+$edit=new WP_REST_Request('POST');$edit->set_body_params(['id'=>$room['id'],'title'=>'Room updated']);$kept=RVAZ_Wonen_Private_UI::save($edit,['RVAZ_Wonen_Audit_Private','save']);audit_check($kept['transactie']==='Huur','editing without transaction retains existing rental type');
+wp_set_current_user($officeB);audit_check(is_wp_error(RVAZ_Wonen_Private_UI::save($edit,['RVAZ_Wonen_Audit_Private','save'])),'compatibility layer rejects editing another private owner room');
+echo "All subscription access and private rental compatibility checks passed.\n";

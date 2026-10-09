@@ -1,0 +1,6 @@
+<?php
+if(!defined('ABSPATH'))exit;
+add_action('admin_menu',function(){if(!class_exists('RVAZ_Wonen'))return;add_submenu_page('rvaz-wonen','Makelaarsmailing voorbereiden','Makelaarsmailing','manage_options','rvaz-wonen-mailtemplate',function(){
+ if(!current_user_can('manage_options'))return;$html=file_get_contents(__DIR__.'/makelaars-uitnodiging.html');
+ echo '<div class="wrap"><h1>RVAZ Wonen – uitnodiging makelaars (eenmalig)</h1><p><strong>Onderwerp:</strong> Nieuw: uw woningaanbod op RVAZ — eerste maand gratis voor de eerste 2 kantoren</p><p>Verbeterd HTML-template om te kopiëren naar RVAZ Nieuwsbrief. Deze pagina verstuurt geen e-mails. Gebruik uitsluitend de aparte lijst Makelaars en controleer toestemming vóór verzending. Laat de verzending gepauzeerd totdat deze uitdrukkelijk is goedgekeurd.</p><label for="rvaz-mail-template">HTML-template</label><textarea id="rvaz-mail-template" readonly style="display:block;width:100%;height:240px">'.esc_textarea($html).'</textarea><p>Selecteer de HTML hierboven en kopieer die naar het HTML-veld van de makelaarsmailing. Bewaar de afmeldlink-placeholder van de nieuwsbriefplugin.</p><h2>Voorbeeld</h2><iframe title="Voorbeeld makelaarsmailing" sandbox="" srcdoc="'.esc_attr($html).'" style="width:100%;height:1000px;border:1px solid #ccd7df"></iframe></div>';
+ });},110);

@@ -1,4 +1,4 @@
-# RVAZ Wonen Account Herstel 1.0.0
+# RVAZ Wonen Account Herstel 1.0.1
 
 Aanvullende plugin voor RVAZ Wonen 1.0.6 en RVAZ Wonen Native API 1.2.4 met kortingscodes. Vervangt geen bestaande plugin.
 
@@ -15,3 +15,6 @@ Upload de ZIP via WordPress → Plugins → Nieuwe plugin → Plugin uploaden en
 Deactiveer uitsluitend deze aanvullende plugin. Bestaande data en de oorspronkelijke Wonen-plugins blijven behouden. Een eerder bewust gedeactiveerd makelaarsaccount wordt hierdoor niet opnieuw geactiveerd.
 
 Niet op de live website geïnstalleerd tijdens deze controle. Geen mails verzonden.
+
+## 1.0.1
+Particuliere formulieren krijgen een responsive indeling, huur/koopkeuze en huurkenmerken; bestaande kortingscode-invoer blijft behouden. Het opslaan gebruikt de oorspronkelijke eigenaar-, concept- en limietcontroles. Na makelaarsopzegging wordt de nieuwe-woningwizard vervangen door een pakketkeuze en worden API-schrijfacties geblokkeerd. Wonen → Makelaarsmailing bevat een verbeterd HTML-template en voorbeeld; niets wordt verzonden.
