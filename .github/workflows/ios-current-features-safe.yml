@@ -1,8 +1,8 @@
-name: RVAZ iOS build99 and TestFlight only
+name: RVAZ iOS build100 and TestFlight only
 
 on:
   push:
-    branches: [ios-current-features-safe]
+    branches: [fix/ios-admob-statistics]
     paths: ['lib/**', 'test/**', 'assets/**', 'ios/**', 'scripts/**', 'pubspec.yaml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
 
@@ -52,8 +52,8 @@ jobs:
           test -f ios/Runner/SceneDelegate.swift
           test -f ios/Runner/Runner.entitlements
           grep -q 'nl.regiovoorneaanzee.app' ios/Runner.xcodeproj/project.pbxproj
-          git fetch --no-tags origin e7bc87ea017399ef7db76b1f43de7dd8e8ed9494
-          test "$(git rev-parse FETCH_HEAD)" = "e7bc87ea017399ef7db76b1f43de7dd8e8ed9494"
+          git fetch --no-tags origin e7bc87ea0173100ef7db76b1f43de7dd8e8ed9494
+          test "$(git rev-parse FETCH_HEAD)" = "e7bc87ea0173100ef7db76b1f43de7dd8e8ed9494"
           python3 scripts/verify_icons.py
           git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/AppFrameworkInfo.plist ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings ios/Runner/GoogleService-Info.plist ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift ios/Runner/Runner.entitlements
 
@@ -94,7 +94,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=99
+        run: flutter build ios --release --no-codesign --build-name=1.1.5 --build-number=100
 
       - name: Archive with proven signing settings
         run: |
@@ -107,7 +107,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.4-build99-native-wonen
+          name: RVAZ-iOS-1.1.5-build100-admob-fix
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
@@ -123,12 +123,12 @@ jobs:
               assert len(names)==1
               info=plistlib.loads(z.read(names[0]))
               assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
-              assert info['CFBundleVersion']=='99'
-              assert info['CFBundleShortVersionString']=='1.1.4'
+              assert info['CFBundleVersion']=='100'
+              assert info['CFBundleShortVersionString']=='1.1.5'
               assert info.get('CFBundleIcons'), 'Compiled app icons missing'
           PY
 
-      - name: Validate and upload build 99 to TestFlight only
+      - name: Validate and upload build 100 to TestFlight only
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
