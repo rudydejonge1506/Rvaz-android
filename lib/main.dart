@@ -27,7 +27,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 const site = 'https://regiovoorneaanzee.nl';
 
-const admobBannerId='ca-app-pub-1599023671130671/1026724281';
+final admobBannerId = Platform.isIOS
+    ? 'ca-app-pub-1599023671130671/9895785784'
+    : 'ca-app-pub-1599023671130671/1026724281';
 final adConsentReady=ValueNotifier<bool>(false);
 Future<void> initializeAdMob() async {
   // iOS: do not start Google Mobile Ads until its native App ID is configured.
@@ -51,7 +53,9 @@ class _RvazAdBannerState extends State<RvazAdBanner>{
  @override Widget build(BuildContext context){final a=ad;if(a==null)return const SizedBox.shrink();return SizedBox(width:a.size.width.toDouble(),height:a.size.height.toDouble(),child:AdWidget(ad:a));}
 }
 
-const admobArticleNativeId='ca-app-pub-1599023671130671/4325473914';
+final admobArticleNativeId = Platform.isIOS
+    ? 'ca-app-pub-1599023671130671/2573497830'
+    : 'ca-app-pub-1599023671130671/4325473914';
 class RvazArticleNativeAd extends StatefulWidget{const RvazArticleNativeAd({super.key});@override State<RvazArticleNativeAd> createState()=>_RvazArticleNativeAdState();}
 class _RvazArticleNativeAdState extends State<RvazArticleNativeAd>{
  NativeAd? ad;
