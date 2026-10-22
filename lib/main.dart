@@ -379,43 +379,115 @@ class ShellTabController {
   static void select(String key)=>_select?.call(key);
 }
 class _ShellState extends State<Shell> {
-  int index = 0;
-  @override void initState(){super.initState();ShellTabController._select=(key){const keys=['home','news','emergency','agenda','account'];final i=keys.indexOf(key);if(i>=0&&mounted)setState(()=>index=i);};WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));}
-  @override void dispose(){if(ShellTabController._select!=null)ShellTabController._select=null;super.dispose();}
-  static const pageMap = <String,Widget>{
-    'home': HomePage(),
-    'news': NewsPage(),
-    'emergency': EmergencyTrafficPage(),
-    'agenda': AgendaPage(),
-    'account': AccountPage(),
+  String selected = 'home';
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  static const pageMap = <String, Widget>{
+    'home': HomePage(), 'news': NewsPage(), 'today': TodayPage(),
+    'emergency': EmergencyTrafficPage(), 'traffic': EmergencyTrafficPage(initialTraffic:true),
+    'agenda': AgendaPage(), 'weekblad': WeekbladPage(), 'account': AccountPage(),
+    'waste': WasteCalendarPage(), 'places': PlacesPage(), 'parking': ParkingPage(),
+    'recreation': RecreationPage(), 'coast': CoastPage(), 'wonen': WonenPage(),
+    'businesses': BusinessesPage(), 'vouchers': MyVouchersPage(),
+    'saved': SavedPage(), 'notifications': NotificationPreferencesPage(),
+    'tip': TipPage(), 'contributions': ContributionsPage(),
   };
-  static const iconMap = <String,IconData>{
-    'home':Icons.home_outlined,'news':Icons.article_outlined,'emergency':Icons.warning_amber_rounded,'agenda':Icons.event_outlined,'account':Icons.more_horiz,
+  static const sections = <String, List<(String, String, IconData)>>{
+    'Overzicht': [('home','Home',Icons.home_outlined)],
+    'Nieuws': [
+      ('news','Laatste nieuws',Icons.article_outlined),
+      ('today','Voorne Vandaag',Icons.today),
+      ('emergency','P2000 / 112',Icons.warning_amber_rounded),
+      ('places','Nieuws per plaats',Icons.location_on_outlined),
+      ('weekblad','Weekblad',Icons.menu_book_outlined),
+    ],
+    'Agenda & activiteiten': [
+      ('agenda','Agenda',Icons.event_outlined),
+      ('submit-event','Evenement aanmelden',Icons.add_circle_outline),
+      ('recreation','Natuur & recreatie',Icons.park_outlined),
+      ('coast','Strand & kust',Icons.waves),
+    ],
+    'Praktisch': [
+      ('waste','Afvalkalender',Icons.delete_outline),
+      ('traffic','Verkeer',Icons.directions_car_outlined),
+      ('parking','Parkeren',Icons.local_parking),
+    ],
+    'Wonen & lokaal': [
+      ('wonen','Wonen',Icons.real_estate_agent_outlined),
+      ('businesses','Bedrijven',Icons.storefront_outlined),
+      ('vouchers','Vouchers',Icons.local_offer_outlined),
+    ],
+    'Mijn account': [
+      ('account','Mijn RVAZ',Icons.person_outline),
+      ('saved','Opgeslagen artikelen',Icons.bookmark_outline),
+      ('notifications','Meldingen',Icons.notifications_outlined),
+      ('contributions','Mijn bijdragen',Icons.edit_note),
+    ],
+    'Contact': [
+      ('tip','Tip de redactie',Icons.campaign_outlined),
+      ('feedback','Feedback over de app',Icons.feedback_outlined),
+    ],
   };
-  static const labelMap = <String,String>{'home':'Home','news':'Nieuws','emergency':'112','agenda':'Agenda','account':'Mijn Voorne'};
-
-  @override
-  Widget build(BuildContext context) {
-    final keys=<String>['home','news','emergency','agenda','account'];
-    if(index>=keys.length) index=0;
-    return Scaffold(backgroundColor:const Color(0xFFF7F9FB),
-      appBar: AppBar(
-        backgroundColor: Colors.white, foregroundColor: appConfig.primary,
-        title: const Row(children: [Expanded(child: LogoMark())]),
-        actions: [
-          PageFeedbackButton(page: labelMap[keys[index]] ?? keys[index]),
-          if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage())),icon:const Icon(Icons.search)),
-          if(appConfig.feature('push') && keys.contains('account')) IconButton(tooltip:'Mijn RVAZ',onPressed:()=>setState(()=>index=keys.indexOf('account')),icon:const Icon(Icons.person_outline)),
-        ],
-      ),
-      body: ColoredBox(color: const Color(0xFFF7F9FB), child: pageMap[keys[index]]!),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex:index,
-        onDestinationSelected:(v)=>setState(()=>index=v),
-        destinations:keys.map((k)=>NavigationDestination(icon:Icon(iconMap[k]),label:labelMap[k]??k)).toList(),
-      ),
-    );
+  String get pageTitle => sections.values.expand((items)=>items)
+      .firstWhere((item)=>item.$1==selected).$2;
+  @override void initState() {
+    super.initState();
+    ShellTabController._select = selectPage;
+    WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
   }
+  void selectPage(String key) {
+    if (mounted && pageMap.containsKey(key)) setState(()=>selected=key);
+  }
+  void choose(String key) {
+    scaffoldKey.currentState?.closeDrawer();
+    if(key=='submit-event') { openEventSubmission(context); return; }
+    if(key=='feedback') { sendPageFeedback(context,'Algemene app-feedback'); return; }
+    selectPage(key);
+  }
+  @override void dispose() { ShellTabController._select=null; super.dispose(); }
+  @override Widget build(BuildContext context) => Scaffold(
+    key:scaffoldKey,
+    backgroundColor:const Color(0xFFF7F9FB),
+    appBar:AppBar(
+      backgroundColor:Colors.white, foregroundColor:appConfig.primary,
+      leading:IconButton(tooltip:'Menu',icon:const Icon(Icons.menu),
+        onPressed:()=>scaffoldKey.currentState?.openDrawer()),
+      title:selected=='home'?const LogoMark():Text(pageTitle),
+      actions:[
+        if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',icon:const Icon(Icons.search),
+          onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage()))),
+      ],
+    ),
+    drawer:Drawer(child:SafeArea(child:Column(children:[
+      Padding(padding:const EdgeInsets.fromLTRB(20,12,8,12),child:Row(children:[
+        const Expanded(child:Text('Regio Voorne aan Zee',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800,color:navy))),
+        IconButton(tooltip:'Menu sluiten',onPressed:()=>scaffoldKey.currentState?.closeDrawer(),icon:const Icon(Icons.close)),
+      ])),
+      const Divider(height:1),
+      Expanded(child:ListView(padding:const EdgeInsets.only(bottom:24),children:[
+        for(final section in sections.entries)...[
+          Padding(padding:const EdgeInsets.fromLTRB(20,20,16,6),child:Text(section.key,
+            style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700,fontSize:13))),
+          for(final item in section.value) ListTile(
+            leading:Icon(item.$3),title:Text(item.$2),selected:selected==item.$1,
+            selectedColor:navy,selectedTileColor:const Color(0xFFEAF4FF),
+            onTap:()=>choose(item.$1)),
+        ],
+      ])),
+    ]))),
+    body:KeyedSubtree(key:ValueKey(selected),child:pageMap[selected]!),
+  );
+}
+
+Future<void> openEventSubmission(BuildContext context) async {
+  try {
+    final opened = await launchUrl(
+      Uri.parse('$site/evenement-toevoegen/'),
+      mode:LaunchMode.inAppBrowserView,
+    );
+    if(opened) return;
+  } catch (_) {}
+  if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content:Text('Het aanmeldformulier kon niet worden geopend. Probeer het opnieuw.')));
 }
 
 class LogoMark extends StatefulWidget {
@@ -992,47 +1064,6 @@ class _HomePageState extends State<HomePage>{
         ),
       ),
     ),
-    Container(padding:const EdgeInsets.fromLTRB(14,8,14,0),child:GridView.count(crossAxisCount:4,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:4,crossAxisSpacing:6,childAspectRatio:.90,children:[
-      _HomeShortcut(icon:Icons.article_outlined,color:Colors.blue,label:'Nieuws',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage())))),
-      _HomeShortcut(icon:Icons.today,color:const Color(0xFF19A84A),label:'Voorne Vandaag',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage()))),
-      _HomeShortcut(icon:Icons.warning_amber_rounded,color:Colors.red,label:'P2000',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage(initialTraffic:false)))),
-      _HomeShortcut(icon:Icons.calendar_month,color:Colors.deepPurple,label:'Agenda',onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Agenda'),backgroundColor:Colors.white,foregroundColor:navy),body:const AgendaPage())))),
-    ])),
-    Padding(
-      padding:const EdgeInsets.fromLTRB(16,4,16,8),
-      child:Material(
-        color:const Color(0xFFEAF4FF),
-        borderRadius:BorderRadius.circular(14),
-        child:InkWell(
-          borderRadius:BorderRadius.circular(14),
-          onTap:()=>showModalBottomSheet(context:context,showDragHandle:true,builder:(sheet)=>SafeArea(child:ListView(shrinkWrap:true,children:[
-      const ListTile(title:Text('Ontdek Voorne aan Zee',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy))),
-      ListTile(leading:const Icon(Icons.directions_car,color:Colors.orange),title:const Text('112 & Verkeer'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const EmergencyTrafficPage()));}),
-      ListTile(leading:const Icon(Icons.calendar_today,color:Color(0xFF19A84A)),title:const Text('Afvalkalender'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));}),
-      ListTile(leading:const Icon(Icons.location_on,color:Colors.blue),title:const Text('Plaatsen'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const PlacesPage()));}),
-      ListTile(leading:const Icon(Icons.local_parking,color:Colors.blue),title:const Text('Parkeren'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const ParkingPage()));}),
-      ListTile(leading:const Icon(Icons.park_outlined,color:Colors.green),title:const Text('Natuur & recreatie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const RecreationPage()));}),
-      ListTile(leading:const Icon(Icons.waves,color:Colors.lightBlue),title:const Text('Strand & kust'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const CoastPage()));}),
-      ListTile(leading:const Icon(Icons.star,color:Colors.amber),title:const Text('Favorieten'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()));}),
-      ListTile(leading:const Icon(Icons.real_estate_agent_outlined,color:navy),title:const Text('Wonen'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const WonenPage()));}),
-      ListTile(leading:const Icon(Icons.storefront,color:Colors.deepPurple),title:const Text('Bedrijven'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage()));}),
-      ListTile(leading:const Icon(Icons.percent,color:Colors.red),title:const Text('Vouchers'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()));}),
-      ListTile(leading:const Icon(Icons.person,color:Colors.blueGrey),title:const Text('Mijn Voorne'),onTap:(){Navigator.pop(sheet);ShellTabController.select('account');}),
-      ListTile(leading:const Icon(Icons.campaign,color:Colors.blue),title:const Text('Tip de redactie'),onTap:(){Navigator.pop(sheet);Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()));}),
-    ])))
-          ,
-          child:const Padding(
-            padding:EdgeInsets.symmetric(horizontal:16,vertical:13),
-            child:Row(children:[
-              Icon(Icons.apps,color:navy),
-              SizedBox(width:10),
-              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Ontdek Voorne aan Zee',style:TextStyle(color:navy,fontSize:16,fontWeight:FontWeight.w900)),SizedBox(height:4),Text('Wonen, bedrijven, vouchers en praktische info',style:TextStyle(color:navy,fontSize:12,height:1.3))])),
-              Icon(Icons.chevron_right,color:navy),
-            ]),
-          ),
-        ),
-      ),
-    ),
     const Center(child:RvazAdBanner()),
     FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
     Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -1051,14 +1082,7 @@ class _HomePageState extends State<HomePage>{
     Padding(padding:const EdgeInsets.fromLTRB(16,10,16,22),child:Column(children:[RotatingAppAd(future:ads),const SizedBox(height:10),Card(child:ListTile(leading:const Icon(Icons.photo_camera_outlined,color:navy),title:const Text('Tip de redactie',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))))]))
   ]));
 }
-class _HomeShortcut extends StatelessWidget{
-  final IconData icon;final Color color;final String label;final VoidCallback? onTap;
-  const _HomeShortcut({required this.icon,required this.color,required this.label,this.onTap});
-  @override Widget build(BuildContext context)=>Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(14),child:Padding(padding:const EdgeInsets.symmetric(vertical:7,horizontal:2),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Container(width:42,height:42,decoration:BoxDecoration(color:color,borderRadius:BorderRadius.circular(8)),child:Icon(icon,color:Colors.white,size:24)),const SizedBox(height:7),Text(label,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,height:1.05,fontWeight:FontWeight.w800,color:navy))]))));
-}
 
-Future<void> _openExternal(String url)async{final u=Uri.tryParse(url);if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}
-Future<void> _mapSearch(String query)=>_openExternal('https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(query)}');
 class ParkingPage extends StatelessWidget {
  const ParkingPage({super.key});
  static const areas=<List<String>>[['Hellevoetsluis','Vesting, centrum en winkelgebieden'],['Brielle','Vesting en centrum'],['Rockanje','Centrum en strand'],['Oostvoorne','Centrum, strand en natuur']];
@@ -1821,6 +1845,7 @@ class _AgendaPageState extends State<AgendaPage>{
  String placeOf(dynamic p)=>val(p,['place','city','town','plaats','event_place']);
  DateTime? date(dynamic p)=>DateTime.tryParse(val(p,['start_date','event_start_date','event_date','start','date','datum','datetime']));
  @override Widget build(BuildContext context)=>ColoredBox(color:const Color(0xFFF7F9FB),child:FutureBuilder<List<dynamic>>(future:future,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final all=s.data??[];final places=<String>['Alle',...appConfig.places.where((x)=>x!='Voorne aan Zee')];final items=all.where((p)=>place=='Alle'||placeOf(p).toLowerCase()==place.toLowerCase()).toList()..sort((a,b)=>(date(a)??DateTime(2100)).compareTo(date(b)??DateTime(2100)));return Column(children:[
+   Padding(padding:const EdgeInsets.fromLTRB(14,12,14,0),child:Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:()=>openEventSubmission(context),icon:const Icon(Icons.add),label:const Text('Evenement aanmelden')))),
    SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.fromLTRB(14,9,14,7),itemCount:places.length,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i){final x=places[i],on=x==place;return ChoiceChip(label:Text(x),selected:on,onSelected:(_)=>setState(()=>place=x),selectedColor:cyan,labelStyle:TextStyle(color:on?Colors.white:navy,fontSize:11,fontWeight:FontWeight.w700),side:BorderSide(color:on?cyan:const Color(0xFFDCE5ED)),showCheckmark:false); })),
    Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(14,8,14,20),children:[const Text('Aankomende evenementen',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:10),RotatingAppAd(future:ads),if(items.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('Geen evenementen gevonden.')),...items.map((p){final d=date(p);final day=d?.day.toString().padLeft(2,'0')??'--';const months=['','JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];final mon=d==null?'':months[d.month];final img=val(p,['image','image_url','thumbnail']);return Card(margin:const EdgeInsets.only(bottom:8),child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>EventDetailPage(event:p))),child:Padding(padding:const EdgeInsets.all(8),child:Row(children:[SizedBox(width:42,child:Column(children:[Text(day,style:const TextStyle(color:navy,fontSize:20,fontWeight:FontWeight.w900)),Text(mon,style:const TextStyle(color:navy,fontSize:10,fontWeight:FontWeight.w900))])),if(img.isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(img,width:72,height:58,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:72,height:58))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title(p),maxLines:2,style:const TextStyle(color:navy,fontSize:13,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text([val(p,['display_date','start_date','date']),val(p,['venue','location']),placeOf(p),val(p,['time','start_time'])].where((x)=>x.isNotEmpty).join('\n'),maxLines:3,style:const TextStyle(fontSize:10,height:1.25,color:Color(0xFF52687A)))])),const Icon(Icons.chevron_right,color:navy)])))) ;})]))
  ]);}));
