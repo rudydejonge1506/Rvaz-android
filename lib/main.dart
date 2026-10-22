@@ -450,8 +450,7 @@ class _ShellState extends State<Shell> {
     backgroundColor:const Color(0xFFF7F9FB),
     appBar:AppBar(
       backgroundColor:Colors.white, foregroundColor:appConfig.primary,
-      leading:IconButton(tooltip:'Menu',icon:const Icon(Icons.menu),
-        onPressed:()=>scaffoldKey.currentState?.openDrawer()),
+      automaticallyImplyLeading:false,
       title:selected=='home'?const LogoMark():Text(pageTitle),
       actions:[
         if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',icon:const Icon(Icons.search),
@@ -475,6 +474,20 @@ class _ShellState extends State<Shell> {
         ],
       ])),
     ]))),
+    bottomNavigationBar:NavigationBar(
+      selectedIndex:const ['home','agenda','emergency'].contains(selected)
+        ? const ['home','agenda','emergency'].indexOf(selected) : 3,
+      onDestinationSelected:(index){
+        if(index==3){scaffoldKey.currentState?.openDrawer();}
+        else{selectPage(const ['home','agenda','emergency'][index]);}
+      },
+      destinations:const [
+        NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'Home'),
+        NavigationDestination(icon:Icon(Icons.event_outlined),selectedIcon:Icon(Icons.event),label:'Agenda'),
+        NavigationDestination(icon:Icon(Icons.warning_amber_rounded),label:'P2000'),
+        NavigationDestination(icon:Icon(Icons.menu),label:'Menu'),
+      ],
+    ),
     body:KeyedSubtree(key:ValueKey(selected),child:pageMap[selected]!),
   );
 }
