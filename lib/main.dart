@@ -1278,19 +1278,22 @@ String p2000DisplayTitle(dynamic item) {
     return '$value'.trim().replaceAll(RegExp(r'<[^>]*>'),'');
   }
 
-  // Prefer the actual incident/P2000 text over a generic app-generated title.
+  // P2000 feeds often contain both a short generated incident label and the
+  // original pager text. Use the most informative available text so details
+  // such as "1 Letsel", vehicle numbers and incident numbers are not lost.
+  final candidates=<String>[];
   for(final key in [
-    'incident','incident_type','incidentType','event','event_type','eventType',
-    'melding','meldingstekst','incident_description','incidentDescription',
     'original_message','originalMessage','raw_message','rawMessage','cap_message',
-    'p2000_message','p2000Message','text','body','details','description','message'
+    'p2000_message','p2000Message','meldingstekst','melding','title','incident',
+    'incident_description','incidentDescription','description','message','text',
+    'body','details','incident_type','incidentType','event','event_type','eventType'
   ]){
-    final value=text(item[key]);
-    if(value.isNotEmpty)return value;
+    final v=text(item[key]);
+    if(v.isNotEmpty&&!candidates.contains(v))candidates.add(v);
   }
-
-  final title=text(item['title']);
-  return title.isEmpty?'Melding':title;
+  if(candidates.isEmpty)return 'Melding';
+  candidates.sort((a,b)=>b.length.compareTo(a.length));
+  return candidates.first;
 }
 
 Widget p2000ServiceIcon(dynamic item,{double size=24}) {
