@@ -18,6 +18,8 @@ void main(){
   }
   await tester.tap(find.widgetWithText(NavigationDestination,'Menu'));
   await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(find.text('Evenement aanmelden'),200,
+   scrollable:find.descendant(of:find.byType(Drawer),matching:find.byType(Scrollable)));
   expect(find.text('Evenement aanmelden'),findsOneWidget);
   await tester.tap(find.byTooltip('Menu sluiten'));
   await tester.pumpAndSettle();
