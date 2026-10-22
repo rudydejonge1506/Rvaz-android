@@ -386,7 +386,7 @@ class _AppNavigationFrameState extends State<AppNavigationFrame>{
   nav.popUntil((route)=>route.isFirst);
   ShellTabController.select(key);
  }
- @override Widget build(BuildContext context)=>ValueListenableBuilder<String>(
+ @override Widget build(BuildContext context)=>Overlay.wrap(child:ValueListenableBuilder<String>(
   valueListenable:ShellTabController.selectedPage,
   builder:(context,selected,_)=>Scaffold(
     key:scaffoldKey,
@@ -424,7 +424,7 @@ class _AppNavigationFrameState extends State<AppNavigationFrame>{
     ),
 
     body:widget.child,
-  ));
+  )));
 }
 
 class Shell extends StatefulWidget {
