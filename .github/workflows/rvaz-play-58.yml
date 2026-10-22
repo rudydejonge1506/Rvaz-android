@@ -1,8 +1,8 @@
-name: RVAZ Google Play version 65 candidate
+name: RVAZ Google Play version 66 candidate
 # Trigger Google Play build 2026-10-01
 on:
   push:
-    branches: [ios-current-features-safe]
+    branches: [feature/central-app-menu]
     paths: ['lib/**', 'test/**', '.github/workflows/rvaz-play-58.yml']
   workflow_dispatch:
 jobs:
@@ -12,12 +12,6 @@ jobs:
       contents: read
       actions: write
     steps:
-      - name: Stop incomplete superseded candidates before TestFlight delivery
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/37918285509/cancel" || true
-          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/37918285475/cancel" || true
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
@@ -119,10 +113,10 @@ jobs:
           Path('android/app/proguard-rules.pro').write_text('-keep class * extends androidx.work.ListenableWorker { public <init>(...); }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-keep class **_Impl { *; }\n-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*\n')
           p.write_text(s)
           PY
-      - name: Build signed version 65 candidate
+      - name: Build signed version 66 candidate
         run: |
-          flutter build appbundle --release --build-name 0.6.15 --build-number 65
-          flutter build apk --release --target-platform android-x64 --build-name 0.6.15 --build-number 65
+          flutter build appbundle --release --build-name 0.6.16 --build-number 66
+          flutter build apk --release --build-name 0.6.16 --build-number 66
       - name: Verify signing and Android version
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
@@ -130,7 +124,7 @@ jobs:
           jarsigner -verify build/app/outputs/bundle/release/app-release.aab
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee build/package.txt
-          grep "name='nl.regiovoorneaanzee.rvaz_android' versionCode='65' versionName='0.6.15'" build/package.txt
+          grep "name='nl.regiovoorneaanzee.rvaz_android' versionCode='66' versionName='0.6.16'" build/package.txt
           test -s build/app/outputs/mapping/release/mapping.txt
       - name: Verify optimized APK launcher pixels
         run: |
@@ -181,8 +175,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Google-Play-65-candidate
+          name: RVAZ-Google-Play-66-candidate
           path: |
+            build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/mapping/release/mapping.txt
             build/package.txt

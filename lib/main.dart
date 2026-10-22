@@ -364,9 +364,67 @@ class RvazApp extends StatelessWidget {
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
           ),
         ),
-        builder:(context,child)=>SafeArea(top:false,child:child??const SizedBox.shrink()),
+        builder:(context,child)=>AppNavigationFrame(child:child??const SizedBox.shrink()),
         home: const Shell(),
       );
+}
+
+class AppNavigationFrame extends StatefulWidget {
+ final Widget child;
+ const AppNavigationFrame({super.key,required this.child});
+ @override State<AppNavigationFrame> createState()=>_AppNavigationFrameState();
+}
+class _AppNavigationFrameState extends State<AppNavigationFrame>{
+ final scaffoldKey=GlobalKey<ScaffoldState>();
+ void choose(String key){
+  scaffoldKey.currentState?.closeDrawer();
+  final nav=navigatorKey.currentState;
+  if(nav==null)return;
+  final pageContext=nav.overlay!.context;
+  if(key=='submit-event'){openEventSubmission(pageContext);return;}
+  if(key=='feedback'){sendPageFeedback(pageContext,'Algemene app-feedback');return;}
+  nav.popUntil((route)=>route.isFirst);
+  ShellTabController.select(key);
+ }
+ @override Widget build(BuildContext context)=>ValueListenableBuilder<String>(
+  valueListenable:ShellTabController.selectedPage,
+  builder:(context,selected,_)=>Scaffold(
+    key:scaffoldKey,
+    resizeToAvoidBottomInset:false,
+    drawer:Drawer(child:SafeArea(child:Column(children:[
+      Padding(padding:const EdgeInsets.fromLTRB(20,12,8,12),child:Row(children:[
+        const Expanded(child:Text('Regio Voorne aan Zee',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800,color:navy))),
+        IconButton(tooltip:'Menu sluiten',onPressed:()=>scaffoldKey.currentState?.closeDrawer(),icon:const Icon(Icons.close)),
+      ])),
+      const Divider(height:1),
+      Expanded(child:ListView(padding:const EdgeInsets.only(bottom:24),children:[
+        for(final section in _ShellState.sections.entries)...[
+          Padding(padding:const EdgeInsets.fromLTRB(20,20,16,6),child:Text(section.key,
+            style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700,fontSize:13))),
+          for(final item in section.value) ListTile(
+            leading:Icon(item.$3),title:Text(item.$2),selected:selected==item.$1,
+            selectedColor:navy,selectedTileColor:const Color(0xFFEAF4FF),
+            onTap:()=>choose(item.$1)),
+        ],
+      ])),
+    ]))),
+    bottomNavigationBar:NavigationBar(
+      selectedIndex:const ['home','agenda','emergency'].contains(selected)
+        ? const ['home','agenda','emergency'].indexOf(selected) : 3,
+      onDestinationSelected:(index){
+        if(index==3){scaffoldKey.currentState?.openDrawer();}
+        else{choose(const ['home','agenda','emergency'][index]);}
+      },
+      destinations:const [
+        NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'Home'),
+        NavigationDestination(icon:Icon(Icons.event_outlined),selectedIcon:Icon(Icons.event),label:'Agenda'),
+        NavigationDestination(icon:Icon(Icons.warning_amber_rounded),label:'P2000'),
+        NavigationDestination(icon:Icon(Icons.menu),label:'Menu'),
+      ],
+    ),
+
+    body:widget.child,
+  ));
 }
 
 class Shell extends StatefulWidget {
@@ -376,12 +434,12 @@ class Shell extends StatefulWidget {
 }
 
 class ShellTabController {
+  static final selectedPage=ValueNotifier<String>('home');
   static void Function(String)? _select;
   static void select(String key)=>_select?.call(key);
 }
 class _ShellState extends State<Shell> {
   String selected = 'home';
-  final scaffoldKey = GlobalKey<ScaffoldState>();
   static const pageMap = <String, Widget>{
     'home': HomePage(), 'news': NewsPage(), 'today': TodayPage(),
     'emergency': EmergencyTrafficPage(), 'traffic': EmergencyTrafficPage(initialTraffic:true),
@@ -436,17 +494,13 @@ class _ShellState extends State<Shell> {
     WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
   }
   void selectPage(String key) {
-    if (mounted && pageMap.containsKey(key)) setState(()=>selected=key);
-  }
-  void choose(String key) {
-    scaffoldKey.currentState?.closeDrawer();
-    if(key=='submit-event') { openEventSubmission(context); return; }
-    if(key=='feedback') { sendPageFeedback(context,'Algemene app-feedback'); return; }
-    selectPage(key);
+    if (mounted && pageMap.containsKey(key)) {
+      setState(()=>selected=key);
+      ShellTabController.selectedPage.value=key;
+    }
   }
   @override void dispose() { ShellTabController._select=null; super.dispose(); }
   @override Widget build(BuildContext context) => Scaffold(
-    key:scaffoldKey,
     backgroundColor:const Color(0xFFF7F9FB),
     appBar:AppBar(
       backgroundColor:Colors.white, foregroundColor:appConfig.primary,
@@ -455,37 +509,6 @@ class _ShellState extends State<Shell> {
       actions:[
         if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',icon:const Icon(Icons.search),
           onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage()))),
-      ],
-    ),
-    drawer:Drawer(child:SafeArea(child:Column(children:[
-      Padding(padding:const EdgeInsets.fromLTRB(20,12,8,12),child:Row(children:[
-        const Expanded(child:Text('Regio Voorne aan Zee',style:TextStyle(fontSize:20,fontWeight:FontWeight.w800,color:navy))),
-        IconButton(tooltip:'Menu sluiten',onPressed:()=>scaffoldKey.currentState?.closeDrawer(),icon:const Icon(Icons.close)),
-      ])),
-      const Divider(height:1),
-      Expanded(child:ListView(padding:const EdgeInsets.only(bottom:24),children:[
-        for(final section in sections.entries)...[
-          Padding(padding:const EdgeInsets.fromLTRB(20,20,16,6),child:Text(section.key,
-            style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700,fontSize:13))),
-          for(final item in section.value) ListTile(
-            leading:Icon(item.$3),title:Text(item.$2),selected:selected==item.$1,
-            selectedColor:navy,selectedTileColor:const Color(0xFFEAF4FF),
-            onTap:()=>choose(item.$1)),
-        ],
-      ])),
-    ]))),
-    bottomNavigationBar:NavigationBar(
-      selectedIndex:const ['home','agenda','emergency'].contains(selected)
-        ? const ['home','agenda','emergency'].indexOf(selected) : 3,
-      onDestinationSelected:(index){
-        if(index==3){scaffoldKey.currentState?.openDrawer();}
-        else{selectPage(const ['home','agenda','emergency'][index]);}
-      },
-      destinations:const [
-        NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'Home'),
-        NavigationDestination(icon:Icon(Icons.event_outlined),selectedIcon:Icon(Icons.event),label:'Agenda'),
-        NavigationDestination(icon:Icon(Icons.warning_amber_rounded),label:'P2000'),
-        NavigationDestination(icon:Icon(Icons.menu),label:'Menu'),
       ],
     ),
     body:KeyedSubtree(key:ValueKey(selected),child:pageMap[selected]!),
