@@ -19,6 +19,7 @@ import 'package:app_links/app_links.dart';
 import 'vouchers_business.dart';
 import 'wonen.dart';
 import 'wonen_featured.dart';
+import 'event_submission.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -417,7 +418,7 @@ class _ShellState extends State<Shell> {
       ('vouchers','Vouchers',Icons.local_offer_outlined),
     ],
     'Mijn account': [
-      ('account','Mijn RVAZ',Icons.person_outline),
+      ('account','Account & profiel',Icons.person_outline),
       ('saved','Opgeslagen artikelen',Icons.bookmark_outline),
       ('notifications','Meldingen',Icons.notifications_outlined),
       ('contributions','Mijn bijdragen',Icons.edit_note),
@@ -479,15 +480,7 @@ class _ShellState extends State<Shell> {
 }
 
 Future<void> openEventSubmission(BuildContext context) async {
-  try {
-    final opened = await launchUrl(
-      Uri.parse('$site/evenement-toevoegen/'),
-      mode:LaunchMode.inAppBrowserView,
-    );
-    if(opened) return;
-  } catch (_) {}
-  if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content:Text('Het aanmeldformulier kon niet worden geopend. Probeer het opnieuw.')));
+ await Navigator.push(context,MaterialPageRoute(builder:(_)=>const EventSubmissionPage()));
 }
 
 class LogoMark extends StatefulWidget {
@@ -1895,7 +1888,7 @@ class _AccountPageState extends State<AccountPage>{
   Widget build(BuildContext context)=>ListView(
     padding:const EdgeInsets.all(18),
     children:[
-      const Text('Mijn RVAZ',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
+      const Text('Account & profiel',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const SizedBox(height:14),
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Row(children:[
         _menuIcon(Icons.person),const SizedBox(width:14),
@@ -1908,18 +1901,19 @@ class _AccountPageState extends State<AccountPage>{
         if(userName==null)OutlinedButton.icon(onPressed:busy?null:()=>auth(false),icon:const Icon(Icons.login),label:const Text('Inloggen'))
         else OutlinedButton.icon(onPressed:logout,icon:const Icon(Icons.logout),label:const Text('Uitloggen')),
       ]))),
+      if(userName==null)TextButton(onPressed:busy?null:()=>auth(true),child:const Text('Account aanmaken')),
       const SizedBox(height:14),
       if(userName!=null)Card(clipBehavior:Clip.antiAlias,child:Column(children:[
         _sectionHeader(Icons.person,'Mijn RVAZ','Jouw instellingen en voorkeuren'),
         ListTile(leading:_menuIcon(Icons.real_estate_agent_outlined),title:const Text('Mijn Wonen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer woningen en aanvragen als makelaar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MijnWonenPage()))),
         const Divider(height:1,indent:72),
-        ListTile(leading:_menuIcon(Icons.home_outlined),title:const Text('Mijn Voorne',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Jouw adres, lokaal nieuws, agenda en afval'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVoornePage()))),
-        const Divider(height:1,indent:72),
+
+
         ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
         const Divider(height:1,indent:72),
-        ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Kies welke pushmeldingen je wilt ontvangen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
-        const Divider(height:1,indent:72),
-        ListTile(leading:_menuIcon(Icons.local_offer_outlined),title:const Text('Mijn vouchers',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Bekijk je persoonlijke QR-codes en status'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
+
+
+
         if(businessLinked)...[
           const Divider(height:1,indent:72),
           ListTile(leading:_menuIcon(Icons.storefront_outlined),title:const Text('Mijn bedrijf',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je bedrijfsprofiel, openingstijden en vouchers'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessManagePage()))),
@@ -1928,12 +1922,6 @@ class _AccountPageState extends State<AccountPage>{
         ],
       ])),
       if(userName!=null)const SizedBox(height:14),
-      Card(clipBehavior:Clip.antiAlias,child:Column(children:[
-        _sectionHeader(Icons.chat_bubble_outline,'Contact & bijdragen','Help mee en blijf in contact'),
-        ListTile(leading:_menuIcon(Icons.feedback_outlined),title:const Text('Feedback over de app',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Meld een fout of geef een suggestie'),trailing:const Icon(Icons.chevron_right),onTap:()=>sendPageFeedback(context,'Algemene app-feedback')),
-        const Divider(height:1,indent:72),
-        ListTile(leading:_menuIcon(Icons.campaign_outlined),title:const Text('Tip de redactie',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(userName==null?'Log in om een tip te versturen':'Stuur nieuws rechtstreeks naar de redactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>userName==null?auth(false):Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))),
-      ])),
     ],
   );
 }
