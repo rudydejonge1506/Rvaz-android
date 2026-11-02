@@ -21,8 +21,8 @@ class FamilyService {
  static Map<String,dynamic> decode(http.Response r){
   Map<String,dynamic> data={};
   try {final x=jsonDecode(r.body);if(x is Map)data=Map<String,dynamic>.from(x);}catch(_){}
-  if(r.statusCode<200||r.statusCode>=300)throw FamilyApiException(
-   '${data['message']??'Familieberichten zijn tijdelijk niet beschikbaar. Probeer opnieuw.'}',loginRequired:r.statusCode==401);
+  if(r.statusCode<200||r.statusCode>=300){throw FamilyApiException(
+   '${data['message']??'Familieberichten zijn tijdelijk niet beschikbaar. Probeer opnieuw.'}',loginRequired:r.statusCode==401);}
   return data;
  }
  static Future<Map<String,dynamic>> list({bool mine=false,String kind='',int page=1}) async {
@@ -59,7 +59,7 @@ class FamilyNoticeCard extends StatelessWidget {
   };
   final centered=notice['align']!='left';
   final align=centered?TextAlign.center:TextAlign.left;
-  final font=notice['font']=='sans'?'OpenSans':'serif';
+  final font=notice['font']=='sans'?'OpenSans':'LibreBaskerville';
   Widget? image;
   if(notice['local_image'] is XFile){image=Image.file(File((notice['local_image'] as XFile).path),fit:BoxFit.contain);}
   else if('${notice['image_base64']??''}'.isNotEmpty){
@@ -132,7 +132,7 @@ class _FamilyPageState extends State<FamilyPage> {
   const Padding(padding:EdgeInsets.symmetric(vertical:16),child:Text('De momenten die ertoe doen. Maak een persoonlijke kaart; de redactie controleert je bericht vóór publicatie.')),
   Wrap(spacing:8,runSpacing:8,children:[
    FilledButton.icon(onPressed:create,icon:const Icon(Icons.edit_outlined),label:const Text('Bericht maken')),
-   if(!widget.mine)OutlinedButton.icon(onPressed:()async{if(!await login()||!mounted)return;await Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('Mijn familieberichten')),body:const FamilyPage(mine:true))));},icon:const Icon(Icons.person_outline),label:const Text('Mijn berichten')),
+   if(!widget.mine)OutlinedButton.icon(onPressed:()async{if(!await login()||!context.mounted)return;await Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('Mijn familieberichten')),body:const FamilyPage(mine:true))));},icon:const Icon(Icons.person_outline),label:const Text('Mijn berichten')),
   ]),
   if(!widget.mine)Padding(padding:const EdgeInsets.symmetric(vertical:16),child:Wrap(spacing:8,runSpacing:6,children:{'':'Alle berichten',...familyKinds}.entries.map((e)=>ChoiceChip(label:Text(e.value),selected:kind==e.key,onSelected:(_){kind=e.key;load(reset:true);})).toList())),
   if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:20),child:Column(children:[Text(error),TextButton(onPressed:needsLogin?()async{if(await login(force:true)&&mounted)load(reset:true);}:()=>load(reset:items.isEmpty),child:Text(needsLogin?'Inloggen / account maken':'Opnieuw proberen'))])),

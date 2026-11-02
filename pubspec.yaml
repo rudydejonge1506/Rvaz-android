@@ -34,6 +34,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   fonts:
+    - family: LibreBaskerville
+      fonts:
+        - asset: assets/fonts/LibreBaskerville.ttf
     - family: Dosis
       fonts:
         - asset: assets/fonts/Dosis.ttf
@@ -42,6 +45,7 @@ flutter:
         - asset: assets/fonts/OpenSans.ttf
   assets:
     - assets/rvaz-logo.png
+    - assets/fonts/LibreBaskerville-OFL.txt
     - assets/fonts/Dosis-OFL.txt
     - assets/fonts/OpenSans-OFL.txt
 

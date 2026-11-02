@@ -1,4 +1,4 @@
-name: RVAZ Google Play version 68 native family candidate
+name: RVAZ Google Play 0.7.1 version 68 native family candidate
 # Trigger Google Play build 2026-10-01
 on:
   push:

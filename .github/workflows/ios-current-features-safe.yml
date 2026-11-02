@@ -1,4 +1,4 @@
-name: RVAZ iOS build105 native family and TestFlight only
+name: RVAZ iOS 1.2.1 build105 native family and TestFlight only
 
 on:
   push:
