@@ -518,7 +518,7 @@ class _ShellState extends State<Shell> {
           onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage()))),
       ],
     ),
-    body:Stack(children:[Offstage(offstage:selected!='home',child:const HomePage()),if(selected!='home')KeyedSubtree(key:ValueKey(selected),child:pageMap[selected]!)]),
+    body:KeyedSubtree(key:ValueKey(selected),child:pageMap[selected]!),
   );
 }
 
