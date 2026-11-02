@@ -90,6 +90,8 @@ try:
     xml, root = snapshot('family-account-required')
     assert not any(n.get('class') == 'android.webkit.WebView' for n in root.iter('node'))
     assert 'Inloggen' in text(root), 'Submission must open the existing native account login'
+    assert 'Familieberichten' in text(root), 'Native account route must retain its app bar'
+    assert find(root, 'Back') is not None or find(root, 'Terug') is not None, 'Native account route must have a visible back button'
     adb('shell', 'input', 'keyevent', '4')
     time.sleep(2)
     xml, root = snapshot('family-return')

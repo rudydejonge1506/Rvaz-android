@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:rvaz_android/main.dart';
 
 void main(){
@@ -16,6 +17,15 @@ void main(){
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:SingleChildScrollView(child:FamilyNoticeCard(notice:{'title':'Fictieve familie De Voorbeeld','message':'Een persoonlijk familiebericht.\nMet ruimte voor een herinnering.','kind':'herinnering','place':'Brielle','background':'goud','font':'sans','align':'left'},full:true)))));
   expect(find.text('Overlijden & herdenkingen'),findsOneWidget);
   expect(find.text('Brielle'),findsOneWidget);
+  expect(tester.takeException(),isNull);
+ });
+ testWidgets('Family account route has a safe page frame and native login', (tester)async{
+  FlutterSecureStorage.setMockInitialValues({});
+  await tester.pumpWidget(const MaterialApp(home:FamilyAccountRoute()));
+  await tester.pumpAndSettle();
+  expect(find.byType(AppBar),findsOneWidget);
+  expect(find.byType(SafeArea),findsWidgets);
+  expect(find.text('Inloggen'),findsOneWidget);
   expect(tester.takeException(),isNull);
  });
  testWidgets('Native editor changes background and renders preview without submitting', (tester)async{

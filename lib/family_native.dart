@@ -83,6 +83,11 @@ class FamilyNoticeCard extends StatelessWidget {
  }
 }
 
+class FamilyAccountRoute extends StatelessWidget {
+ const FamilyAccountRoute({super.key});
+ @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Familieberichten')),body:const SafeArea(child:AccountPage()));
+}
+
 class FamilyPage extends StatefulWidget {
  final bool mine;
  const FamilyPage({super.key,this.mine=false});
@@ -109,7 +114,7 @@ class _FamilyPageState extends State<FamilyPage> {
  Future<bool> login({bool force=false}) async {
   if(!force&&await appLoggedIn())return true;
   if(!mounted)return false;
-  await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()));
+  await Navigator.push(context,MaterialPageRoute(builder:(_)=>const FamilyAccountRoute()));
   return appLoggedIn();
  }
  Future<void> create()async{
@@ -189,7 +194,7 @@ class _FamilyEditorPageState extends State<FamilyEditorPage> {
   CheckboxListTile(contentPadding:EdgeInsets.zero,value:permission,onChanged:busy?null:(v)=>setState(()=>permission=v??false),title:const Text('Ik heb toestemming om deze tekst en afbeelding openbaar te laten publiceren.')),
   const Text('De redactie kan contact opnemen via het e-mailadres van je account. Dat adres verschijnt niet bij je bericht.'),
   if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:16),child:Text(error,style:const TextStyle(color:Colors.red))),
-  if(needsLogin)TextButton(onPressed:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()));if(mounted)setState(()=>needsLogin=false);},child:const Text('Opnieuw inloggen; mijn kaart bewaren')),
+  if(needsLogin)TextButton(onPressed:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const FamilyAccountRoute()));if(mounted)setState(()=>needsLogin=false);},child:const Text('Opnieuw inloggen; mijn kaart bewaren')),
   const SizedBox(height:16),FilledButton.icon(onPressed:busy?null:send,icon:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_outlined),label:Text(busy?'Versturen…':'Versturen ter beoordeling')),const SizedBox(height:32),
  ])));
 }
