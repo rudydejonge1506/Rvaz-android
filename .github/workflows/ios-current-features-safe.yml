@@ -1,9 +1,6 @@
 name: RVAZ iOS build104 and TestFlight only
 
 on:
-  push:
-    branches: [feature/central-app-menu, feature/newsroom-design]
-    paths: ['lib/**', 'test/**', 'assets/**', 'ios/**', 'scripts/**', 'pubspec.yaml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
 
 concurrency:

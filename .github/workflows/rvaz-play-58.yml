@@ -1,9 +1,6 @@
 name: RVAZ Google Play version 67 candidate
 # Trigger Google Play build 2026-10-01
 on:
-  push:
-    branches: [feature/central-app-menu, feature/newsroom-design]
-    paths: ['lib/**', 'test/**', 'assets/**', 'pubspec.yaml', 'scripts/check_live_news.py', '.github/workflows/ios-current-features-safe.yml', '.github/workflows/rvaz-play-58.yml']
   workflow_dispatch:
 jobs:
   build:

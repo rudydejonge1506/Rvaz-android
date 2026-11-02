@@ -19,3 +19,5 @@ jobs:
       - run: python3 scripts/verify_icons.py
 
       - run: php -l backend/rvaz-native-events.php
+
+      - run: php -l backend/rvaz-family-native-api.php
