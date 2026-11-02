@@ -106,8 +106,8 @@ class _FamilyPageState extends State<FamilyPage> {
   }catch(e){if(mounted&&run==generation)setState((){error=e is FamilyApiException?e.message:'Geen verbinding. Probeer opnieuw.';needsLogin=e is FamilyApiException&&e.loginRequired;});}
   finally{if(mounted&&run==generation)setState(()=>loading=false);}
  }
- Future<bool> login() async {
-  if(await appLoggedIn())return true;
+ Future<bool> login({bool force=false}) async {
+  if(!force&&await appLoggedIn())return true;
   if(!mounted)return false;
   await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()));
   return appLoggedIn();
@@ -135,7 +135,7 @@ class _FamilyPageState extends State<FamilyPage> {
    if(!widget.mine)OutlinedButton.icon(onPressed:()async{if(!await login()||!mounted)return;await Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('Mijn familieberichten')),body:const FamilyPage(mine:true))));},icon:const Icon(Icons.person_outline),label:const Text('Mijn berichten')),
   ]),
   if(!widget.mine)Padding(padding:const EdgeInsets.symmetric(vertical:16),child:Wrap(spacing:8,runSpacing:6,children:{'':'Alle berichten',...familyKinds}.entries.map((e)=>ChoiceChip(label:Text(e.value),selected:kind==e.key,onSelected:(_){kind=e.key;load(reset:true);})).toList())),
-  if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:20),child:Column(children:[Text(error),TextButton(onPressed:needsLogin?()async{if(await login()&&mounted)load(reset:true);}:()=>load(reset:items.isEmpty),child:Text(needsLogin?'Inloggen / account maken':'Opnieuw proberen'))])),
+  if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:20),child:Column(children:[Text(error),TextButton(onPressed:needsLogin?()async{if(await login(force:true)&&mounted)load(reset:true);}:()=>load(reset:items.isEmpty),child:Text(needsLogin?'Inloggen / account maken':'Opnieuw proberen'))])),
   if(!loading&&error.isEmpty&&items.isEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:24),child:Text(widget.mine?'Je hebt nog geen familieberichten aangemeld.':'Er zijn nog geen gepubliceerde familieberichten in deze categorie.')),
   for(final n in items)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
    InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('Familiebericht')),body:SingleChildScrollView(padding:const EdgeInsets.all(16),child:FamilyNoticeCard(notice:n,full:true))))),child:FamilyNoticeCard(notice:n)),
@@ -156,7 +156,7 @@ class _FamilyEditorPageState extends State<FamilyEditorPage> {
  final title=TextEditingController(),message=TextEditingController();
  String kind='herinnering',background='papier',font='serif',align='center',layout='card',place='Hellevoetsluis';
  late final String requestId='family-${DateTime.now().microsecondsSinceEpoch}';
- XFile? image;bool permission=false,busy=false;String error='';
+ XFile? image;bool permission=false,busy=false,needsLogin=false;String error='';
  @override void dispose(){title.dispose();message.dispose();super.dispose();}
  Map<String,dynamic> get preview=>{'title':title.text.isEmpty?'Jouw titel':title.text,'message':message.text.isEmpty?'Jouw persoonlijke bericht':message.text,'kind':kind,'background':background,'font':font,'align':align,'layout':layout,'place':place,'local_image':image};
  Widget choice(String label,String value,Map<String,String> options,ValueChanged<String> change)=>Padding(padding:const EdgeInsets.symmetric(vertical:8),child:DropdownButtonFormField<String>(initialValue:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),items:options.entries.map((e)=>DropdownMenuItem(value:e.key,child:Text(e.value,overflow:TextOverflow.ellipsis))).toList(),onChanged:busy?null:(v){if(v!=null)setState(()=>change(v));}));
@@ -168,9 +168,9 @@ class _FamilyEditorPageState extends State<FamilyEditorPage> {
   if(busy||!form.currentState!.validate())return;
   if(!permission){setState(()=>error='Bevestig je toestemming voor publicatie.');return;}
   if(layout=='image'&&image==null){setState(()=>error='Voeg je zelfgemaakte kaart toe.');return;}
-  setState((){busy=true;error='';});
+  setState((){busy=true;error='';needsLogin=false;});
   try{await FamilyService.submit({'title':title.text.trim(),'message':message.text.trim(),'kind':kind,'background':background,'font':font,'align':align,'layout':layout,'place':place,'permission':'1','request_id':requestId},image);if(mounted)Navigator.pop(context,true);}
-  catch(e){if(mounted)setState(()=>error=e is FamilyApiException?e.message:'Geen bevestiging ontvangen. Probeer opnieuw; je inzending wordt niet dubbel geplaatst.');}
+  catch(e){if(mounted)setState((){error=e is FamilyApiException?e.message:'Geen bevestiging ontvangen. Probeer opnieuw; je inzending wordt niet dubbel geplaatst.';needsLogin=e is FamilyApiException&&e.loginRequired;});}
   finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Maak je familiebericht')),body:Form(key:form,child:ListView(padding:const EdgeInsets.all(16),children:[
@@ -189,6 +189,7 @@ class _FamilyEditorPageState extends State<FamilyEditorPage> {
   CheckboxListTile(contentPadding:EdgeInsets.zero,value:permission,onChanged:busy?null:(v)=>setState(()=>permission=v??false),title:const Text('Ik heb toestemming om deze tekst en afbeelding openbaar te laten publiceren.')),
   const Text('De redactie kan contact opnemen via het e-mailadres van je account. Dat adres verschijnt niet bij je bericht.'),
   if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:16),child:Text(error,style:const TextStyle(color:Colors.red))),
+  if(needsLogin)TextButton(onPressed:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage()));if(mounted)setState(()=>needsLogin=false);},child:const Text('Opnieuw inloggen; mijn kaart bewaren')),
   const SizedBox(height:16),FilledButton.icon(onPressed:busy?null:send,icon:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_outlined),label:Text(busy?'Versturen…':'Versturen ter beoordeling')),const SizedBox(height:32),
  ])));
 }

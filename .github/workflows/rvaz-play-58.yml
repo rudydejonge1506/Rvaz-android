@@ -5,6 +5,9 @@ on:
     branches: [feature/newsroom-design]
     paths: ['.github/workflows/rvaz-play-58.yml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
+concurrency:
+  group: rvaz-native-family-android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
