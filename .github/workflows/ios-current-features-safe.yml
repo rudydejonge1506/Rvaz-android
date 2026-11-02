@@ -1,10 +1,13 @@
-name: RVAZ iOS build104 and TestFlight only
+name: RVAZ iOS build105 and TestFlight only
 
 on:
+  push:
+    branches: [feature/newsroom-design]
+    paths: ['.github/workflows/rvaz-play-58.yml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
 
 concurrency:
-  group: rvaz-newsroom-ios-${{ github.ref }}
+  group: rvaz-native-family-ios-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -105,7 +108,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.2.0 --build-number=104
+        run: flutter build ios --release --no-codesign --build-name=1.2.1 --build-number=105
 
       - name: Archive with proven signing settings
         run: |
@@ -118,7 +121,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.2.0-build104-newsroom
+          name: RVAZ-iOS-1.2.1-build105-native-family
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
@@ -134,8 +137,8 @@ jobs:
               assert len(names)==1
               info=plistlib.loads(z.read(names[0]))
               assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
-              assert info['CFBundleVersion']=='104'
-              assert info['CFBundleShortVersionString']=='1.2.0'
+              assert info['CFBundleVersion']=='105'
+              assert info['CFBundleShortVersionString']=='1.2.1'
               assert info.get('CFBundleIcons'), 'Compiled app icons missing'
           PY
 
@@ -148,7 +151,7 @@ jobs:
           test -n "$RUN_ID" && test "$RUN_ID" != null
           gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
 
-      - name: Validate and upload build 104 to TestFlight only
+      - name: Validate and upload build 105 to TestFlight only
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
