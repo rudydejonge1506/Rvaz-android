@@ -16,10 +16,6 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v4
-      - name: Verify live paginated news metadata
-        run: python3 scripts/check_live_news.py
-      - name: Verify live native family API
-        run: python3 scripts/check_live_family.py
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

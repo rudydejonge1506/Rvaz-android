@@ -74,7 +74,9 @@ try:
         xml, root = snapshot('family-attempt-' + str(attempt))
         assert not dismiss_launcher_anr(root), 'Unexpected launcher interruption during family navigation'
         assert not any(n.get('class') == 'android.webkit.WebView' for n in root.iter('node')), 'Family must use native widgets'
-        if 'De momenten die ertoe doen' in text(root) and 'Bericht maken' in text(root):
+        if ('De momenten die ertoe doen' in text(root) and 'Bericht maken' in text(root)
+                and ('Er zijn nog geen gepubliceerde familieberichten' in text(root)
+                     or 'Lees familiebericht' in text(root))):
             print('Native family cards, filters and account actions rendered without a WebView.', flush=True)
             snapshot('family-page')
             break
