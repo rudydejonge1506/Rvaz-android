@@ -6,6 +6,8 @@ Map<String,dynamic> post(int id)=>{'id':id,'title':'Nieuwsbericht $id','date':'2
 
 void main(){
  testWidgets('More news appends without duplicates or losing the current scroll position',(tester)async{
+  tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+  addTearDown((){tester.view.resetPhysicalSize();tester.view.resetDevicePixelRatio();});
   final calls=<int>[];
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:NewsroomFeed(showPromotions:false,
    loader:(page,before)async{calls.add(page);return page==1
@@ -14,6 +16,7 @@ void main(){
   await tester.pumpAndSettle();
   expect(find.text('Nieuwsbericht 1'),findsOneWidget);
   await tester.scrollUntilVisible(find.byKey(const ValueKey('newsroom-load-more')),400,scrollable:find.byType(Scrollable).first);
+  await tester.ensureVisible(find.text('Meer laden'));await tester.pumpAndSettle();
   final scroll=tester.state<ScrollableState>(find.byType(Scrollable).first).position;
   final before=scroll.pixels;
   await tester.tap(find.text('Meer laden'));
@@ -30,6 +33,8 @@ void main(){
    loader:(page,before)async{calls.add(page);if(page==2&&!failed){failed=true;throw Exception('Offline');}
     return page==1?NewsroomBatch([post(1)],true):NewsroomBatch([post(2)],false);}))));
   await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(find.text('Meer laden'),300,scrollable:find.byType(Scrollable).first);
+  await tester.ensureVisible(find.text('Meer laden'));await tester.pumpAndSettle();
   await tester.tap(find.text('Meer laden'));await tester.pumpAndSettle();
   expect(find.text('Nieuwsbericht 1'),findsOneWidget);
   await tester.ensureVisible(find.text('Opnieuw proberen'));

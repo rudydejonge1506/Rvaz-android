@@ -197,9 +197,15 @@ class _FamilyPageState extends State<FamilyPage> {
    ..setBackgroundColor(Colors.white)
    ..setNavigationDelegate(NavigationDelegate(
     onPageStarted:(_){if(mounted)setState((){loading=true;failed=false;});},
-    onPageFinished:(_){if(mounted)setState(()=>loading=false);},
+    onPageFinished:(_)async{
+     // Keep the site's submission, moderation and account forms intact while
+     // avoiding a second website masthead inside the native app chrome.
+     await controller.runJavaScript("const s=document.createElement('style');s.textContent='.rk-masthead,.rk-mainnav,.footer,#wpadminbar{display:none!important}html,body{margin-top:0!important}.rf-page{width:100%!important;max-width:none!important;padding:16px!important}';document.head.appendChild(s);").catchError((_){});
+     if(mounted)setState(()=>loading=false);
+    },
     onWebResourceError:(e){if(e.isForMainFrame==true&&mounted)setState((){loading=false;failed=true;});},
     onNavigationRequest:(r){
+     if(!r.isMainFrame)return NavigationDecision.navigate;
      final u=Uri.tryParse(r.url);
      if(u!=null&&u.scheme=='https'&&['regiovoorneaanzee.nl','www.regiovoorneaanzee.nl'].contains(u.host))return NavigationDecision.navigate;
      if(u!=null&&['https','http','mailto','tel'].contains(u.scheme))launchUrl(u,mode:LaunchMode.externalApplication);

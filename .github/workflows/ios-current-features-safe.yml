@@ -116,7 +116,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.5-build102-central-menu
+          name: RVAZ-iOS-1.2.0-build102-newsroom
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
