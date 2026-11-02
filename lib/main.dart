@@ -1391,10 +1391,10 @@ Future<List<dynamic>> loadNdwTraffic()async{
 
 class EmergencyTrafficPage extends StatefulWidget{final bool initialTraffic;final String initialPlace;const EmergencyTrafficPage({super.key,this.initialTraffic=false,this.initialPlace=''});@override State<EmergencyTrafficPage> createState()=>_EmergencyTrafficPageState();}
 class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
- String place='Voorne aan Zee';bool traffic=false;late Future<List<dynamic>> items;
+ String place='Voorne aan Zee',service='';bool traffic=false;late Future<List<dynamic>> items;
  static const p2000Places=['Voorne aan Zee','Hellevoetsluis','Rockanje','Brielle','Oostvoorne','Oudenhoorn','Nieuwenhoorn','Tinte','Vierpolders','Zwartewaal','Abbenbroek','Heenvliet','Geervliet','Zuidland','Simonshaven','Rotterdam-Rijnmond'];
  @override void initState(){super.initState();traffic=widget.initialTraffic;if(widget.initialPlace.isNotEmpty&&p2000Places.contains(widget.initialPlace))place=widget.initialPlace;items=load();}
- String hay(dynamic e)=>[e is Map?e['title']:'',e is Map?e['description']:'',e is Map?e['message']:'',e is Map?e['body']:'',e is Map?e['place']:'',e is Map?e['location']:'',e is Map?e['city']:''].join(' ').toLowerCase();
+ String hay(dynamic e)=>[e is Map?e['title']:'',e is Map?e['description']:'',e is Map?e['message']:'',e is Map?e['body']:'',e is Map?e['place']:'',e is Map?e['location']:'',e is Map?e['city']:'',e is Map?e['service']:'',e is Map?e['dienst']:'',e is Map?e['discipline']:''].join(' ').toLowerCase();
  Future<List<dynamic>>load()async{
    if(traffic){try{return await loadNdwTraffic();}catch(e){debugPrint('NDW verkeer: $e');return <dynamic>[];}}
    final region=Uri.encodeQueryComponent('Rotterdam-Rijnmond');
@@ -1420,13 +1420,17 @@ class _EmergencyTrafficPageState extends State<EmergencyTrafficPage>{
    final center=centers[selected];if(center==null)return false;
    return const Distance().as(LengthUnit.Kilometer,center,LatLng(lat,lon))<=8;
  }
- List<dynamic> filtered(List<dynamic> all){if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)||(traffic&&trafficNearPlace(e,place))).toList();}
+ List<dynamic> filtered(List<dynamic> all){if(!traffic&&service.isNotEmpty)all=all.where((e)=>hay(e).contains(service)).toList();if(place=='Rotterdam-Rijnmond')return all;if(place=='Voorne aan Zee'){if(traffic)return all;const places=['hellevoetsluis','brielle','rockanje','oostvoorne','oudenhoorn','nieuwenhoorn','tinte','vierpolders','zwartewaal','abbenbroek','heenvliet','geervliet','zuidland','simonshaven'];return all.where((e){final h=hay(e);return places.any(h.contains);}).toList();}final q=place.toLowerCase();return all.where((e)=>hay(e).contains(q)||(traffic&&trafficNearPlace(e,place))).toList();}
  void refresh(){setState(()=>items=load());}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('112 & Verkeer'),backgroundColor:Colors.white,foregroundColor:navy,actions:[
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:Text(traffic?'Verkeer':'112 & P2000'),backgroundColor:Colors.white,foregroundColor:navy,actions:[
    if(!traffic)IconButton(tooltip:'P2000 pushmeldingen',icon:const Icon(Icons.notifications_active_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
    const PageFeedbackButton(page:'112 & Verkeer')
  ]),body:Column(children:[
    Padding(padding:const EdgeInsets.all(16),child:Column(children:[
+     if(!traffic)Padding(padding:const EdgeInsets.only(bottom:12),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+       for(final entry in {'':'Alle diensten','brandweer':'Brandweer','ambulance':'Ambulance','politie':'Politie'}.entries)
+        Padding(padding:const EdgeInsets.only(right:8),child:ChoiceChip(label:Text(entry.value),selected:service==entry.key,onSelected:(_)=>setState(()=>service=entry.key))),
+     ]))),
      DropdownButtonFormField<String>(initialValue:place,decoration:InputDecoration(labelText:traffic?'Plaats':'P2000-regio / plaats',border:const OutlineInputBorder()),items:(traffic?['Rotterdam-Rijnmond',...appConfig.places.where((x)=>x!='Voorne aan Zee')]:p2000Places).map((x)=>DropdownMenuItem(value:x,child:Text(x=='Voorne aan Zee'?'Heel Voorne aan Zee':x))).toList(),onChanged:(v){setState(()=>place=v??'Voorne aan Zee');refresh();}),
      const SizedBox(height:12),
      SegmentedButton<bool>(segments:const [ButtonSegment(value:false,label:Text('112 / P2000'),icon:Icon(Icons.warning_amber)),ButtonSegment(value:true,label:Text('Verkeer'),icon:Icon(Icons.traffic))],selected:{traffic},onSelectionChanged:(v){setState(()=>traffic=v.first);refresh();})
