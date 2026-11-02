@@ -15,6 +15,6 @@ De gedeelde Flutter-app voor Regio Voorne aan Zee. De newsroom-update staat op `
 
 ## Release
 
-Android-kandidaat: 0.7.0 (67). iOS-kandidaat: 1.2.0 (103). Apple-versies worden voor het bouwen via de bestaande beveiligde CI-sleutels gecontroleerd. Androidversie 67 is een kandidaat totdat Google Play zelf het nummer heeft gecontroleerd.
+Android-kandidaat: 0.7.0 (67). iOS-kandidaat: 1.2.0 (104). Apple-versies worden voor het bouwen via de bestaande beveiligde CI-sleutels gecontroleerd. Androidversie 67 is een kandidaat totdat Google Play zelf het nummer heeft gecontroleerd.
 
 De CI voert analyse, regressietests, ondertekenings- en icooncontroles uit. De Android-release wordt ook op Android 15 gestart. Apple-upload naar TestFlight is geen publieke App Store-publicatie. Google Play-upload is een afzonderlijke stap.

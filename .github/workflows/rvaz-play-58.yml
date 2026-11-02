@@ -164,8 +164,14 @@ jobs:
           script: |
             adb install build/app/outputs/flutter-apk/app-release.apk
             adb logcat -c
+            adb shell pm grant nl.regiovoorneaanzee.rvaz_android android.permission.POST_NOTIFICATIONS
             adb shell am start -W -n nl.regiovoorneaanzee.rvaz_android/.MainActivity
-            sleep 25
+            sleep 35
+            adb shell uiautomator dump /sdcard/rvaz-screen.xml
+            adb pull /sdcard/rvaz-screen.xml build/rvaz-screen.xml
+            ! grep -q 'Nieuws laden is niet gelukt' build/rvaz-screen.xml
+            ! grep -q 'Er zijn nog geen nieuwsberichten' build/rvaz-screen.xml
+            grep -q 'Uitgelicht nieuws:' build/rvaz-screen.xml
             adb logcat -d > build/rvaz-startup.log
             adb shell pidof nl.regiovoorneaanzee.rvaz_android
             ! grep -E 'FATAL EXCEPTION|Fatal signal|Unable to instantiate application' build/rvaz-startup.log
@@ -182,4 +188,5 @@ jobs:
             build/app/outputs/mapping/release/mapping.txt
             build/package.txt
             build/rvaz-startup.*
+            build/rvaz-screen.xml
           if-no-files-found: error

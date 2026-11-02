@@ -23,17 +23,16 @@ typedef NewsroomLoader=Future<NewsroomBatch> Function(int page,String before);
 Future<NewsroomBatch> loadNewsroomBatch(int page,String before) async {
  // Request only public listing metadata. Full article content is obtained via
  // the existing protected App API when the reader opens an article.
- final uri=Uri.parse('$site/wp-json/wp/v2/posts').replace(queryParameters:{
-  'per_page':'15','page':'$page','orderby':'date','order':'desc',
-  '_embed':'wp:featuredmedia,wp:term',
-  '_fields':'id,title,date,date_gmt,link,_links,_embedded',
-  if(before.isNotEmpty)'before':before,
- });
+ // Keep list separators literal: the production site's redirect path encodes
+ // percent-escaped separators a second time, producing empty metadata fields.
+ final cursor=before.isEmpty?'':DateTime.parse(before).toUtc().toIso8601String();
+ final uri=Uri.parse('https://www.regiovoorneaanzee.nl/wp-json/wp/v2/posts?per_page=15&page=$page&orderby=date&order=desc&_embed=wp:featuredmedia,wp:term&_fields=id,title,date,date_gmt,link,_links,_embedded${cursor.isEmpty?'':'&before=$cursor'}');
  final r=await http.get(uri,headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:20));
  if(r.statusCode==400){final d=jsonDecode(r.body);if(d is Map&&d['code']=='rest_post_invalid_page_number')return const NewsroomBatch([],false);}
- if(r.statusCode!=200)throw Exception('Nieuws laden is niet gelukt. Probeer het opnieuw.');
+ if(r.statusCode!=200)throw Exception('Nieuws ophalen: HTTP ${r.statusCode}');
  final raw=List<dynamic>.from(jsonDecode(r.body));
  final posts=raw.map((item){
+  if(item is! Map||item['id']==null)throw const FormatException('Ongeldige nieuwsmetadata ontvangen');
   final p=Map<String,dynamic>.from(item);
   final embed=p['_embedded'];
   final media=embed is Map?embed['wp:featuredmedia']:null;
@@ -82,7 +81,7 @@ class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClie
     posts.addAll(batch.posts.where((p)=>ids.add('${p['id']}')));
     page=next;before=cursor;more=batch.hasMore;
    });
-  }catch(_){if(mounted)setState(()=>error='Nieuws laden is niet gelukt. Probeer het opnieuw.');}
+  }catch(e){debugPrint('RVAZ news list: $e');if(mounted)setState(()=>error='Nieuws laden is niet gelukt. Probeer het opnieuw.');}
   finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context){
@@ -148,7 +147,7 @@ class NewsroomArticleTile extends StatelessWidget {
   return Material(color:Colors.white,child:InkWell(onTap:()=>openArticle(context,post),child:Container(
    padding:EdgeInsets.symmetric(vertical:lead?14:12),decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:newsroomLine))),
    child:lead?Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    AspectRatio(aspectRatio:16/9,child:photo()),const SizedBox(height:10),
+    Semantics(label:'Uitgelicht nieuws: $title',image:true,child:AspectRatio(aspectRatio:16/9,child:photo())),const SizedBox(height:10),
     Text(title,style:newsroomHeading.copyWith(fontSize:27)),const SizedBox(height:7),
     Text(meta,style:const TextStyle(fontSize:12,color:Color(0xFF63788C))),
    ]):Row(crossAxisAlignment:CrossAxisAlignment.start,children:[

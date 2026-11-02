@@ -526,36 +526,16 @@ Future<void> openEventSubmission(BuildContext context) async {
  await Navigator.push(context,MaterialPageRoute(builder:(_)=>const EventSubmissionPage()));
 }
 
-class LogoMark extends StatefulWidget {
-  const LogoMark({super.key});
-  @override
-  State<LogoMark> createState() => _LogoMarkState();
-}
-class _LogoMarkState extends State<LogoMark> {
-  String logoUrl = '';
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-  Future<void> _load() async {
-    try {
-      final r = await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));
-      if (r.statusCode == 200) {
-        final j = jsonDecode(r.body);
-        final u = j['logo_url']?.toString() ?? '';
-        if (mounted && u.isNotEmpty) setState(() => logoUrl = u);
-      }
-    } catch (_) {}
-  }
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 41,
-    child: logoUrl.isNotEmpty
-      ? Image.network(logoUrl, width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft,
-          errorBuilder: (_, __, ___) => Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft))
-      : Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft),
-  );
+class LogoMark extends StatelessWidget {
+ const LogoMark({super.key});
+ @override Widget build(BuildContext context)=>SizedBox(height:41,child:Image.network(
+  'https://www.regiovoorneaanzee.nl/wp-content/uploads/2023/03/cropped-L-1536x289.png',
+  width:220,height:41,fit:BoxFit.contain,alignment:Alignment.centerLeft,
+  errorBuilder:(_,__,___)=>Row(mainAxisSize:MainAxisSize.min,children:[
+   Image.asset('assets/rvaz-logo.png',width:41,height:41,fit:BoxFit.contain),
+   const SizedBox(width:8),const Flexible(child:Text('REGIO VOORNE AAN ZEE',style:TextStyle(fontFamily:'OpenSans',fontSize:12,fontWeight:FontWeight.w800,color:navy))),
+  ]),
+ ));
 }
 
 class AppAd {
