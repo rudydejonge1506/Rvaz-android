@@ -44,6 +44,8 @@ flutter:
         - asset: assets/fonts/OpenSans.ttf
   assets:
     - assets/rvaz-logo.png
+    - assets/fonts/Dosis-OFL.txt
+    - assets/fonts/OpenSans-OFL.txt
 
 flutter_launcher_icons:
   android: true
