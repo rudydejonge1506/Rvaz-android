@@ -3,7 +3,7 @@ name: RVAZ Google Play version 67 candidate
 on:
   push:
     branches: [feature/central-app-menu, feature/newsroom-design]
-    paths: ['lib/**', 'test/**', 'assets/**', 'pubspec.yaml', '.github/workflows/rvaz-play-58.yml']
+    paths: ['lib/**', 'test/**', 'assets/**', 'pubspec.yaml', 'scripts/check_live_news.py', '.github/workflows/ios-current-features-safe.yml', '.github/workflows/rvaz-play-58.yml']
   workflow_dispatch:
 jobs:
   build:
@@ -13,6 +13,8 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v4
+      - name: Verify live paginated news metadata
+        run: python3 scripts/check_live_news.py
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
