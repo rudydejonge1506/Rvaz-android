@@ -1,10 +1,14 @@
-name: RVAZ iOS build102 and TestFlight only
+name: RVAZ iOS build103 and TestFlight only
 
 on:
   push:
     branches: [feature/central-app-menu, feature/newsroom-design]
     paths: ['lib/**', 'test/**', 'assets/**', 'ios/**', 'scripts/**', 'pubspec.yaml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
+
+concurrency:
+  group: rvaz-newsroom-ios-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -103,7 +107,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.2.0 --build-number=102
+        run: flutter build ios --release --no-codesign --build-name=1.2.0 --build-number=103
 
       - name: Archive with proven signing settings
         run: |
@@ -116,7 +120,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.2.0-build102-newsroom
+          name: RVAZ-iOS-1.2.0-build103-newsroom
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
@@ -132,12 +136,12 @@ jobs:
               assert len(names)==1
               info=plistlib.loads(z.read(names[0]))
               assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
-              assert info['CFBundleVersion']=='102'
+              assert info['CFBundleVersion']=='103'
               assert info['CFBundleShortVersionString']=='1.2.0'
               assert info.get('CFBundleIcons'), 'Compiled app icons missing'
           PY
 
-      - name: Validate and upload build 102 to TestFlight only
+      - name: Validate and upload build 103 to TestFlight only
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}

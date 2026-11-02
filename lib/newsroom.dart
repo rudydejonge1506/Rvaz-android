@@ -213,6 +213,23 @@ class _FamilyPageState extends State<FamilyPage> {
     },
    ))
    ..loadRequest(Uri.parse('$site/familieberichten/${widget.mine?'#mijn-berichten':''}'));
+  if(controller.platform is AndroidWebViewController){
+   (controller.platform as AndroidWebViewController).setOnShowFileSelector((params)async{
+    try{
+     final image=await ImagePicker().pickImage(source:ImageSource.gallery,maxWidth:1600,maxHeight:1600,imageQuality:85);
+     return image==null?<String>[]:[Uri.file(image.path).toString()];
+    }catch(_){return <String>[];}
+   });
+  }
+  controller.setOnJavaScriptConfirmDialog((request)async{
+   if(!mounted)return false;
+   return await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+    title:const Text('Bevestigen'),content:Text(request.message),actions:[
+     TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Annuleren')),
+     FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Bevestigen')),
+    ]))??false;
+  });
+
  }
  @override Widget build(BuildContext context)=>Column(children:[
   if(loading)const LinearProgressIndicator(minHeight:2),
