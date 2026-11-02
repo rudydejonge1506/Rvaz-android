@@ -24,6 +24,7 @@ void main(){
   expect(calls,[1,2]);
   expect(scroll.pixels,closeTo(before,1));
   expect(find.text('Nieuwsbericht 15'),findsOneWidget);
+  await tester.scrollUntilVisible(find.text('Nieuwsbericht 17'),200,scrollable:find.byType(Scrollable).first);
   expect(find.text('Nieuwsbericht 17'),findsOneWidget);
   expect(find.text('Meer laden'),findsNothing);
  });
