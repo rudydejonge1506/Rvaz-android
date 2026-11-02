@@ -1,7 +1,7 @@
 name: Central app menu checks
 on:
   push:
-    branches: [feature/central-app-menu]
+    branches: [feature/central-app-menu, feature/newsroom-design]
 permissions:
   contents: read
 jobs:

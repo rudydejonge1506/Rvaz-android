@@ -20,6 +20,8 @@ import 'vouchers_business.dart';
 import 'wonen.dart';
 import 'wonen_featured.dart';
 import 'event_submission.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+part 'newsroom.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -122,10 +124,10 @@ class AppConfig {
     this.homeTitle='Regio Voorne aan Zee', this.latestTitle='Laatste nieuws', this.agendaTitle='Agenda',
     this.weekbladTitle='Weekblad', this.accountTitle='Mijn RVAZ',
     this.places=const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne','Oudenhoorn'],
-    this.navOrder=const ['home','news','weekblad','agenda','account'],
-    this.homeBlocks=const ['news','agenda','weekblad','ads'],
-    this.accountBlocks=const ['saved','notifications','tips','contributions','weekblad','profile'],
-    this.navigation=const {'home':true,'news':true,'weekblad':true,'agenda':true,'account':true},
+    this.navOrder=const ['home','news','agenda','account'],
+    this.homeBlocks=const ['news','agenda','ads'],
+    this.accountBlocks=const ['saved','notifications','tips','contributions','profile'],
+    this.navigation=const {'home':true,'news':true,'agenda':true,'account':true},
     this.features=const {'search':true,'saved':true,'tips':true,'contributions':true,'push':true,'share':true,'listen':false,'traffic':true,'emergency112':true},
     this.limits=const {'news_per_page':20,'home_news':8,'agenda_home':4,'ad_frequency':5},
     this.primary=navy, this.accent=cyan, this.success=green, this.background=const Color(0xFFF7F9FB),
@@ -147,8 +149,8 @@ class AppConfig {
       agendaTitle:(texts['agenda_title']??'Agenda').toString(), weekbladTitle:(texts['weekblad_title']??'Weekblad').toString(),
       accountTitle:(texts['account_title']??'Mijn RVAZ').toString(),
       places:list(j['places'],const ['Voorne aan Zee','Hellevoetsluis','Brielle','Rockanje','Oostvoorne','Oudenhoorn']),
-      navOrder:list(j['nav_order'],const ['home','news','weekblad','agenda','account']), homeBlocks:list(j['home_blocks'],const ['news','agenda','weekblad','ads']),
-      accountBlocks:list(j['account_blocks'],const ['saved','notifications','tips','contributions','weekblad','profile']),
+      navOrder:list(j['nav_order'],const ['home','news','agenda','account']), homeBlocks:list(j['home_blocks'],const ['news','agenda','ads']),
+      accountBlocks:list(j['account_blocks'],const ['saved','notifications','tips','contributions','profile']),
       navigation:boolMap(j['navigation']), features:boolMap(j['features']),
       limits:j['limits'] is Map?Map<String,dynamic>.from(j['limits']):const {'news_per_page':20,'home_news':8,'agenda_home':4,'ad_frequency':5},
       primary:_color(theme['primary'],navy), accent:_color(theme['accent']??j['accent_color'],cyan), success:_color(theme['success'],green),
@@ -184,7 +186,7 @@ Future<void> registerDeviceToken() async {
     final wastePostcode=(await storage.read(key:'rvaz_waste_postcode')??'').trim();
     final wasteHouse=(await storage.read(key:'rvaz_waste_house')??'').trim();
     final wasteAddition=(await storage.read(key:'rvaz_waste_addition')??'').trim();
-    final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad'];
+    final topics=<String>['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda'];
     if(wastePush){topics.add('afval');try{await m.subscribeToTopic('afval');}catch(_){}}else{try{await m.unsubscribeFromTopic('afval');}catch(_){}}
     if(p2000OptIn){
       topics.add('112');
@@ -202,7 +204,7 @@ Future<void> registerDeviceToken() async {
         }
       }
     }
-    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
+    final payload = jsonEncode({'token':token,'device_token':token,'fcm_token':token,'platform':Platform.isIOS?'ios':'android','topics':topics,'p2000_street':{'enabled':p2000StreetEnabled&&p2000StreetPlace.isNotEmpty&&p2000StreetName.isNotEmpty,'place':p2000StreetPlace,'street':p2000StreetName},'waste':{'enabled':wastePush&&wasteBagId.isNotEmpty,'bag_id':wasteBagId,'postcode':wastePostcode,'house_number':wasteHouse,'addition':wasteAddition,'reminder':'evening_before'}});
     for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
@@ -310,7 +312,7 @@ Future<void> main() async {
     await loadConfig();
     final permission = await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (permission.authorizationStatus != AuthorizationStatus.denied) {
-      for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda','weekblad']) {
+      for (final topic in ['all','news','breaking','hellevoetsluis','brielle','rockanje','oostvoorne','verkeer','agenda']) {
         try { await messaging.subscribeToTopic(topic); } catch (_) {}
       }
       await registerDeviceToken();
@@ -318,8 +320,8 @@ Future<void> main() async {
   }());
 }
 
-const navy = Color(0xFF203253);
-const cyan = Color(0xFF11BDEB);
+const navy = Color(0xFF073B66);
+const cyan = Color(0xFF0879BD);
 const green = Color(0xFF00CE8B);
 
 class RvazApp extends StatelessWidget {
@@ -332,18 +334,21 @@ class RvazApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: appConfig.accent),
           useMaterial3: true,
-          scaffoldBackgroundColor: const Color(0xFFF4F7FA),
-          fontFamily: 'Roboto',
+          scaffoldBackgroundColor: Colors.white,
+          fontFamily: 'OpenSans',
+          textTheme: const TextTheme(titleLarge:TextStyle(fontFamily:'Dosis',fontSize:26,fontWeight:FontWeight.w600,color:navy),headlineLarge:TextStyle(fontFamily:'Dosis',fontSize:32,fontWeight:FontWeight.w600,color:navy),headlineMedium:TextStyle(fontFamily:'Dosis',fontSize:28,fontWeight:FontWeight.w600,color:navy)),
+          filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(backgroundColor:navy,foregroundColor:Colors.white,minimumSize:const Size(48,48),shape:const RoundedRectangleBorder(borderRadius:BorderRadius.all(Radius.circular(2))))),
           cardTheme: const CardThemeData(
             elevation: 0,
             margin: EdgeInsets.zero,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(2)),side:BorderSide(color:Color(0xFFD9E5ED))),
           ),
           appBarTheme: const AppBarTheme(
             elevation: 0,
             scrolledUnderElevation: 0,
             centerTitle: false,
+            titleTextStyle:TextStyle(fontFamily:"Dosis",fontSize:25,fontWeight:FontWeight.w600,color:navy),
             backgroundColor: Colors.white,
             foregroundColor: navy,
           ),
@@ -360,8 +365,8 @@ class RvazApp extends StatelessWidget {
           inputDecorationTheme: const InputDecorationTheme(
             filled: true,
             fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
+            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(2)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(2)), borderSide: BorderSide(color: Color(0xFFDDE5EC))),
           ),
         ),
         builder:(context,child)=>AppNavigationFrame(child:child??const SizedBox.shrink()),
@@ -376,6 +381,8 @@ class AppNavigationFrame extends StatefulWidget {
 }
 class _AppNavigationFrameState extends State<AppNavigationFrame>{
  final scaffoldKey=GlobalKey<ScaffoldState>();
+ @override void initState(){super.initState();ShellTabController.openMenu=()=>scaffoldKey.currentState?.openDrawer();}
+ @override void dispose(){ShellTabController.openMenu=null;super.dispose();}
  void choose(String key){
   scaffoldKey.currentState?.closeDrawer();
   final nav=navigatorKey.currentState;
@@ -409,17 +416,15 @@ class _AppNavigationFrameState extends State<AppNavigationFrame>{
       ])),
     ]))),
     bottomNavigationBar:NavigationBar(
-      selectedIndex:const ['home','agenda','emergency'].contains(selected)
-        ? const ['home','agenda','emergency'].indexOf(selected) : 3,
-      onDestinationSelected:(index){
-        if(index==3){scaffoldKey.currentState?.openDrawer();}
-        else{choose(const ['home','agenda','emergency'][index]);}
-      },
+      selectedIndex:const ['home','emergency','agenda','family','account'].contains(selected)
+        ? const ['home','emergency','agenda','family','account'].indexOf(selected) : 0,
+      onDestinationSelected:(index)=>choose(const ['home','emergency','agenda','family','account'][index]),
       destinations:const [
-        NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'Home'),
+        NavigationDestination(icon:Icon(Icons.newspaper_outlined),selectedIcon:Icon(Icons.newspaper),label:'Nieuws'),
+        NavigationDestination(icon:Icon(Icons.emergency_outlined),label:'112 & P2000'),
         NavigationDestination(icon:Icon(Icons.event_outlined),selectedIcon:Icon(Icons.event),label:'Agenda'),
-        NavigationDestination(icon:Icon(Icons.warning_amber_rounded),label:'P2000'),
-        NavigationDestination(icon:Icon(Icons.menu),label:'Menu'),
+        NavigationDestination(icon:Icon(Icons.favorite_border),selectedIcon:Icon(Icons.favorite),label:'Familie'),
+        NavigationDestination(icon:Icon(Icons.person_outline),selectedIcon:Icon(Icons.person),label:'Account'),
       ],
     ),
 
@@ -436,6 +441,7 @@ class Shell extends StatefulWidget {
 class ShellTabController {
   static final selectedPage=ValueNotifier<String>('home');
   static void Function(String)? _select;
+  static VoidCallback? openMenu;
   static void select(String key)=>_select?.call(key);
 }
 class _ShellState extends State<Shell> {
@@ -443,7 +449,7 @@ class _ShellState extends State<Shell> {
   static const pageMap = <String, Widget>{
     'home': HomePage(), 'news': NewsPage(), 'today': TodayPage(),
     'emergency': EmergencyTrafficPage(), 'traffic': EmergencyTrafficPage(initialTraffic:true),
-    'agenda': AgendaPage(), 'weekblad': WeekbladPage(), 'account': AccountPage(),
+    'agenda': AgendaPage(), 'family': FamilyPage(), 'account': AccountPage(),
     'waste': WasteCalendarPage(), 'places': PlacesPage(), 'parking': ParkingPage(),
     'recreation': RecreationPage(), 'coast': CoastPage(), 'wonen': WonenPage(),
     'businesses': BusinessesPage(), 'vouchers': MyVouchersPage(),
@@ -451,13 +457,13 @@ class _ShellState extends State<Shell> {
     'tip': TipPage(), 'contributions': ContributionsPage(),
   };
   static const sections = <String, List<(String, String, IconData)>>{
-    'Overzicht': [('home','Home',Icons.home_outlined)],
+    'Overzicht': [('home','Nieuws',Icons.newspaper_outlined)],
     'Nieuws': [
       ('news','Laatste nieuws',Icons.article_outlined),
       ('today','Voorne Vandaag',Icons.today),
-      ('emergency','P2000 / 112',Icons.warning_amber_rounded),
+      ('emergency','112 & P2000',Icons.emergency_outlined),
       ('places','Nieuws per plaats',Icons.location_on_outlined),
-      ('weekblad','Weekblad',Icons.menu_book_outlined),
+      ('family','Familieberichten',Icons.favorite_border),
     ],
     'Agenda & activiteiten': [
       ('agenda','Agenda',Icons.event_outlined),
@@ -486,8 +492,7 @@ class _ShellState extends State<Shell> {
       ('feedback','Feedback over de app',Icons.feedback_outlined),
     ],
   };
-  String get pageTitle => sections.values.expand((items)=>items)
-      .firstWhere((item)=>item.$1==selected).$2;
+
   @override void initState() {
     super.initState();
     ShellTabController._select = selectPage;
@@ -505,7 +510,8 @@ class _ShellState extends State<Shell> {
     appBar:AppBar(
       backgroundColor:Colors.white, foregroundColor:appConfig.primary,
       automaticallyImplyLeading:false,
-      title:selected=='home'?const LogoMark():Text(pageTitle),
+      leading:IconButton(tooltip:'Menu',icon:const Icon(Icons.menu),onPressed:()=>ShellTabController.openMenu?.call()),
+      title:const LogoMark(),
       actions:[
         if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',icon:const Icon(Icons.search),
           onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const SearchPage()))),
@@ -877,19 +883,20 @@ class ArticlePage extends StatefulWidget {
 }
 class _ArticlePageState extends State<ArticlePage>{
   dynamic post;
-  bool loading=false, denied=false;
+  bool loading=false, denied=false, articleError=false;
   @override void initState(){super.initState();post=widget.post;_loadProtected();}
   Future<void> _loadProtected() async {
-    if(!postRequiresLogin(post))return;
+    if(!postRequiresLogin(post)&&post['needs_fetch']!=true)return;
     final token=await const FlutterSecureStorage().read(key:'rvaz_token');
-    if(token==null||token.isEmpty){if(mounted)setState(()=>denied=true);return;}
+    if(postRequiresLogin(post)&&(token==null||token.isEmpty)){if(mounted)setState(()=>denied=true);return;}
     final id=int.tryParse('${post['id']??''}');if(id==null)return;
     setState(()=>loading=true);
     try{
-      final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/posts/$id'),headers:{'Authorization':'Bearer $token','Accept':'application/json'}).timeout(const Duration(seconds:12));
-      if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body);if(d is Map)post=d['post']??d;}
+      final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/posts/$id'),headers:{if(token!=null&&token.isNotEmpty)'Authorization':'Bearer $token','Accept':'application/json'}).timeout(const Duration(seconds:20));
+      if(r.statusCode==200){final d=jsonDecode(r.body);if(d is Map){post=d['post']??d;if(postRequiresLogin(post)&&(token==null||token.isEmpty))denied=true;}}
       else if(r.statusCode==401||r.statusCode==403){denied=true;}
-    }catch(_){}
+      else{articleError=true;}
+    }catch(_){articleError=true;}
     if(mounted)setState(()=>loading=false);
   }
 
@@ -903,6 +910,7 @@ class _ArticlePageState extends State<ArticlePage>{
   @override
   Widget build(BuildContext context) {
     if(loading)return const Scaffold(body:Center(child:CircularProgressIndicator()));
+    if(articleError)return Scaffold(appBar:AppBar(title:const Text('Nieuwsartikel')),body:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('Het artikel kon niet worden geladen.'),TextButton(onPressed:(){articleError=false;_loadProtected();},child:const Text('Opnieuw proberen'))])));
     if(denied)return Scaffold(appBar:AppBar(title:const Text('Regio Voorne aan Zee')),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.lock_outline,size:48,color:navy),const SizedBox(height:14),const Text('Alleen voor ingelogde gebruikers',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(height:8),const Text('Log in bij Mijn RVAZ om dit artikel te lezen.',textAlign:TextAlign.center),const SizedBox(height:16),FilledButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage())),child:const Text('Inloggen'))]))));
     final image = postImage(post);
     final rawTitle = post['title'];
@@ -949,7 +957,7 @@ class _ArticlePageState extends State<ArticlePage>{
           final ads=adSnapshot.data??[];
           final content=<Widget>[];
           if(blocks.isEmpty){
-            content.add(SizedBox(width:double.infinity,child:Html(data:bodyHtml,onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
+            content.add(SizedBox(width:double.infinity,child:Html(data:bodyHtml,onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontFamily:'Dosis',fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontFamily:'Dosis',fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontFamily:'Dosis',fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));
           }else{
             // Korte artikelen: maximaal één advertentie. Langere artikelen krijgen
             // advertenties verspreid door de tekst, met minimaal drie tekstblokken ertussen.
@@ -958,7 +966,7 @@ class _ArticlePageState extends State<ArticlePage>{
             for(var i=0;i<blocks.length;i++){
               final ym=RegExp(r'\[\[RVAZ_YOUTUBE:([A-Za-z0-9_-]+)\]\]').firstMatch(blocks[i]);
               if(ym!=null){content.add(Padding(padding:const EdgeInsets.symmetric(vertical:10),child:RvazYoutubePlayer(videoId:ym.group(1)!)));}
-              else{content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));}
+              else{content.add(SizedBox(width:double.infinity,child:Html(data:blocks[i],onLinkTap:(url,attributes,element)async{if(url!=null&&url.trim().isNotEmpty){final u=Uri.tryParse(url.trim());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}},style:{'body':Style(margin:Margins.zero,padding:HtmlPaddings.zero,fontSize:FontSize(17),lineHeight:LineHeight(1.55),color:const Color(0xFF202A33)),'figure':Style(margin:Margins.zero),'h1':Style(fontFamily:'Dosis',fontSize:FontSize(28),fontWeight:FontWeight.w900,color:navy),'h2':Style(fontFamily:'Dosis',fontSize:FontSize(24),fontWeight:FontWeight.w900,color:navy),'h3':Style(fontFamily:'Dosis',fontSize:FontSize(20),fontWeight:FontWeight.w800,color:navy)})));}
               final after=i+1;
               final nativePoints=<int>{(blocks.length/2).ceil(),if(blocks.length>=10)(blocks.length*3/4).ceil()};
               if(after<blocks.length&&nativePoints.contains(after)){
@@ -977,15 +985,15 @@ class _ArticlePageState extends State<ArticlePage>{
           }
           return ListView(children:[
             if (image.isNotEmpty)
-              Image.network(image, height: 240, width: double.infinity,
-                  fit: BoxFit.cover,
+              Image.network(image, width: double.infinity,
+                  fit: BoxFit.fitWidth,
                   errorBuilder: (_, __, ___) => const SizedBox.shrink()),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 const Text('NIEUWS',style:TextStyle(color:cyan,fontWeight:FontWeight.w900)),
                 const SizedBox(height:8),
-                Text(title,style:const TextStyle(color:navy,fontSize:29,height:1.08,fontWeight:FontWeight.w900)),
+                Text(title,style:const TextStyle(color:navy,fontFamily:'Dosis',fontSize:31,height:1.16,fontWeight:FontWeight.w600)),
                 const SizedBox(height:18),
                 ...content,
                 if(blocks.length<=1)...[
@@ -1014,106 +1022,11 @@ class _ArticlePageState extends State<ArticlePage>{
 class RvazYoutubePlayer extends StatefulWidget{final String videoId;const RvazYoutubePlayer({super.key,required this.videoId});@override State<RvazYoutubePlayer> createState()=>_RvazYoutubePlayerState();}
 class _RvazYoutubePlayerState extends State<RvazYoutubePlayer>{late final YoutubePlayerController controller;@override void initState(){super.initState();controller=YoutubePlayerController.fromVideoId(videoId:widget.videoId,autoPlay:false,params:const YoutubePlayerParams(showControls:true,showFullscreenButton:true,origin:'https://www.youtube-nocookie.com'));}@override void dispose(){controller.close();super.dispose();}@override Widget build(BuildContext context)=>ClipRRect(borderRadius:BorderRadius.circular(8),child:AspectRatio(aspectRatio:16/9,child:YoutubePlayer(controller:controller)));}
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-  @override State<HomePage> createState()=>_HomePageState();
-}
-class _HomePageState extends State<HomePage>{
-  late Future<List<dynamic>> posts;
-  late Future<List<dynamic>> events;
-  late Future<List<AppAd>> ads;
-  late Future<List<dynamic>> businesses;
-  late Future<Map<String,dynamic>> weather;
-  int visibleNews=8;
-  @override void initState(){super.initState();_reload();}
-  void _reload(){visibleNews=8;posts=_posts();events=_events();ads=loadAppAds(placement:'home');businesses=loadBusinesses();weather=_weather();}
-  Future<Map<String,dynamic>> _weather() async {
-    try{
-      final r=await http.get(Uri.parse('https://api.open-meteo.com/v1/forecast?latitude=51.8333&longitude=4.1333&current=temperature_2m,weather_code&timezone=Europe%2FAmsterdam')).timeout(const Duration(seconds:8));
-      if(r.statusCode==200){final d=jsonDecode(r.body);if(d is Map&&d['current'] is Map)return Map<String,dynamic>.from(d['current']);}
-    }catch(_){}
-    return <String,dynamic>{};
-  }
-  String _weatherLabel(int code){if(code==0)return'Helder';if(code<=3)return'Bewolkt';if(code<=48)return'Mist';if(code<=67)return'Regen';if(code<=77)return'Sneeuw';if(code<=82)return'Buien';if(code<=99)return'Onweer';return'Weer';}
-  IconData _weatherIcon(int code){if(code==0)return Icons.wb_sunny_outlined;if(code<=3)return Icons.cloud_outlined;if(code<=67)return Icons.grain;if(code<=77)return Icons.ac_unit;if(code<=82)return Icons.umbrella_outlined;if(code<=99)return Icons.thunderstorm_outlined;return Icons.cloud_outlined;}
-  Future<List<dynamic>> _posts() async {
-    try{
-      final r=await http.get(
-        Uri.parse('$site/wp-json/rvaz-app/v1/posts?per_page=100'),
-        headers:await authHeaders(),
-      ).timeout(const Duration(seconds:15));
-      if(r.statusCode==200){
-        final d=jsonDecode(r.body);
-        final x=RvazApi.list(d,const ['posts']);
-        if(x.isNotEmpty)return x;
-      }
-    }catch(_){}
-    return <dynamic>[];
-  }
-  Future<List<dynamic>> _events()=>RvazApi.firstList(['agenda?per_page=5','events?per_page=5'],keys:const ['events','agenda']);
-  String clean(dynamic v)=>decodeHtmlEntities('$v'.replaceAll(RegExp(r'<[^>]*>'),''));
-  @override Widget build(BuildContext context)=>RefreshIndicator(onRefresh:()async{setState(_reload);await Future.wait([posts,events,ads,businesses,weather]);},child:ListView(padding:EdgeInsets.zero,children:[
-    if(appConfig.breakingBanner.trim().isNotEmpty)Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[const Icon(Icons.flash_on,size:18,color:Colors.red),const SizedBox(width:7),const Text('BREAKING',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:Colors.red)),const SizedBox(width:8),Expanded(child:Text(appConfig.breakingBanner,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,color:navy)))])),
-    FutureBuilder<Map<String,dynamic>>(future:weather,builder:(context,s){final w=s.data??{};if(w.isEmpty)return const SizedBox.shrink();final temp=(w['temperature_2m'] as num?)?.round(),code=(w['weather_code'] as num?)?.toInt()??0;if(temp==null)return const SizedBox.shrink();return Container(margin:const EdgeInsets.fromLTRB(16,12,16,0),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),boxShadow:const [BoxShadow(color:Color(0x12000000),blurRadius:8,offset:Offset(0,2))]),child:Row(children:[Icon(_weatherIcon(code),size:28,color:Colors.orange),const SizedBox(width:9),Text('$temp°',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:navy)),const SizedBox(width:8),Expanded(child:Text(_weatherLabel(code),style:const TextStyle(fontSize:12,color:Colors.black54))),const VerticalDivider(),const Icon(Icons.location_on_outlined,size:17,color:cyan),const SizedBox(width:4),const Text('Voorne aan Zee',style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:navy))]));}),
-    InkWell(
-      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TodayPage())),
-      child:Container(
-        width:MediaQuery.sizeOf(context).width,
-        height:116,
-        margin:const EdgeInsets.only(top:8,bottom:4),
-        decoration:BoxDecoration(
-          color:const Color(0xFF073B63),
-          image:DecorationImage(
-            image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl.trim()),
-            fit:BoxFit.cover,
-            colorFilter:const ColorFilter.mode(Color(0x66000000),BlendMode.darken),
-          ),
-        ),
-        child:Padding(
-          padding:const EdgeInsets.fromLTRB(18,12,18,12),
-          child:Column(
-            crossAxisAlignment:CrossAxisAlignment.start,
-            mainAxisAlignment:MainAxisAlignment.center,
-            children:[
-              const Text('Voorne Vandaag',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
-              const SizedBox(height:2),
-              const Text('Het laatste nieuws uit de regio',style:TextStyle(color:Colors.white,fontSize:13)),
-              const SizedBox(height:8),
-              Container(
-                padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),
-                decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(16)),
-                child:const Row(mainAxisSize:MainAxisSize.min,children:[
-                  Text('Bekijk al het nieuws',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w700)),
-                  SizedBox(width:3),
-                  Icon(Icons.chevron_right,color:Colors.white,size:15),
-                ]),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-    const Center(child:RvazAdBanner()),
-    FutureBuilder<Map<String,dynamic>>(future:_editorialCapabilities(),builder:(context,s){if(s.data?['can_submit_news']!=true)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,8,16,0),child:Card(child:ListTile(leading:const CircleAvatar(child:Icon(Icons.edit_note)),title:const Text('Nieuws insturen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Voor redactieleden · ter goedkeuring door de eindredactie'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage())))));}),
-    Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[const Expanded(child:Text('Laatste nieuws uit Voorne aan Zee',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:navy))),TextButton(style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:4),minimumSize:Size.zero,tapTargetSize:MaterialTapTargetSize.shrinkWrap),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Nieuws'),backgroundColor:Colors.white,foregroundColor:navy),body:const NewsPage()))),child:const Row(mainAxisSize:MainAxisSize.min,children:[Text('Meer laden',style:TextStyle(fontSize:11)),Icon(Icons.chevron_right,size:15)]))]),
-      FutureBuilder<List<dynamic>>(future:posts,builder:(context,s){final all=s.data??[];if(all.isEmpty)return const SizedBox.shrink();final x=all.take(visibleNews).toList();final p=x.first;return Column(children:[
-        Card(clipBehavior:Clip.antiAlias,margin:EdgeInsets.zero,child:InkWell(onTap:()=>openArticle(context,p),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[if(postImage(p).isNotEmpty)Image.network(postImage(p),height:150,width:double.infinity,fit:BoxFit.cover),Padding(padding:const EdgeInsets.all(11),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),style:const TextStyle(color:navy,fontSize:17,height:1.15,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(formatPostDate(p),style:const TextStyle(fontSize:10,color:Colors.black54))]))]))),
-        const SizedBox(height:8),...x.skip(1).map((p)=>Card(margin:const EdgeInsets.only(bottom:7),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:3),leading:postImage(p).isEmpty?null:ClipRRect(borderRadius:BorderRadius.circular(5),child:Image.network(postImage(p),width:76,height:56,fit:BoxFit.cover)),title:Text(clean(p['title'] is Map?p['title']['rendered']:p['title']??''),maxLines:2,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:13)),subtitle:Text(formatPostDate(p),style:const TextStyle(fontSize:10)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openArticle(context,p)))),
-        if(visibleNews<all.length)OutlinedButton.icon(onPressed:()=>setState(()=>visibleNews=(visibleNews+8).clamp(1,all.length)),icon:const Icon(Icons.expand_more),label:const Text('Meer laden')),
-      ]);}),
-    ])),
-    FutureBuilder<List<dynamic>>(future:businesses,builder:(context,s){final pros=(s.data??[]).where(_businessIsPro).take(3).toList();if(pros.isEmpty)return const SizedBox.shrink();return Padding(padding:const EdgeInsets.fromLTRB(16,14,16,4),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('Uitgelichte PRO-bedrijven',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:navy)),TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessesPage())),child:const Text('Bekijk alle →'))]),
-      SizedBox(height:142,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:pros.length,separatorBuilder:(_,__)=>const SizedBox(width:8),itemBuilder:(c,i){final e=pros[i];String bv(String k)=>e is Map?(e[k]?.toString()??''):'';final img=bv('image');return SizedBox(width:145,child:Card(clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>BusinessDetailPage(item:e))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Stack(fit:StackFit.expand,children:[img.isEmpty?const Center(child:Icon(Icons.storefront,size:36)):Image.network(img,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.storefront,size:36))),Positioned(top:5,right:5,child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:Colors.blue,borderRadius:BorderRadius.circular(5)),child:const Text('PRO',style:TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))))])),Padding(padding:const EdgeInsets.all(7),child:Text(clean(bv('title')),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:navy)))]))));})),
-    ]));}),
-    const FeaturedHomes(),
-    Padding(padding:const EdgeInsets.fromLTRB(16,10,16,22),child:Column(children:[RotatingAppAd(future:ads),const SizedBox(height:10),Card(child:ListTile(leading:const Icon(Icons.photo_camera_outlined,color:navy),title:const Text('Tip de redactie',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TipPage()))))]))
-  ]));
+class HomePage extends StatelessWidget {
+ const HomePage({super.key});
+ @override Widget build(BuildContext context)=>const NewsroomFeed();
 }
 
-Future<void> _openExternal(String url)async{final u=Uri.tryParse(url);if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}
-Future<void> _mapSearch(String query)=>_openExternal('https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(query)}');
 class ParkingPage extends StatelessWidget {
  const ParkingPage({super.key});
  static const areas=<List<String>>[['Hellevoetsluis','Vesting, centrum en winkelgebieden'],['Brielle','Vesting en centrum'],['Rockanje','Centrum en strand'],['Oostvoorne','Centrum, strand en natuur']];
@@ -1606,149 +1519,10 @@ class P2000DetailPage extends StatelessWidget {
   }
 }
 
-class NewsPage extends StatefulWidget {
-  const NewsPage({super.key});
-  @override
-  State<NewsPage> createState() => _NewsPageState();
+class NewsPage extends StatelessWidget {
+ const NewsPage({super.key});
+ @override Widget build(BuildContext context)=>const NewsroomFeed();
 }
-
-class _NewsPageState extends State<NewsPage> {
-  late Future<List<dynamic>> future;
-  late Future<List<AppAd>> adsFuture;
-  @override
-  void initState() {
-    super.initState();
-    future = load();
-    adsFuture = loadAppAds();
-  }
-
-  Future<List<dynamic>> load() async {
-    final count=appConfig.limit('news_per_page',20).clamp(1,100);
-    final r=await http.get(
-      Uri.parse('$site/wp-json/rvaz-app/v1/posts?per_page=$count'),
-      headers:await authHeaders(),
-    ).timeout(const Duration(seconds:15));
-    if(r.statusCode!=200)throw Exception('Nieuws kon niet worden geladen');
-    final d=jsonDecode(r.body);
-    return RvazApi.list(d,const ['posts']);
-  }
-
-  String clean(String s) => s
-      .replaceAll(RegExp(r'<[^>]*>'), '')
-      .replaceAll('&amp;', '&')
-      .replaceAll('&#8217;', "'")
-      .replaceAll('&#8211;', '–');
-
-  @override
-  Widget build(BuildContext context) => RefreshIndicator(
-        onRefresh: () async => setState(() => future = load()),
-        child: FutureBuilder<List<dynamic>>(
-          future: future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return ListView(children: [
-                const SizedBox(height: 180),
-                Center(child: Text(snapshot.error.toString()))
-              ]);
-            }
-            final posts = snapshot.data ?? [];
-            return FutureBuilder<List<AppAd>>(future: adsFuture, builder: (context, adSnapshot) {
-            final ads = adSnapshot.data ?? [];
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text(appConfig.latestTitle,
-                    style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: navy)),
-                const SizedBox(height: 5),
-                Text(appConfig.homeIntro),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: appConfig.places.map((x) => ActionChip(
-                      label: Text(x),
-                      onPressed: () {
-                        final filtered = x == 'Voorne aan Zee'
-                            ? load()
-                            : http.get(Uri.parse('$site/wp-json/wp/v2/search?search=${Uri.encodeQueryComponent(x)}&subtype=post&per_page=30')).then((r) async {
-                                if (r.statusCode != 200) return <dynamic>[];
-                                final ids = (jsonDecode(r.body) as List).map((e) => e['id']).whereType<int>().toList();
-                                if (ids.isEmpty) return <dynamic>[];
-                                final pr = await http.get(Uri.parse('$site/wp-json/wp/v2/posts?include=${ids.join(',')}&per_page=30&_embed=1'));
-                                return pr.statusCode == 200 ? List<dynamic>.from(jsonDecode(pr.body)) : <dynamic>[];
-                              });
-                        setState(() => future = filtered);
-                      },
-                    )).toList(),
-                ),
-                const SizedBox.shrink(),
-                const SizedBox(height: 12),
-                ...posts.asMap().entries.expand((entry) {
-                  final p = entry.value;
-                  final widgets = <Widget>[Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => openArticle(context,p),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (postImage(p).isNotEmpty)
-                            Image.network(postImage(p), height: 190, fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                          Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('NIEUWS',
-                                style: TextStyle(
-                                    color: cyan,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 6),
-                            Text(clean((p['title'] is Map?p['title']['rendered']:p['title']??'').toString()),
-                                style: const TextStyle(
-                                    fontSize: 20,
-                                    height: 1.15,
-                                    fontWeight: FontWeight.w900,
-                                    color: navy)),
-                            const SizedBox(height: 6),
-                            if (formatPostDate(p).isNotEmpty) ...[
-                              Row(children: [
-                                const Icon(Icons.schedule, size: 14, color: Colors.black54),
-                                const SizedBox(width: 5),
-                                Text(formatPostDate(p), style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
-                              ]),
-                              const SizedBox(height: 8),
-                            ],
-                            Text(clean((p['excerpt'] is Map?p['excerpt']['rendered']:p['excerpt']??'').toString()),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(height: 1.4)),
-                          ],
-                        ),
-                      ),
-                        ],
-                      ),
-                    ),
-                  )];
-                  final freq=appConfig.limit('ad_frequency',5).clamp(2,20); if (ads.isNotEmpty && entry.key>0 && (entry.key+1)%freq==0) widgets.add(AppAdCard(ad: ads[(entry.key~/freq)%ads.length]));
-                  return widgets;
-                }),
-              ],
-            ); });
-          },
-        ),
-      );
-}
-
 
 class TodayPage extends StatefulWidget{const TodayPage({super.key});@override State<TodayPage> createState()=>_TodayPageState();}
 class _TodayPageState extends State<TodayPage>{
@@ -1882,30 +1656,6 @@ class _AgendaPageState extends State<AgendaPage>{
  ]);}));
 }
 
-class WeekbladPage extends StatefulWidget {
-  const WeekbladPage({super.key});
-  @override State<WeekbladPage> createState()=>_WeekbladPageState();
-}
-class _WeekbladPageState extends State<WeekbladPage> {
-  late Future<List<dynamic>> future;
-  late Future<List<AppAd>> ads;
-  @override void initState(){super.initState();future=load();ads=loadAppAds(placement:'weekblad');}
-  Future<List<dynamic>> load() => RvazApi.firstList(
-    ['weekblad','issues'],
-    keys: const ['issues','editions','weekblad'],
-  );
-  @override Widget build(BuildContext context)=>FutureBuilder<List<dynamic>>(future:future,builder:(context,s){
-    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
-    final issues=s.data??[];
-    return ListView(padding:const EdgeInsets.all(18),children:[
-      Text(appConfig.weekbladTitle,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
-      const Text('Weekblad Voorne aan Zee'),const SizedBox(height:18),RotatingAppAd(future:ads),
-      if(issues.isEmpty) Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Er zijn momenteel geen weekbladedities gevonden.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:()=>launchUrl(Uri.parse('$site/weekblad/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new),label:const Text('Bekijk weekblad op de website'))]))),
-      ...issues.map((x)=>Card(child:ListTile(leading:const Icon(Icons.menu_book,color:navy),title:Text('${x['title']??'Weekblad'}'.replaceAll('&#8211;','–').replaceAll('&amp;','&'),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${x['date']??''} · ${x['pages']??0} pagina’s'),trailing:const Icon(Icons.chevron_right),onTap:()=>launchUrl(Uri.parse('${x['pdf']}'),mode:LaunchMode.externalApplication))))
-    ]);
-  });
-}
-
 class AccountPage extends StatefulWidget { const AccountPage({super.key}); @override State<AccountPage> createState()=>_AccountPageState(); }
 class _AccountPageState extends State<AccountPage>{
  String? userName; bool busy=false; bool advertiser=false; bool businessLinked=false; Map<String,dynamic> userInfo={};
@@ -1924,7 +1674,7 @@ class _AccountPageState extends State<AccountPage>{
   Widget build(BuildContext context)=>ListView(
     padding:const EdgeInsets.all(18),
     children:[
-      const Text('Account & profiel',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
+      const Text('Mijn account',style:TextStyle(fontSize:30,fontWeight:FontWeight.w900,color:navy)),
       const SizedBox(height:14),
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Row(children:[
         _menuIcon(Icons.person),const SizedBox(width:14),
@@ -1941,6 +1691,12 @@ class _AccountPageState extends State<AccountPage>{
       const SizedBox(height:14),
       if(userName!=null)Card(clipBehavior:Clip.antiAlias,child:Column(children:[
         _sectionHeader(Icons.person,'Mijn RVAZ','Jouw instellingen en voorkeuren'),
+        ListTile(leading:_menuIcon(Icons.favorite_border),title:const Text('Mijn familieberichten'),subtitle:const Text('Plaatsen, status bekijken en verwijderen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('Mijn familieberichten')),body:const FamilyPage(mine:true))))),
+        ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen & P2000'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
+        ListTile(leading:_menuIcon(Icons.bookmark_outline),title:const Text('Bewaarde artikelen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()))),
+        ListTile(leading:_menuIcon(Icons.local_offer_outlined),title:const Text('Mijn vouchers'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
+        ListTile(leading:_menuIcon(Icons.campaign_outlined),title:const Text('Mijn advertenties'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyAdsPage()))),
+
         ListTile(leading:_menuIcon(Icons.real_estate_agent_outlined),title:const Text('Mijn Wonen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer woningen en aanvragen als makelaar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MijnWonenPage()))),
         const Divider(height:1,indent:72),
 
@@ -2238,7 +1994,7 @@ class BusinessDetailPage extends StatelessWidget{
     if(isPro&&int.tryParse(v('id'))!=null)Card(margin:const EdgeInsets.only(bottom:14),child:Padding(padding:const EdgeInsets.all(16),child:BusinessVoucherSection(businessId:int.parse(v('id'))))),
     if(address.isNotEmpty||lat!=null&&lng!=null)card('Locatie',Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      if(address.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.location_on_outlined),const SizedBox(width:8),Expanded(child:Text(address))])),
-     if(lat!=null&&lng!=null)ClipRRect(borderRadius:BorderRadius.circular(12),child:SizedBox(height:220,child:fmap.FlutterMap(options:fmap.MapOptions(initialCenter:LatLng(lat,lng),initialZoom:15),children:[fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),fmap.MarkerLayer(markers:[fmap.Marker(point:LatLng(lat,lng),width:44,height:44,child:const Icon(Icons.location_pin,color:navy,size:42))])])))
+     if(lat!=null&&lng!=null)ClipRRect(borderRadius:BorderRadius.circular(2),child:SizedBox(height:220,child:fmap.FlutterMap(options:fmap.MapOptions(initialCenter:LatLng(lat,lng),initialZoom:15),children:[fmap.TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',userAgentPackageName:'nl.regiovoorneaanzee.app'),fmap.MarkerLayer(markers:[fmap.Marker(point:LatLng(lat,lng),width:44,height:44,child:const Icon(Icons.location_pin,color:navy,size:42))])])))
     ])),
     card('Openingstijden',Column(children:hourRows)),
     if(gallery.isNotEmpty)card("Foto's",Wrap(spacing:8,runSpacing:8,children:gallery.take(3).map((url)=>ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,width:(MediaQuery.sizeOf(context).width-64)/2,height:125,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()))).toList())),
@@ -2303,7 +2059,7 @@ class _InvoicesPageState extends State<InvoicesPage>{late Future<List<dynamic>> 
 class ProfilePage extends StatelessWidget{final Map<String,dynamic> user;const ProfilePage({super.key,required this.user});@override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn profiel'),backgroundColor:Colors.white,foregroundColor:navy),body:ListView(padding:const EdgeInsets.all(18),children:[Card(child:Column(children:[ListTile(leading:const Icon(Icons.person),title:Text(user['name']?.toString()??''),subtitle:const Text('Naam')),const Divider(height:1),ListTile(leading:const Icon(Icons.email_outlined),title:Text(user['email']?.toString()??''),subtitle:const Text('E-mailadres')),if((user['place']?.toString()??'').isNotEmpty)...[const Divider(height:1),ListTile(leading:const Icon(Icons.location_on_outlined),title:Text(user['place'].toString()),subtitle:const Text('Woonplaats'))]]))]));}
 class NotificationPreferencesPage extends StatefulWidget{const NotificationPreferencesPage({super.key});@override State<NotificationPreferencesPage> createState()=>_NotificationPreferencesPageState();}
 class _NotificationPreferencesPageState extends State<NotificationPreferencesPage>{
- Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true,'weekblad':true};Map<String,bool> p2000={'hellevoetsluis':false,'rockanje':false,'brielle':false,'oostvoorne':false,'voorne-aan-zee':false};bool busy=true,streetEnabled=false;
+ Map<String,bool> p={'breaking':true,'news':true,'emergency112':false,'traffic':true,'agenda':true};Map<String,bool> p2000={'hellevoetsluis':false,'rockanje':false,'brielle':false,'oostvoorne':false,'voorne-aan-zee':false};bool busy=true,streetEnabled=false;
  final streetPlace=TextEditingController(),streetName=TextEditingController();
  static const labels={'hellevoetsluis':'Hellevoetsluis','rockanje':'Rockanje','brielle':'Brielle','oostvoorne':'Oostvoorne','voorne-aan-zee':'Voorne aan Zee'};
  @override void initState(){super.initState();load();}
@@ -2330,5 +2086,5 @@ class _NotificationPreferencesPageState extends State<NotificationPreferencesPag
   const Text('Werkt alleen wanneer de plaats en straatnaam in het oorspronkelijke P2000-bericht staan.',style:TextStyle(fontSize:12,color:Colors.black54))
  ])),
  const Divider(height:1),
- for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','traffic':'Verkeer','agenda':'Agenda','weekblad':'Weekblad'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))
+ for(final e in {'breaking':'Breaking nieuws','news':'Nieuws','traffic':'Verkeer','agenda':'Agenda'}.entries)SwitchListTile(value:p[e.key]??true,onChanged:(v)=>save(e.key,v),title:Text(e.value))
  ]));}
