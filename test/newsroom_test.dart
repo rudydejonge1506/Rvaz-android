@@ -13,8 +13,8 @@ void main(){
     : NewsroomBatch([post(15),post(16),post(17)],false);}))));
   await tester.pumpAndSettle();
   expect(find.text('Nieuwsbericht 1'),findsOneWidget);
-  await tester.scrollUntilVisible(find.byKey(const ValueKey('newsroom-load-more')),400);
-  final scroll=tester.state<ScrollableState>(find.byType(Scrollable).last).position;
+  await tester.scrollUntilVisible(find.byKey(const ValueKey('newsroom-load-more')),400,scrollable:find.byType(Scrollable).first);
+  final scroll=tester.state<ScrollableState>(find.byType(Scrollable).first).position;
   final before=scroll.pixels;
   await tester.tap(find.text('Meer laden'));
   await tester.pumpAndSettle();

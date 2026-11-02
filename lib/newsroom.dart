@@ -62,6 +62,7 @@ class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClie
  final scroll=ScrollController();
  int page=0; bool busy=false,more=true; String error='',before='';
  late final Future<List<dynamic>> businesses=widget.showPromotions?loadBusinesses():Future.value([]);
+ late final Future<Map<String,dynamic>> editorial=widget.showPromotions?_editorialCapabilities():Future.value({});
  late final Future<List<AppAd>> ads=widget.showPromotions?loadAppAds(placement:'home'):Future.value([]);
  @override bool get wantKeepAlive=>true;
  @override void initState(){super.initState();load();}
@@ -97,6 +98,7 @@ class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClie
      _topic('Wonen',()=>ShellTabController.select('wonen')),
      _topic('Vouchers',()=>ShellTabController.select('vouchers')),
     ])),
+    if(widget.showPromotions)FutureBuilder<Map<String,dynamic>>(future:editorial,builder:(context,s)=>s.data?['can_submit_news']==true?ListTile(leading:const Icon(Icons.edit_note),title:const Text('Nieuws insturen'),subtitle:const Text('Voor redactieleden'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage()))):const SizedBox.shrink()),
     const SizedBox(height:12),const NewsroomHeading('Laatste nieuws'),
     if(posts.isNotEmpty)...[
      NewsroomArticleTile(post:posts.first,lead:true),

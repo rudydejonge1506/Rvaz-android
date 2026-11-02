@@ -1027,6 +1027,8 @@ class HomePage extends StatelessWidget {
  @override Widget build(BuildContext context)=>const NewsroomFeed();
 }
 
+Future<void> _openExternal(String url)async{final u=Uri.tryParse(url);if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);}
+Future<void> _mapSearch(String query)=>_openExternal('https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(query)}');
 class ParkingPage extends StatelessWidget {
  const ParkingPage({super.key});
  static const areas=<List<String>>[['Hellevoetsluis','Vesting, centrum en winkelgebieden'],['Brielle','Vesting en centrum'],['Rockanje','Centrum en strand'],['Oostvoorne','Centrum, strand en natuur']];
