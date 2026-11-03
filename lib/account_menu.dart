@@ -63,7 +63,7 @@ class _AccountMenuSectionsState extends State<AccountMenuSections>{
     tilePadding:const EdgeInsets.symmetric(horizontal:16,vertical:6),childrenPadding:EdgeInsets.zero,
     iconColor:navy,collapsedIconColor:navy,shape:const Border(),collapsedShape:const Border(),
     title:Text(group.key,style:RvazTypography.heading.copyWith(fontSize:22)),
-    children:[for(final item in group.value)Container(color:Colors.white,child:Container(decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:Color(0xffd9e5ed)))) ,child:ListTile(
+    children:[for(final item in group.value)Material(color:Colors.white,child:Container(decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:Color(0xffd9e5ed)))) ,child:ListTile(
      contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:8),leading:Icon(item.$3,color:cyan),
      title:Text(item.$2,style:RvazTypography.heading.copyWith(fontSize:21)),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>widget.onSelected(item.$1),
     )))],

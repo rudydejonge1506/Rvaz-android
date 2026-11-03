@@ -24,7 +24,7 @@ void main(){
    final photo=File('${dir.path}/fictitious.jpg');await photo.writeAsBytes([255,216,255,217]);
    final api=BusinessApi(headers:headers,client:MockClient((r)async{
     expect(r.method,'POST');expect(r.url.path,'/wp-json/rvaz-business/v1/mine/media');expect(r.headers['Authorization'],'Bearer fixture-only');
-    expect(r.headers['content-type'],contains('multipart/form-data'));expect(r.body,contains('name="logo"'));
+    expect(r.headers['content-type'],contains('multipart/form-data'));expect(latin1.decode(r.bodyBytes),contains('name="logo"'));
     return http.Response('{"ok":true,"pending_changes":true,"media":{"logo":"https://example.invalid/logo.jpg"}}',200);
    }));
    await api.uploadMedia({'logo':photo.path});
