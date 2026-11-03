@@ -1,5 +1,5 @@
 name: RVAZ Google Play 0.7.3 version 71 newsroom and account update
-# Final categorized Account menu and store review release 2026-11-03
+# Account permissions release. Final categorized Account menu and store review release 2026-11-03
 on:
   push:
     branches: [feature/newsroom-design]

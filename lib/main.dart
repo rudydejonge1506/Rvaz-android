@@ -1490,26 +1490,41 @@ class _TodayPageState extends State<TodayPage>{
 
 class AccountPage extends StatefulWidget { const AccountPage({super.key}); @override State<AccountPage> createState()=>_AccountPageState(); }
 class _AccountPageState extends State<AccountPage>{
- String? userName; bool busy=false; bool advertiser=false; bool canScanVouchers=false; Map<String,dynamic> userInfo={};
+ String? userName; bool busy=false; bool advertiser=false; bool canScanVouchers=false; bool canManageBusiness=false; bool canManageHousing=false; Map<String,dynamic> userInfo={};
  @override void initState(){super.initState();restore();}
- Future<bool> _checkVoucherScannerAccess() async {
-  try {
-   final token = await const FlutterSecureStorage().read(key:'rvaz_token');
-   if (token == null || token.isEmpty) return false;
-   final offer = await BusinessApi(headers: () async => {
-    'Authorization': 'Bearer $token',
-    'X-RVAZ-Token': token,
-   }).offer();
-   final currentToken = await const FlutterSecureStorage().read(key:'rvaz_token');
-   return currentToken == token && (int.tryParse('${offer['business_id']}') ?? 0) > 0;
-  } catch (_) {
-   return false;
-  }
+ Future<void> _loadManagementAccess() async {
+  final storage = const FlutterSecureStorage();
+  final token = await storage.read(key: 'rvaz_token');
+  if (token == null || token.isEmpty) return;
+  final api = BusinessApi(headers: () async => {
+   'Authorization': 'Bearer $token',
+   'X-RVAZ-Token': token,
+  });
+  final results = await Future.wait<bool>([
+   () async { try { return (int.tryParse('${(await api.mine())['id']}') ?? 0) > 0; } catch (_) { return false; } }(),
+   () async { try { return (int.tryParse('${(await api.offer())['business_id']}') ?? 0) > 0; } catch (_) { return false; } }(),
+   () async {
+    try {
+     final account = await wonenRequest('/makelaar/me');
+     if (account is! Map || account['makelaar'] != true || account['blocked'] == true) return false;
+     final dashboard = await wonenRequest('/makelaar/dashboard');
+     return dashboard is Map && dashboard['subscription_active'] == true;
+    } catch (_) { return false; }
+   }(),
+  ]);
+  if (await storage.read(key: 'rvaz_token') != token || !mounted) return;
+  setState(() {
+   canManageBusiness = results[0];
+   canScanVouchers = results[0] && results[1];
+   canManageHousing = results[2];
+  });
  }
- Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});final linked=await _checkVoucherScannerAccess();if(mounted)setState(()=>canScanVouchers=linked);}}catch(_){}}
- Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});final linked=await _checkVoucherScannerAccess();if(mounted)setState(()=>canScanVouchers=linked);}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
- Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;canScanVouchers=false;userInfo={};});}
+ Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});await _loadManagementAccess();}}catch(_){}}
+ Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});await _loadManagementAccess();}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
+ Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;canScanVouchers=false;canManageBusiness=false;canManageHousing=false;userInfo={};});}
  Future<void> openMenuItem(String key)async{
+  if (key == 'my-business' && (userName == null || !canManageBusiness)) return;
+  if (key == 'my-wonen' && (userName == null || !canManageHousing)) return;
   if (key == 'scan' && (userName == null || !canScanVouchers)) return;
   const protected={'profile','saved','my-vouchers','my-family','contributions','my-ads','my-wonen','my-business','scan','invoices'};
   if(protected.contains(key)&&userName==null){await auth(false);if(!mounted||userName==null)return;}
@@ -1542,7 +1557,7 @@ class _AccountPageState extends State<AccountPage>{
     if(userName==null)...[FilledButton.icon(onPressed:busy?null:()=>auth(false),icon:const Icon(Icons.login),label:const Text('Inloggen')),OutlinedButton(onPressed:busy?null:()=>auth(true),child:const Text('Gratis account'))]
     else OutlinedButton.icon(onPressed:logout,icon:const Icon(Icons.logout),label:const Text('Uitloggen')),
    ]),
-  ]))),const SizedBox(height:24),AccountMenuSections(onSelected:openMenuItem, showVoucherScanner:userName != null && canScanVouchers),
+  ]))),const SizedBox(height:24),AccountMenuSections(onSelected:openMenuItem, showVoucherScanner:userName != null && canScanVouchers, showBusinessManagement:userName != null && canManageBusiness, showHousingManagement:userName != null && canManageHousing),
  ]);
 }
 

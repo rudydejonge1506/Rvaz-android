@@ -43,8 +43,8 @@ String accountMenuLabel(String key){
 
 class AccountMenuSections extends StatefulWidget{
  final ValueChanged<String> onSelected;
- final bool showVoucherScanner;
- const AccountMenuSections({super.key,required this.onSelected,this.showVoucherScanner=false});
+ final bool showVoucherScanner, showBusinessManagement, showHousingManagement;
+ const AccountMenuSections({super.key,required this.onSelected,this.showVoucherScanner=false,this.showBusinessManagement=false,this.showHousingManagement=false});
  @override State<AccountMenuSections> createState()=>_AccountMenuSectionsState();
 }
 class _AccountMenuSectionsState extends State<AccountMenuSections>{
@@ -52,7 +52,7 @@ class _AccountMenuSectionsState extends State<AccountMenuSections>{
  @override Widget build(BuildContext context){
   final groups=<String,List<AccountMenuEntry>>{};
   for(final group in accountMenuGroups.entries){
-   final entries=group.value.where((e)=>(e.$1 != 'scan' || widget.showVoucherScanner) && '${group.key} ${e.$2}'.toLowerCase().contains(query)).toList();
+   final entries=group.value.where((e)=>(e.$1 != 'scan' || widget.showVoucherScanner) && (e.$1 != 'my-business' || widget.showBusinessManagement) && (e.$1 != 'my-wonen' || widget.showHousingManagement) && '${group.key} ${e.$2}'.toLowerCase().contains(query)).toList();
    if(entries.isNotEmpty)groups[group.key]=entries;
   }
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
