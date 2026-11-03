@@ -2,7 +2,7 @@ name: Native family API integration
 on:
   push:
     branches: [feature/newsroom-design]
-    paths: ['backend/rvaz-family-native-api.php', 'backend/tests/family/**', '.github/workflows/native-family-checks.yml']
+    paths: ['backend/rvaz-family-native-api.php', 'backend/rvaz-waste-reminders/**', 'backend/tests/waste/**', 'backend/tests/family/**', '.github/workflows/native-family-checks.yml']
 permissions:
   contents: read
 jobs:
@@ -27,3 +27,6 @@ jobs:
           php /tmp/wp-cli.phar config create --path=/tmp/family-wp --dbname=family_test --dbuser=root --dbpass=ci-only --dbhost=127.0.0.1:3306
           php /tmp/wp-cli.phar core install --path=/tmp/family-wp --url=http://localhost --title=CI --admin_user=ci_admin --admin_password=ci-only --admin_email=ci@example.invalid --skip-email
           php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/backend/tests/family/integration.php" --path=/tmp/family-wp
+
+      - name: Waste reminders integration without sending real notifications
+        run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/backend/tests/waste/integration.php" --path=/tmp/family-wp

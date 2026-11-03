@@ -23,6 +23,8 @@ import 'event_submission.dart';
 part 'newsroom.dart';
 part 'article_typography.dart';
 part 'agenda_layout.dart';
+part 'favorites.dart';
+part 'waste_registration.dart';
 part 'family_native.dart';
 
 @pragma('vm:entry-point')
@@ -166,13 +168,13 @@ class AppConfig {
 AppConfig appConfig=const AppConfig();
 Future<void> loadConfig() async {try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));if(r.statusCode==200){final d=jsonDecode(r.body);if(d is Map<String,dynamic>)appConfig=AppConfig.fromJson(d);}}catch(_){}}
 
-Future<void> registerDeviceToken() async {
+Future<bool> registerDeviceToken({bool requireWasteReceipt=false}) async {
   final m = FirebaseMessaging.instance;
   try {
     final settings = await m.getNotificationSettings();
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+    if (settings.authorizationStatus == AuthorizationStatus.denied) return false;
     final token = await m.getToken();
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) return false;
     final headers = <String,String>{'Content-Type':'application/json','Accept':'application/json'};
     try {
       final auth = await authHeaders();
@@ -210,10 +212,16 @@ Future<void> registerDeviceToken() async {
     for (final endpoint in ['device']) {
       try {
         final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:headers,body:payload).timeout(const Duration(seconds:8));
-        if (r.statusCode >= 200 && r.statusCode < 300) return;
+        if (r.statusCode >= 200 && r.statusCode < 300) {
+          var confirmed=false;
+          try{confirmed=wasteRegistrationConfirmed(jsonDecode(r.body),wastePush&&wasteBagId.isNotEmpty);}catch(_){}
+          await storage.write(key:'rvaz_waste_server_confirmed',value:confirmed?'1':'0');
+          return !requireWasteReceipt||confirmed;
+        }
       } catch (_) {}
     }
   } catch (_) {}
+  return false;
 }
 
 
@@ -242,6 +250,10 @@ Future<void> openPushMessage(RemoteMessage message) async {
       data.containsKey('p2000_id') ||
       data.containsKey('p2000');
 
+  if (data['type']=='waste'||data['screen']=='waste') {
+    navigatorKey.currentState?.push(MaterialPageRoute(builder:(_)=>const WasteCalendarPage()));
+    return;
+  }
   if (isP2000) {
     final item = <String,dynamic>{
       ...data,
@@ -285,7 +297,7 @@ Future<void> openPushMessage(RemoteMessage message) async {
     }
   } catch (_) {}
   if (post != null) {
-    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ArticlePage(post: post)));
+    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ArticlePage(post: {...Map<String,dynamic>.from(post),'needs_fetch':true})));
   } else if (link.isNotEmpty) {
     launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
   }
@@ -840,24 +852,6 @@ Future<void> openArticle(BuildContext context,dynamic post) async {
   if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:post)));
 }
 
-Future<bool> saveArticle(dynamic post) async {
-  final id = int.tryParse('${post['id'] ?? ''}');
-  if (id == null) return false;
-  final headers = await authHeaders();
-  if (!headers.containsKey('Authorization')) return false;
-  headers['Content-Type'] = 'application/json';
-  for (final body in [
-    {'post_id': id},
-    {'id': id},
-  ]) {
-    try {
-      final r = await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/saved'), headers: headers, body: jsonEncode(body));
-      if (r.statusCode >= 200 && r.statusCode < 300) return true;
-    } catch (_) {}
-  }
-  return false;
-}
-
 class ArticlePage extends StatefulWidget {
   final dynamic post;
   const ArticlePage({super.key, required this.post});
@@ -866,7 +860,21 @@ class ArticlePage extends StatefulWidget {
 class _ArticlePageState extends State<ArticlePage>{
   dynamic post;
   bool loading=false, denied=false, articleError=false;
-  @override void initState(){super.initState();post=widget.post;_loadProtected();}
+  bool favorite=false,favoriteBusy=false;
+  @override void initState(){super.initState();post=widget.post;_loadProtected();_loadFavorite();}
+  Future<void> _loadFavorite()async{
+    if(!await appLoggedIn())return;
+    if(mounted)setState(()=>favoriteBusy=true);
+    try{final items=await FavoritesService.load();if(mounted)setState(()=>favorite=items.any((p)=>'${p['id']??p['post_id']}'=='${post['id']}'));}catch(_){}
+    finally{if(mounted)setState(()=>favoriteBusy=false);}
+  }
+  Future<void> _toggleFavorite()async{
+    setState(()=>favoriteBusy=true);final next=!favorite;
+    final ok=await saveArticle(post,saved:next);
+    if(!mounted)return;
+    setState((){favoriteBusy=false;if(ok)favorite=next;});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(ok?(next?'Artikel bewaard bij Mijn RVAZ.':'Artikel uit je favorieten verwijderd.'):'Bewaren of verwijderen is niet gelukt. Controleer of je bent ingelogd.')));
+  }
   Future<void> _loadProtected() async {
     if(!postRequiresLogin(post)&&post['needs_fetch']!=true)return;
     final token=await const FlutterSecureStorage().read(key:'rvaz_token');
@@ -919,15 +927,9 @@ class _ArticlePageState extends State<ArticlePage>{
             },
           ),
           IconButton(
-            tooltip: 'Artikel bewaren',
-            icon: const Icon(Icons.bookmark_add_outlined),
-            onPressed: () async {
-              final ok = await saveArticle(post);
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-                ok ? 'Artikel opgeslagen bij Mijn RVAZ.' : 'Opslaan lukt alleen wanneer je bent ingelogd.'
-              )));
-            },
+            tooltip:favorite?'Verwijderen uit favorieten':'Artikel bewaren',
+            icon:Icon(favorite?Icons.bookmark:Icons.bookmark_add_outlined),
+            onPressed:favoriteBusy?null:_toggleFavorite,
           ),
           PageFeedbackButton(page: 'Nieuwsartikel', detail: title),
         ],
@@ -1707,7 +1709,7 @@ class WasteCalendarPage extends StatefulWidget {
 }
 class _WasteCalendarPageState extends State<WasteCalendarPage> {
   final postcode=TextEditingController(), house=TextEditingController(), addition=TextEditingController();
-  bool busy=false,wastePush=false; String error='', address=''; List<Map<String,dynamic>> dates=[];
+  bool busy=false,wastePush=false,wasteConfirmed=false,wasteSyncing=false; String error='', address=''; List<Map<String,dynamic>> dates=[];
   static const names=<int,String>{2:'GFT+e',3:'PMD',4:'Oud papier en karton',25:'Restafval'};
   static const icons=<int,IconData>{2:Icons.eco_outlined,3:Icons.recycling,4:Icons.description_outlined,25:Icons.delete_outline};
   @override void initState(){super.initState();_restore();}
@@ -1718,6 +1720,7 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
     house.text=await st.read(key:'rvaz_waste_house')??'';
     addition.text=await st.read(key:'rvaz_waste_addition')??'';
     wastePush=(await st.read(key:'rvaz_waste_push'))=='1';
+    wasteConfirmed=(await st.read(key:'rvaz_waste_server_confirmed'))=='1';
     if(postcode.text.isNotEmpty&&house.text.isNotEmpty)await load();
   }
   Future<void> load() async {
@@ -1748,7 +1751,7 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
       upcoming.sort((a,b)=>(a['ophaaldatum']??'').toString().compareTo((b['ophaaldatum']??'').toString()));
       const st=FlutterSecureStorage();
       await st.write(key:'rvaz_waste_postcode',value:pc);await st.write(key:'rvaz_waste_house',value:nr);await st.write(key:'rvaz_waste_addition',value:add);await st.write(key:'rvaz_waste_bagid',value:bag);await st.write(key:'rvaz_neighborhood_place',value:(ad['woonplaats']??'').toString().trim());await st.write(key:'rvaz_neighborhood_street',value:(ad['straat']??'').toString().trim());
-      if(wastePush)await registerDeviceToken();
+      if(wastePush){wasteConfirmed=await registerDeviceToken(requireWasteReceipt:true);}
       if(mounted)setState((){address=(ad['description']??[ad['straat'],ad['huisnummer'],ad['woonplaats']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' ')).toString();dates=upcoming;});
     }catch(_){if(mounted)setState(()=>error='Dit adres of de afvalkalender kon niet worden geladen. Controleer je gegevens en probeer opnieuw.');}
     if(mounted)setState(()=>busy=false);
@@ -1760,7 +1763,12 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
     await const FlutterSecureStorage().write(key:'rvaz_waste_push',value:value?'1':'0');
     if(value){try{await FirebaseMessaging.instance.subscribeToTopic('afval');}catch(_){}}else{try{await FirebaseMessaging.instance.unsubscribeFromTopic('afval');}catch(_){}}
     if(mounted)setState(()=>wastePush=value);
-    await registerDeviceToken();
+    await syncWasteReminder();
+  }
+  Future<void> syncWasteReminder()async{
+    if(mounted)setState(()=>wasteSyncing=true);
+    final confirmed=await registerDeviceToken(requireWasteReceipt:true);
+    if(mounted)setState((){wasteConfirmed=confirmed;wasteSyncing=false;});
   }
   String dateLabel(String raw){
     final d=DateTime.tryParse(raw);if(d==null)return raw;
@@ -1783,8 +1791,9 @@ class _WasteCalendarPageState extends State<WasteCalendarPage> {
       if(busy)const Padding(padding:EdgeInsets.only(top:12),child:LinearProgressIndicator()),
       if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:Card(child:ListTile(leading:const Icon(Icons.info_outline,color:Colors.orange),title:Text(error)))),
       if(address.isNotEmpty)...[const SizedBox(height:16),Text(address,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800,color:navy)),const SizedBox(height:8)],
-      if(address.isNotEmpty)Card(child:SwitchListTile(value:wastePush,onChanged:setWastePush,secondary:const Icon(Icons.notifications_active_outlined,color:Color(0xFF16834B)),title:const Text('Afvalherinnering',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Ontvang een pushmelding de avond vóór de ophaaldag'))),
+      if(address.isNotEmpty)Card(child:SwitchListTile(value:wastePush,onChanged:wasteSyncing?null:setWastePush,secondary:const Icon(Icons.notifications_active_outlined,color:Color(0xFF16834B)),title:const Text('Afvalherinnering',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(wastePush?(wasteConfirmed?'Aangemeld bij de server: de avond vóór de ophaaldag vanaf 19:00 uur.':'Nog niet bevestigd door de server. Synchroniseer je herinnering.'):'Ontvang een pushmelding de avond vóór de ophaaldag vanaf 19:00 uur'))),
       if(!busy&&address.isNotEmpty&&shown.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('Er zijn geen komende ophaalmomenten gevonden.'))),
+      if(wastePush&&!wasteConfirmed)TextButton.icon(onPressed:wasteSyncing?null:syncWasteReminder,icon:const Icon(Icons.sync),label:Text(wasteSyncing?'Synchroniseren…':'Herinnering opnieuw aanmelden')),
       ...shown.map((e){final id=int.tryParse('${e['afvalstroom_id']??''}')??0;final name=names[id]??'Afval';final raw=(e['ophaaldatum']??'').toString();return Card(margin:const EdgeInsets.only(bottom:8),child:ListTile(leading:CircleAvatar(backgroundColor:const Color(0xFFE8F7EE),child:Icon(icons[id]??Icons.delete_outline,color:const Color(0xFF16834B))),title:Text(name,style:const TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:Text(dateLabel(raw)),trailing:dateLabel(raw)=='Morgen'?const Chip(label:Text('MORGEN',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900))):null));}),
       if(address.isNotEmpty)const Padding(padding:EdgeInsets.fromLTRB(4,8,4,20),child:Text('Afvalgegevens worden opgehaald bij Reinis. Je adresvoorkeur wordt alleen op dit toestel bewaard.',style:TextStyle(fontSize:11,color:Colors.black54)))
     ]));
@@ -1801,7 +1810,7 @@ class NativeInfoPage extends StatelessWidget { final String title,text; final Ic
 
 
 Future<Map<String,String>> authHeaders() async { final t=await const FlutterSecureStorage().read(key:'rvaz_token'); return {'Accept':'application/json',if(t!=null&&t.isNotEmpty)'Authorization':'Bearer $t'}; }
-class SavedPage extends StatefulWidget{const SavedPage({super.key});@override State<SavedPage> createState()=>_SavedPageState();}class _SavedPageState extends State<SavedPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/saved'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');if(r.statusCode!=200)return[];final d=jsonDecode(r.body);return d is List?List<dynamic>.from(d):(d is Map&&d['items'] is List?List<dynamic>.from(d['items']):[]);}Future<void>open(dynamic e)async{final id=int.tryParse('${e['post_id']??e['id']??''}');if(id==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/wp/v2/posts/$id?_embed=1'));if(r.statusCode==200&&mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:jsonDecode(r.body))));}catch(_){}}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Opgeslagen artikelen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Nog geen opgeslagen artikelen.')):ListView(children:x.map((e){final t=e['title'];final title=t is Map?t['rendered']:'${t??'Artikel'}';return ListTile(leading:const Icon(Icons.bookmark,color:navy),title:Text('$title'),trailing:const Icon(Icons.chevron_right),onTap:()=>open(e));}).toList());}));}
+
 class ContributionsPage extends StatefulWidget{const ContributionsPage({super.key});@override State<ContributionsPage> createState()=>_ContributionsPageState();}class _ContributionsPageState extends State<ContributionsPage>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=load();}Future<List<dynamic>>load()async{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/contributions'),headers:await authHeaders());if(r.statusCode==401)throw Exception('Log eerst in bij Account.');return r.statusCode==200?List<dynamic>.from(jsonDecode(r.body)):[];}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn bijdragen')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));final x=s.data??[];return x.isEmpty?const Center(child:Text('Je hebt nog geen bijdragen.')):ListView(children:x.map((e)=>ListTile(title:Text('${e['title']}'),subtitle:Text('${e['status']} · ${e['type']}'))).toList());}));}
 bool _businessIsPro(dynamic e){
  if(e is! Map)return false;
