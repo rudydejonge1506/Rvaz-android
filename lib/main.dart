@@ -1525,6 +1525,7 @@ class _AccountPageState extends State<AccountPage>{
  Future<void> openMenuItem(String key)async{
   if (key == 'my-business' && (userName == null || !canManageBusiness)) return;
   if (key == 'my-wonen' && (userName == null || !canManageHousing)) return;
+  if ((key == 'my-ads' || key == 'invoices') && (userName == null || !(canManageBusiness || canManageHousing))) return;
   if (key == 'scan' && (userName == null || !canScanVouchers)) return;
   const protected={'profile','saved','my-vouchers','my-family','contributions','my-ads','my-wonen','my-business','scan','invoices'};
   if(protected.contains(key)&&userName==null){await auth(false);if(!mounted||userName==null)return;}
