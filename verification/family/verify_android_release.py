@@ -66,6 +66,53 @@ try:
     else:
         raise AssertionError('No rendered live headline after the startup checks')
 
+    agenda = find(root, 'Agenda')
+    assert agenda is not None, 'Native agenda navigation is missing'
+    tap(agenda)
+    for attempt in range(6):
+        time.sleep(5)
+        xml, root = snapshot('agenda-attempt-' + str(attempt))
+        value = text(root)
+        if 'aankomende evenementen' in value:
+            assert 'Evenement aanmelden' in value
+            snapshot('agenda-new-layout')
+            print('Native agenda dates and submission controls rendered.', flush=True)
+            break
+    else:
+        raise AssertionError('Native agenda did not load')
+    news = find(root, 'Nieuws')
+    assert news is not None
+    tap(news)
+    time.sleep(3)
+    xml, root = snapshot('news-for-places')
+    places = find(root, 'Plaatsen')
+    assert places is not None, 'Place directory navigation is missing'
+    tap(places)
+    time.sleep(2)
+    xml, root = snapshot('places-directory')
+    assert 'Nieuws per plaats' in text(root)
+    rockanje = find(root, 'Rockanje')
+    assert rockanje is not None
+    tap(rockanje)
+    for attempt in range(8):
+        time.sleep(5)
+        xml, root = snapshot('rockanje-attempt-' + str(attempt))
+        if 'Uitgelicht nieuws:' in text(root):
+            assert 'Nieuws uit Rockanje' in text(root)
+            snapshot('rockanje-news')
+            print('Real Rockanje archive rendered in the shared newsroom layout.', flush=True)
+            break
+    else:
+        raise AssertionError('Place archive did not render')
+    adb('shell', 'input', 'keyevent', '4')
+    time.sleep(2)
+    xml, root = snapshot('directory-after-rockanje')
+    news = find(root, 'Nieuws')
+    assert news is not None
+    tap(news)
+    time.sleep(2)
+    xml, root = snapshot('news-after-places')
+
     family = find(root, 'Familie')
     assert family is not None, 'Permanent family navigation is missing'
     tap(family)
@@ -111,6 +158,6 @@ try:
     else:
         raise AssertionError('Vouchers is missing from the menu')
     assert adb('shell', 'pidof', package).strip(), 'RVAZ app process stopped'
-    print('Signed release checks passed: live news, family page, vouchers and persistent navigation.', flush=True)
+    print('Signed release checks passed: live news, agenda, place archive, family page, vouchers and persistent navigation.', flush=True)
 finally:
     (out / 'device.log').write_text(adb('logcat', '-d', check=False))
