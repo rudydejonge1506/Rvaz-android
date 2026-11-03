@@ -113,8 +113,14 @@ try:
     time.sleep(2)
     xml, root = snapshot('news-after-places')
 
-    family = find(root, 'Familie')
-    assert family is not None, 'Permanent family navigation is missing'
+    account = find(root, 'Account')
+    assert account is not None, 'Permanent account menu is missing'
+    tap(account)
+    time.sleep(3)
+    xml, root = snapshot('account-categorized-menu')
+    assert 'Account & menu' in text(root)
+    family = find(root, 'Familieberichten')
+    assert family is not None, 'Family notices are missing from the account menu'
     tap(family)
     for attempt in range(6):
         time.sleep(10)
@@ -143,20 +149,20 @@ try:
     time.sleep(2)
     xml, root = snapshot('family-return')
 
-    menu = find(root, 'Menu')
-    assert menu is not None, 'Native menu button is missing'
-    tap(menu)
-    width, height = map(int, re.findall(r'(\d+)x(\d+)', adb('shell', 'wm', 'size'))[0])
-    for attempt in range(5):
-        time.sleep(2)
-        xml, root = snapshot('menu-attempt-' + str(attempt))
-        if find(root, 'Vouchers') is not None:
-            print('Vouchers is available in the native menu.', flush=True)
-            snapshot('vouchers-menu')
-            break
-        adb('shell', 'input', 'swipe', str(width // 3), str(height * 3 // 4), str(width // 3), str(height // 3), '400')
-    else:
-        raise AssertionError('Vouchers is missing from the menu')
+    account = find(root, 'Account')
+    assert account is not None
+    tap(account)
+    time.sleep(2)
+    xml, root = snapshot('all-options-menu')
+    search = next((n for n in root.iter('node') if n.get('class') == 'android.widget.EditText'), None)
+    assert search is not None, 'The central account menu must be searchable'
+    tap(search)
+    adb('shell', 'input', 'text', 'vouchers')
+    time.sleep(2)
+    xml, root = snapshot('vouchers-menu')
+    assert 'Vouchers & aanbiedingen' in text(root), 'Public vouchers are missing from the central menu'
+    assert 'Mijn vouchers' in text(root), 'Claimed vouchers are missing from the central menu'
+    print('The categorized Account menu exposes public and personal vouchers.', flush=True)
     assert adb('shell', 'pidof', package).strip(), 'RVAZ app process stopped'
     print('Signed release checks passed: live news, agenda, place archive, family page, vouchers and persistent navigation.', flush=True)
 finally:

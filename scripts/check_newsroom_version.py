@@ -21,7 +21,7 @@ builds = get('builds?filter[app]=6817375521&sort=-uploadedDate&limit=200')['data
 highest = max((int(b['attributes']['version']) for b in builds
                if str(b['attributes']['version']).isdigit()), default=0)
 print('Highest recent Apple build:', highest, flush=True)
-assert highest < 107, 'Build 107 is already used; choose a higher number before upload.'
+assert highest < 108, 'Build 108 is already used; choose a higher number before upload.'
 versions = get('apps/6817375521/appStoreVersions?limit=200')['data']
 def version_tuple(value):
     return tuple((list(map(int,value.split('.')))+[0,0,0])[:3])
@@ -29,4 +29,4 @@ for version in versions:
     attrs = version['attributes']
     print('Apple version:', attrs['versionString'], attrs['appStoreState'], flush=True)
     assert attrs.get('platform') != 'IOS' or version_tuple(attrs['versionString']) < (1, 2, 2), 'Choose a newer marketing version.'
-print('Apple accepts the next proposed identity: 1.2.2 (107).', flush=True)
+print('Apple accepts the next proposed identity: 1.2.2 (108).', flush=True)

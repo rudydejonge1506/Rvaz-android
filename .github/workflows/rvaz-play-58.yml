@@ -1,4 +1,4 @@
-name: RVAZ Google Play 0.7.2 version 69 newsroom and account update
+name: RVAZ Google Play 0.7.2 version 70 newsroom and account update
 # Trigger Google Play build 2026-10-01
 on:
   push:
@@ -116,7 +116,7 @@ jobs:
           Path('android/app/proguard-rules.pro').write_text('-keep class * extends androidx.work.ListenableWorker { public <init>(...); }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-keep class **_Impl { *; }\n-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*\n')
           p.write_text(s)
           PY
-      - name: Build signed version 69 native family candidate
+      - name: Build signed version 70 native family candidate
         run: |
           flutter build appbundle --release
           flutter build apk --release
@@ -127,7 +127,7 @@ jobs:
           jarsigner -verify build/app/outputs/bundle/release/app-release.aab
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-release.apk | tee build/package.txt
-          grep "name='nl.regiovoorneaanzee.rvaz_android' versionCode='69' versionName='0.7.2'" build/package.txt
+          grep "name='nl.regiovoorneaanzee.rvaz_android' versionCode='70' versionName='0.7.2'" build/package.txt
           test -s build/app/outputs/mapping/release/mapping.txt
       - name: Verify optimized APK launcher pixels
         run: |
@@ -172,7 +172,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-Google-Play-69-newsroom
+          name: RVAZ-Google-Play-70-account-menu
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab

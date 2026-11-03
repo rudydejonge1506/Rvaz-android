@@ -24,6 +24,7 @@ part 'newsroom.dart';
 part 'article_typography.dart';
 part 'agenda_layout.dart';
 part 'favorites.dart';
+part 'account_menu.dart';
 part 'waste_registration.dart';
 part 'family_native.dart';
 
@@ -394,55 +395,24 @@ class AppNavigationFrame extends StatefulWidget {
  @override State<AppNavigationFrame> createState()=>_AppNavigationFrameState();
 }
 class _AppNavigationFrameState extends State<AppNavigationFrame>{
- final scaffoldKey=GlobalKey<ScaffoldState>();
- @override void initState(){super.initState();ShellTabController.openMenu=()=>scaffoldKey.currentState?.openDrawer();}
- @override void dispose(){ShellTabController.openMenu=null;super.dispose();}
  void choose(String key){
-  scaffoldKey.currentState?.closeDrawer();
-  final nav=navigatorKey.currentState;
-  if(nav==null)return;
-  final pageContext=nav.overlay!.context;
-  if(key=='submit-event'){openEventSubmission(pageContext);return;}
-  if(key=='feedback'){sendPageFeedback(pageContext,'Algemene app-feedback');return;}
-  nav.popUntil((route)=>route.isFirst);
-  ShellTabController.select(key);
+  final nav=navigatorKey.currentState;if(nav==null)return;
+  nav.popUntil((route)=>route.isFirst);ShellTabController.select(key);
  }
  @override Widget build(BuildContext context)=>Overlay.wrap(child:ValueListenableBuilder<String>(
   valueListenable:ShellTabController.selectedPage,
   builder:(context,selected,_)=>Scaffold(
-    key:scaffoldKey,
-    resizeToAvoidBottomInset:false,
-    drawer:Drawer(child:SafeArea(child:Column(children:[
-      Padding(padding:const EdgeInsets.fromLTRB(20,12,8,12),child:Row(children:[
-        const Expanded(child:Text('Regio Voorne aan Zee',style:TextStyle(fontFamily:'Dosis',fontSize:20,fontWeight:FontWeight.w600,color:navy))),
-        IconButton(tooltip:'Menu sluiten',onPressed:()=>scaffoldKey.currentState?.closeDrawer(),icon:const Icon(Icons.close)),
-      ])),
-      const Divider(height:1),
-      Expanded(child:ListView(padding:const EdgeInsets.only(bottom:24),children:[
-        for(final section in _ShellState.sections.entries)...[
-          Padding(padding:const EdgeInsets.fromLTRB(20,20,16,6),child:Text(section.key,
-            style:const TextStyle(color:Colors.black54,fontWeight:FontWeight.w700,fontSize:13))),
-          for(final item in section.value) ListTile(
-            leading:Icon(item.$3),title:Text(item.$2),selected:selected==item.$1,
-            selectedColor:navy,selectedTileColor:const Color(0xFFEAF4FF),
-            onTap:()=>choose(item.$1)),
-        ],
-      ])),
-    ]))),
-    bottomNavigationBar:NavigationBar(
-      selectedIndex:const ['home','emergency','agenda','family','account'].contains(selected)
-        ? const ['home','emergency','agenda','family','account'].indexOf(selected) : 0,
-      onDestinationSelected:(index)=>choose(const ['home','emergency','agenda','family','account'][index]),
-      destinations:const [
-        NavigationDestination(icon:Icon(Icons.newspaper_outlined),selectedIcon:Icon(Icons.newspaper),label:'Nieuws'),
-        NavigationDestination(icon:Icon(Icons.emergency_outlined),label:'112 & P2000'),
-        NavigationDestination(icon:Icon(Icons.event_outlined),selectedIcon:Icon(Icons.event),label:'Agenda'),
-        NavigationDestination(icon:Icon(Icons.favorite_border),selectedIcon:Icon(Icons.favorite),label:'Familie'),
-        NavigationDestination(icon:Icon(Icons.person_outline),selectedIcon:Icon(Icons.person),label:'Account'),
-      ],
-    ),
-
-    body:widget.child,
+   resizeToAvoidBottomInset:false,
+   bottomNavigationBar:NavigationBar(
+    selectedIndex:const ['home','myvoorne','emergency','agenda','account'].contains(selected)?const ['home','myvoorne','emergency','agenda','account'].indexOf(selected):0,
+    onDestinationSelected:(index)=>choose(const ['home','myvoorne','emergency','agenda','account'][index]),
+    destinations:const [
+     NavigationDestination(icon:Icon(Icons.newspaper_outlined),selectedIcon:Icon(Icons.newspaper),label:'Nieuws'),
+     NavigationDestination(icon:Icon(Icons.location_on_outlined),selectedIcon:Icon(Icons.location_on),label:'Mijn Voorne'),
+     NavigationDestination(icon:Icon(Icons.emergency_outlined),label:'112 & P2000'),
+     NavigationDestination(icon:Icon(Icons.event_outlined),selectedIcon:Icon(Icons.event),label:'Agenda'),
+     NavigationDestination(icon:Icon(Icons.person_outline),selectedIcon:Icon(Icons.person),label:'Account'),
+    ]),body:widget.child,
   )));
 }
 
@@ -455,13 +425,12 @@ class Shell extends StatefulWidget {
 class ShellTabController {
   static final selectedPage=ValueNotifier<String>('home');
   static void Function(String)? _select;
-  static VoidCallback? openMenu;
   static void select(String key)=>_select?.call(key);
 }
 class _ShellState extends State<Shell> {
   String selected = 'home';
   static const pageMap = <String, Widget>{
-    'home': HomePage(), 'news': NewsPage(), 'today': TodayPage(),
+    'home': HomePage(), 'news': NewsPage(), 'today': TodayPage(), 'myvoorne': TodayPage(),
     'emergency': EmergencyTrafficPage(), 'traffic': EmergencyTrafficPage(initialTraffic:true),
     'agenda': AgendaPage(), 'family': FamilyPage(), 'account': AccountPage(),
     'waste': WasteCalendarPage(), 'places': PlacesPage(), 'parking': ParkingPage(),
@@ -469,42 +438,6 @@ class _ShellState extends State<Shell> {
     'businesses': BusinessesPage(), 'vouchers': MyVouchersPage(),
     'saved': SavedPage(), 'notifications': NotificationPreferencesPage(),
     'tip': TipPage(), 'contributions': ContributionsPage(),
-  };
-  static const sections = <String, List<(String, String, IconData)>>{
-    'Overzicht': [('home','Nieuws',Icons.newspaper_outlined)],
-    'Nieuws': [
-      ('news','Laatste nieuws',Icons.article_outlined),
-      ('today','Voorne Vandaag',Icons.today),
-      ('emergency','112 & P2000',Icons.emergency_outlined),
-      ('places','Nieuws per plaats',Icons.location_on_outlined),
-      ('family','Familieberichten',Icons.favorite_border),
-    ],
-    'Agenda & activiteiten': [
-      ('agenda','Agenda',Icons.event_outlined),
-      ('submit-event','Evenement aanmelden',Icons.add_circle_outline),
-      ('recreation','Natuur & recreatie',Icons.park_outlined),
-      ('coast','Strand & kust',Icons.waves),
-    ],
-    'Praktisch': [
-      ('waste','Afvalkalender',Icons.delete_outline),
-      ('traffic','Verkeer',Icons.directions_car_outlined),
-      ('parking','Parkeren',Icons.local_parking),
-    ],
-    'Wonen & lokaal': [
-      ('wonen','Wonen',Icons.real_estate_agent_outlined),
-      ('businesses','Bedrijven',Icons.storefront_outlined),
-      ('vouchers','Vouchers',Icons.local_offer_outlined),
-    ],
-    'Mijn account': [
-      ('account','Account & profiel',Icons.person_outline),
-      ('saved','Opgeslagen artikelen',Icons.bookmark_outline),
-      ('notifications','Meldingen',Icons.notifications_outlined),
-      ('contributions','Mijn bijdragen',Icons.edit_note),
-    ],
-    'Contact': [
-      ('tip','Tip de redactie',Icons.campaign_outlined),
-      ('feedback','Feedback over de app',Icons.feedback_outlined),
-    ],
   };
 
   @override void initState() {
@@ -524,7 +457,6 @@ class _ShellState extends State<Shell> {
     appBar:AppBar(
       backgroundColor:Colors.white, foregroundColor:appConfig.primary,
       automaticallyImplyLeading:false,
-      leading:IconButton(tooltip:'Menu',icon:const Icon(Icons.menu),onPressed:()=>ShellTabController.openMenu?.call()),
       title:const LogoMark(),
       actions:[
         if(appConfig.feature('search')) IconButton(tooltip:'Zoeken',icon:const Icon(Icons.search),
@@ -1532,12 +1464,12 @@ class _TodayPageState extends State<TodayPage>{
      const SizedBox(height:8),...items.take(5).map((e)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,title:Text(text(e,'title').isNotEmpty?text(e,'title'):text(e,'message'),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontFamily:'Dosis',fontWeight:FontWeight.w600,color:navy)),subtitle:text(e,'place').isEmpty?null:Text(text(e,'place')),trailing:const Icon(Icons.chevron_right,color:navy),onTap:()=>openItem(kind,e)))
    ])));
  }
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Voorne Vandaag')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFFF7F9FB),appBar:AppBar(title:const Text('Mijn Voorne')),body:FutureBuilder<Map<String,dynamic>>(future:future,builder:(context,s){
    if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
    final d=s.data??{},news=section(d,'news'),p2000=section(d,'p2000'),traffic=section(d,'traffic'),agenda=section(d,'agenda').where(isTodayEvent).toList();
    return RefreshIndicator(onRefresh:()async{setState(()=>future=load());await future;},child:ListView(padding:const EdgeInsets.all(16),children:[
      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF073B63),Color(0xFF0B6FA4)]),borderRadius:BorderRadius.circular(18),image:DecorationImage(image:NetworkImage(appConfig.homeHeroUrl.trim().isEmpty?defaultRVAZHero:appConfig.homeHeroUrl),fit:BoxFit.cover,colorFilter:const ColorFilter.mode(Color(0x77073B63),BlendMode.darken))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       Text(greeting(),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),const SizedBox(height:4),const Text('Voorne Vandaag',style:TextStyle(fontFamily:'Dosis',color:Colors.white,fontSize:29,fontWeight:FontWeight.w600)),const SizedBox(height:5),
+       Text(greeting(),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),const SizedBox(height:4),const Text('Mijn Voorne',style:TextStyle(fontFamily:'Dosis',color:Colors.white,fontSize:29,fontWeight:FontWeight.w600)),const SizedBox(height:5),
        Text(place=='Voorne aan Zee'?'Stel je adres in voor informatie uit jouw buurt.':'Jouw buurt: $place${street.isEmpty?'':' · $street'}',style:const TextStyle(color:Colors.white70,fontWeight:FontWeight.w600))
      ])),
      const SizedBox(height:10),
@@ -1576,58 +1508,39 @@ class _AccountPageState extends State<AccountPage>{
  Future<void> restore()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t==null)return;try{final r=await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/me'),headers:{'Authorization':'Bearer $t'});if(r.statusCode==200){final d=jsonDecode(r.body);if(mounted)setState((){userInfo=Map<String,dynamic>.from(d['user']??{});userName=userInfo['name']?.toString();advertiser=userInfo['advertiser']==true;});final linked=await _hasLinkedBusiness();if(mounted)setState(()=>businessLinked=linked);}}catch(_){}}
  Future<void> auth(bool reg)async{final n=TextEditingController(),e=TextEditingController(),p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:Text(reg?'Account aanmaken':'Inloggen'),content:Column(mainAxisSize:MainAxisSize.min,children:[if(reg)TextField(controller:n,decoration:const InputDecoration(labelText:'Naam')),TextField(controller:e,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mailadres')),TextField(controller:p,obscureText:true,decoration:InputDecoration(labelText:'Wachtwoord',helperText:reg?'Minimaal 8 tekens':null))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Annuleren')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(reg?'Account aanmaken':'Inloggen'))]));if(ok!=true)return;if(reg&&(n.text.trim().isEmpty||p.text.length<8)){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Naam en minimaal 8 tekens voor het wachtwoord zijn nodig.')));return;}setState(()=>busy=true);try{final body=reg?{'name':n.text.trim(),'email':e.text.trim(),'password':p.text}:{'login':e.text.trim(),'password':p.text};final endpoint=reg?'register':'login';final r=await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/$endpoint'),headers:{'Content-Type':'application/json','Accept':'application/json'},body:jsonEncode(body));if(r.statusCode>=200&&r.statusCode<300){final d=jsonDecode(r.body),t=d['token']?.toString()??'';if(t.isNotEmpty)await const FlutterSecureStorage().write(key:'rvaz_token',value:t);if(mounted){final u=Map<String,dynamic>.from(d['user']??{});setState((){userInfo=u;userName=u['name']?.toString()??n.text.trim();advertiser=u['advertiser']==true;});final linked=await _hasLinkedBusiness();if(mounted)setState(()=>businessLinked=linked);}}else{String m='Inloggen of registreren mislukt.';try{m=jsonDecode(r.body)['message']?.toString()??m;}catch(_){}if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Geen verbinding met RVAZ.')));}if(mounted)setState(()=>busy=false);}
  Future<void> logout()async{final t=await const FlutterSecureStorage().read(key:'rvaz_token');if(t!=null){try{await http.post(Uri.parse('$site/wp-json/rvaz-app/v1/logout'),headers:{'Authorization':'Bearer $t'});}catch(_){}}await const FlutterSecureStorage().delete(key:'rvaz_token');if(mounted)setState((){userName=null;advertiser=false;businessLinked=false;userInfo={};});}
-  Widget _sectionHeader(IconData icon,String title,String subtitle)=>Container(
-    padding:const EdgeInsets.symmetric(horizontal:16,vertical:12),
-    decoration:const BoxDecoration(color:Color(0xFFEAF4FF),borderRadius:BorderRadius.vertical(top:Radius.circular(14))),
-    child:Row(children:[Icon(icon,color:navy),const SizedBox(width:12),Text(title,style:const TextStyle(fontFamily:'Dosis',fontSize:18,fontWeight:FontWeight.w600,color:navy)),const Spacer(),Flexible(child:Text(subtitle,textAlign:TextAlign.right,style:const TextStyle(fontSize:12,color:Colors.black54)))]),
-  );
-  Widget _menuIcon(IconData icon)=>CircleAvatar(backgroundColor:const Color(0xFFEAF4FF),child:Icon(icon,color:navy));
-  @override
-  Widget build(BuildContext context)=>ListView(
-    padding:const EdgeInsets.all(18),
-    children:[
-      const Text('Mijn account',style:TextStyle(fontFamily:'Dosis',fontSize:30,fontWeight:FontWeight.w600,color:navy)),
-      const SizedBox(height:14),
-      Card(child:Padding(padding:const EdgeInsets.all(18),child:Row(children:[
-        _menuIcon(Icons.person),const SizedBox(width:14),
-        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('RVAZ-account',style:TextStyle(fontFamily:'Dosis',fontSize:20,fontWeight:FontWeight.w600,color:navy)),const SizedBox(height:5),
-          Text(userName==null?'Hetzelfde account werkt op website en app':'Ingelogd als $userName'),
-          if(busy)const Padding(padding:EdgeInsets.only(top:8),child:LinearProgressIndicator()),
-        ])),
-        const SizedBox(width:10),
-        if(userName==null)OutlinedButton.icon(onPressed:busy?null:()=>auth(false),icon:const Icon(Icons.login),label:const Text('Inloggen'))
-        else OutlinedButton.icon(onPressed:logout,icon:const Icon(Icons.logout),label:const Text('Uitloggen')),
-      ]))),
-      if(userName==null)TextButton(onPressed:busy?null:()=>auth(true),child:const Text('Account aanmaken')),
-      const SizedBox(height:14),
-      if(userName!=null)Card(clipBehavior:Clip.antiAlias,child:Column(children:[
-        _sectionHeader(Icons.person,'Mijn RVAZ','Jouw instellingen en voorkeuren'),
-        ListTile(leading:_menuIcon(Icons.favorite_border),title:const Text('Mijn familieberichten'),subtitle:const Text('Plaatsen, status bekijken en verwijderen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('Mijn familieberichten')),body:const FamilyPage(mine:true))))),
-        ListTile(leading:_menuIcon(Icons.notifications_outlined),title:const Text('Meldingen & P2000'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationPreferencesPage()))),
-        ListTile(leading:_menuIcon(Icons.bookmark_outline),title:const Text('Bewaarde artikelen'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SavedPage()))),
-        ListTile(leading:_menuIcon(Icons.local_offer_outlined),title:const Text('Mijn vouchers'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyVouchersPage()))),
-        ListTile(leading:_menuIcon(Icons.campaign_outlined),title:const Text('Mijn advertenties'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyAdsPage()))),
-
-        ListTile(leading:_menuIcon(Icons.real_estate_agent_outlined),title:const Text('Mijn Wonen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer woningen en aanvragen als makelaar'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MijnWonenPage()))),
-        const Divider(height:1,indent:72),
-
-
-        ListTile(leading:_menuIcon(Icons.settings_outlined),title:const Text('Mijn profiel',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je gegevens en voorkeuren'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProfilePage(user:userInfo)))),
-        const Divider(height:1,indent:72),
-
-
-
-        if(businessLinked)...[
-          const Divider(height:1,indent:72),
-          ListTile(leading:_menuIcon(Icons.storefront_outlined),title:const Text('Mijn bedrijf',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Beheer je bedrijfsprofiel, openingstijden en vouchers'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessManagePage()))),
-          const Divider(height:1,indent:72),
-          ListTile(leading:_menuIcon(Icons.qr_code_scanner),title:const Text('Voucher scannen',style:TextStyle(fontWeight:FontWeight.w900,color:navy)),subtitle:const Text('Controleer en wissel een voucher in'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessVoucherScannerPage()))),
-        ],
-      ])),
-      if(userName!=null)const SizedBox(height:14),
-    ],
-  );
+ Future<void> openMenuItem(String key)async{
+  const protected={'profile','saved','my-vouchers','my-family','contributions','my-ads','my-wonen','my-business','scan','invoices'};
+  if(protected.contains(key)&&userName==null){await auth(false);if(!mounted||userName==null)return;}
+  if(!mounted)return;
+  if(key=='feedback'){await sendPageFeedback(context,'Foutje in de app');return;}
+  if(key=='submit-event'){await openEventSubmission(context);return;}
+  final Widget? page=switch(key){
+   'news'=>const NewsPage(),'places'=>const PlacesPage(),'family'=>const FamilyPage(),
+   'myvoorne'=>const TodayPage(),'waste'=>const WasteCalendarPage(),'address'=>const MyNeighborhoodPage(),
+   'traffic'=>const EmergencyTrafficPage(initialTraffic:true),'parking'=>const ParkingPage(),
+   'emergency'=>const EmergencyTrafficPage(),'agenda'=>const AgendaPage(),'recreation'=>const RecreationPage(),'coast'=>const CoastPage(),
+   'wonen'=>const WonenPage(),'businesses'=>const BusinessesPage(),'vouchers'=>const VouchersPage(),
+   'saved'=>const SavedPage(),'my-vouchers'=>const MyVouchersPage(),'my-family'=>const FamilyPage(mine:true),
+   'notifications'=>const NotificationPreferencesPage(),'contributions'=>const ContributionsPage(),
+   'profile'=>ProfilePage(user:userInfo),'my-business'=>const BusinessManagePage(),'scan'=>const BusinessVoucherScannerPage(),
+   'my-wonen'=>const MijnWonenPage(),'my-ads'=>const MyAdsPage(),'invoices'=>const InvoicesPage(),
+   'tip'=>const TipPage(),'contact'=>const NativeInfoPage(title:'Contact',icon:Icons.mail_outline,text:'Neem contact op met de redactie via redactie@regiovoorneaanzee.nl. Een nieuwstip kun je direct doorgeven via Tip de redactie.'),
+   _=>null,
+  };
+  if(page!=null)await Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:Text(accountMenuLabel(key))),body:page)));
+ }
+ @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:[
+  const NewsroomHeading('Account & menu'),const SizedBox(height:16),
+  Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(userName==null?'Welkom bij RVAZ':'Hallo $userName',style:RvazTypography.heading.copyWith(fontSize:24)),const SizedBox(height:8),
+   Text(userName==null?'Alle onderdelen van de app vind je hieronder. Log in voor je eigen berichten, favorieten en bedrijfsbeheer.':'Hetzelfde account werkt op de website en in de app.'),
+   if(busy)const LinearProgressIndicator(),const SizedBox(height:12),
+   Wrap(spacing:12,runSpacing:8,children:[
+    if(userName==null)...[FilledButton.icon(onPressed:busy?null:()=>auth(false),icon:const Icon(Icons.login),label:const Text('Inloggen')),OutlinedButton(onPressed:busy?null:()=>auth(true),child:const Text('Gratis account'))]
+    else OutlinedButton.icon(onPressed:logout,icon:const Icon(Icons.logout),label:const Text('Uitloggen')),
+   ]),
+  ]))),const SizedBox(height:24),AccountMenuSections(onSelected:openMenuItem),
+ ]);
 }
 
 class MyNeighborhoodPage extends StatefulWidget {
