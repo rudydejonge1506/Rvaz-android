@@ -1,5 +1,5 @@
 name: RVAZ Google Play 0.7.2 version 70 newsroom and account update
-# Trigger Google Play build 2026-10-01
+# Unified Account menu release 2026-11-03
 on:
   push:
     branches: [feature/newsroom-design]

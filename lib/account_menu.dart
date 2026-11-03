@@ -27,7 +27,7 @@ const accountMenuGroups=<String,List<AccountMenuEntry>>{
   ('notifications','Meldingen & P2000',Icons.notifications_outlined),('contributions','Mijn bijdragen',Icons.edit_note),
  ],
  'Zakelijk beheer':[
-  ('my-business','Mijn bedrijf',Icons.edit_business_outlined),('scan','Voucher scannen',Icons.qr_code_scanner),
+  ('my-business','Mijn bedrijf',Icons.storefront_outlined),('scan','Voucher scannen',Icons.qr_code_scanner),
   ('my-wonen','Mijn Wonen',Icons.apartment),('my-ads','Mijn advertenties',Icons.campaign_outlined),('invoices','Facturen',Icons.receipt_long_outlined),
  ],
  'Contact & hulp':[

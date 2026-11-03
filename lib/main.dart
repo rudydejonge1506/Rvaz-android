@@ -1527,7 +1527,7 @@ class _AccountPageState extends State<AccountPage>{
    'tip'=>const TipPage(),'contact'=>const NativeInfoPage(title:'Contact',icon:Icons.mail_outline,text:'Neem contact op met de redactie via redactie@regiovoorneaanzee.nl. Een nieuwstip kun je direct doorgeven via Tip de redactie.'),
    _=>null,
   };
-  if(page!=null)await Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:Text(accountMenuLabel(key))),body:page)));
+  if(page!=null)await Navigator.push(context,MaterialPageRoute(builder:(_)=>const {'news','family','my-family','agenda','vouchers'}.contains(key)?Scaffold(appBar:AppBar(title:Text(accountMenuLabel(key))),body:page):page));
  }
  @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:[
   const NewsroomHeading('Account & menu'),const SizedBox(height:16),
