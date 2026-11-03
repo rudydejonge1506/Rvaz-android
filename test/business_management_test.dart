@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -16,6 +17,18 @@ void main(){
    return http.Response('{"ok":true,"pending_changes":true}',200);
   }));
   await api.saveProfile({'title':'Fictief testbedrijf','hours':{'monday':{'open':'09:00','close':'17:30','closed':false}}});
+ });
+ test('Company photos use the authenticated native moderation endpoint',()async{
+  final dir=await Directory.systemTemp.createTemp('rvaz-business-media-');
+  try{
+   final photo=File('${dir.path}/fictitious.jpg');await photo.writeAsBytes([255,216,255,217]);
+   final api=BusinessApi(headers:headers,client:MockClient((r)async{
+    expect(r.method,'POST');expect(r.url.path,'/wp-json/rvaz-business/v1/mine/media');expect(r.headers['Authorization'],'Bearer fixture-only');
+    expect(r.headers['content-type'],contains('multipart/form-data'));expect(r.body,contains('name="logo"'));
+    return http.Response('{"ok":true,"pending_changes":true,"media":{"logo":"https://example.invalid/logo.jpg"}}',200);
+   }));
+   await api.uploadMedia({'logo':photo.path});
+  }finally{await dir.delete(recursive:true);}
  });
  test('PRO voucher create, update and deactivation reuse the existing owner endpoint',()async{
   final methods=<String>[];

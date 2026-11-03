@@ -17,6 +17,7 @@ import 'package:flutter_map/flutter_map.dart' as fmap;
 import 'package:latlong2/latlong.dart';
 import 'package:app_links/app_links.dart';
 import 'vouchers_business.dart';
+import 'store_review.dart';
 import 'wonen.dart';
 import 'wonen_featured.dart';
 import 'event_submission.dart';
@@ -443,7 +444,6 @@ class _ShellState extends State<Shell> {
   @override void initState() {
     super.initState();
     ShellTabController._select = selectPage;
-    WidgetsBinding.instance.addPostFrameCallback((_)=>maybeAskTesterFeedback(context));
   }
   void selectPage(String key) {
     if (mounted && pageMap.containsKey(key)) {
@@ -679,27 +679,6 @@ Future<void> sendPageFeedback(BuildContext context, String page, {String? detail
   }
 }
 
-Future<void> maybeAskTesterFeedback(BuildContext context) async {
-  const st=FlutterSecureStorage();
-  final disabled=(await st.read(key:'rvaz_feedback_prompt_disabled'))=='1';
-  if(disabled)return;
-  final n=(int.tryParse(await st.read(key:'rvaz_app_opens')??'0')??0)+1;
-  await st.write(key:'rvaz_app_opens',value:'$n');
-  if(n<4 || (n-4)%7!=0)return;
-  if(!context.mounted)return;
-  final action=await showDialog<String>(context:context,builder:(d)=>AlertDialog(
-    title:const Text('Help je mee de RVAZ-app beter te maken?'),
-    content:const Text('Je test de app. Wil je kort delen wat goed werkt of wat we nog kunnen verbeteren?'),
-    actions:[
-      TextButton(onPressed:()=>Navigator.pop(d,'stop'),child:const Text('Niet meer vragen')),
-      TextButton(onPressed:()=>Navigator.pop(d,'later'),child:const Text('Later')),
-      FilledButton(onPressed:()=>Navigator.pop(d,'feedback'),child:const Text('Feedback geven')),
-    ],
-  ));
-  if(action=='stop')await st.write(key:'rvaz_feedback_prompt_disabled',value:'1');
-  if(action=='feedback'&&context.mounted)await sendPageFeedback(context,'Testfeedback');
-}
-
 class PageFeedbackButton extends StatelessWidget { final String page; final String? detail; const PageFeedbackButton({super.key, required this.page, this.detail}); @override Widget build(BuildContext context)=>IconButton(tooltip:'Feedback over deze pagina',icon:const Icon(Icons.feedback_outlined),onPressed:()=>sendPageFeedback(context,page,detail:detail)); }
 const defaultRVAZHero = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg/1280px-Vuurtoren_Hellevoetsluis_%2846736809815%29.jpg';
 
@@ -769,7 +748,7 @@ Future<void> openArticle(BuildContext context,dynamic post) async {
           if(context.mounted)await _showLoginRequired(context);
           return;
         }
-        if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:resolved)));
+        if(context.mounted)await openReadArticle(context,resolved);
         return;
       }
     }catch(_){}
@@ -781,7 +760,16 @@ Future<void> openArticle(BuildContext context,dynamic post) async {
     if(context.mounted)await _showLoginRequired(context);
     return;
   }
-  if(context.mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:post)));
+  if(context.mounted)await openReadArticle(context,post);
+}
+
+Future<void> openReadArticle(BuildContext context,dynamic post)async{
+ final readTime=Stopwatch()..start();
+ await Navigator.push(context,MaterialPageRoute(builder:(_)=>ArticlePage(post:post)));
+ readTime.stop();
+ if(!context.mounted||ModalRoute.of(context)?.isCurrent!=true)return;
+ await Future<void>.delayed(const Duration(milliseconds:500));
+ if(context.mounted&&ModalRoute.of(context)?.isCurrent==true)await storeReviewService.recordArticleRead(readTime.elapsed);
 }
 
 class ArticlePage extends StatefulWidget {
@@ -1513,6 +1501,7 @@ class _AccountPageState extends State<AccountPage>{
   if(protected.contains(key)&&userName==null){await auth(false);if(!mounted||userName==null)return;}
   if(!mounted)return;
   if(key=='feedback'){await sendPageFeedback(context,'Foutje in de app');return;}
+  if(key=='review'){final ok=await storeReviewService.openStore();if(!ok&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('De appwinkel kon niet worden geopend. Probeer het later opnieuw.')));return;}
   if(key=='submit-event'){await openEventSubmission(context);return;}
   final Widget? page=switch(key){
    'news'=>const NewsPage(),'places'=>const PlacesPage(),'family'=>const FamilyPage(),

@@ -41,6 +41,20 @@ class BusinessApi{
   }finally{if(owned)c.close();}
  }
  Future<Map<String,dynamic>> mine()=>request('rvaz-business/v1/mine');
+ Future<Map<String,dynamic>> uploadMedia(Map<String,String> files)async{
+  const allowed={'logo','cover','gallery_0','gallery_1','gallery_2'};
+  if(files.isEmpty||files.keys.any((key)=>!allowed.contains(key)))throw Exception('Kies een geldige bedrijfsfoto.');
+  final owned=client==null,c=client??http.Client();
+  try{
+   final h=await headers();if(!h.containsKey('Authorization'))throw Exception('Log eerst in bij Mijn RVAZ.');
+   final req=http.MultipartRequest('POST',Uri.parse('https://www.regiovoorneaanzee.nl/wp-json/rvaz-business/v1/mine/media'))..headers.addAll(h)..followRedirects=false;
+   for(final file in files.entries){req.files.add(await http.MultipartFile.fromPath(file.key,file.value));}
+   final response=await http.Response.fromStream(await c.send(req).timeout(const Duration(seconds:45)));
+   dynamic data;try{data=jsonDecode(response.body);}catch(_){}
+   if(response.statusCode<200||response.statusCode>=300||data is! Map||data['ok']!=true||data['pending_changes']!=true)throw Exception(data is Map?data['message']??'De foto is niet bevestigd.':'De foto is niet bevestigd. Probeer opnieuw.');
+   return Map<String,dynamic>.from(data);
+  }finally{if(owned)c.close();}
+ }
  Future<Map<String,dynamic>> saveProfile(Map<String,dynamic> data)async{
   final result=await request('rvaz-business/v1/mine',method:'POST',data:data);
   if(result['ok']!=true||result['pending_changes']!=true)throw Exception('De wijzigingen zijn niet bevestigd. Probeer opnieuw.');

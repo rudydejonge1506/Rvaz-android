@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'business_api.dart';
+import 'package:image_picker/image_picker.dart';
 export 'business_api.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -113,11 +114,11 @@ class _BusinessManagePageState extends State<BusinessManagePage>{
   if(b==null)return Scaffold(appBar:AppBar(title:const Text('Mijn bedrijf')),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[Text(error??'Aan dit account is geen bedrijf gekoppeld.',textAlign:TextAlign.center),TextButton(onPressed:load,child:const Text('Opnieuw proberen'))]))));
   final pro=b!['pro']==true;
   const labels={'title':'Bedrijfsnaam','description':'Omschrijving','address':'Adres','phone':'Telefoon','email':'E-mail','website':'Website','facebook':'Facebook','instagram':'Instagram','linkedin':'LinkedIn','socials':'Social media links','additional_info':'Extra informatie'};
-  return DefaultTabController(length:pro?3:2,child:Scaffold(appBar:AppBar(title:const Text('Mijn bedrijf'),actions:pro?[IconButton(tooltip:'Voucher scannen',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessVoucherScannerPage())),icon:const Icon(Icons.qr_code_scanner))]:null,bottom:TabBar(tabs:[const Tab(text:'Gegevens'),const Tab(text:'Openingstijden'),if(pro)const Tab(text:'Voordeel')])),body:TabBarView(children:[ListView(padding:const EdgeInsets.all(16),children:[
+  return DefaultTabController(length:pro?4:3,child:Scaffold(appBar:AppBar(title:const Text('Mijn bedrijf'),actions:pro?[IconButton(tooltip:'Voucher scannen',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BusinessVoucherScannerPage())),icon:const Icon(Icons.qr_code_scanner))]:null,bottom:TabBar(tabs:[const Tab(text:'Gegevens'),const Tab(text:'Openingstijden'),const Tab(text:'Foto’s'),if(pro)const Tab(text:'Voordeel')])),body:TabBarView(children:[ListView(padding:const EdgeInsets.all(16),children:[
    if(b!['pending_changes']==true)const Padding(padding:EdgeInsets.only(bottom:16),child:Text('Wijzigingen wachten op goedkeuring. Tot die tijd blijft de huidige openbare versie zichtbaar.')),
    for(final e in labels.entries)if(pro||['title','description','address','phone'].contains(e.key))Padding(padding:const EdgeInsets.only(bottom:12),child:TextField(controller:fields[e.key],enabled:!saving,minLines:['description','additional_info','socials'].contains(e.key)?3:1,maxLines:['description','additional_info','socials'].contains(e.key)?8:1,decoration:InputDecoration(labelText:e.value))),
    FilledButton(onPressed:saving?null:save,child:Text(saving?'Bezig met versturen…':'Wijzigingen versturen'))
-  ]),OpeningHoursEditor(hours:hours,onSave:save),if(pro)const BusinessOfferManage()])));
+  ]),OpeningHoursEditor(hours:hours,onSave:save),BusinessMediaEditor(api:api,business:b!,onSaved:()=>setState(()=>b!['pending_changes']=true)),if(pro)const BusinessOfferManage()])));
  }
 }
 
@@ -127,4 +128,38 @@ class _OpeningHoursEditorState extends State<OpeningHoursEditor>{@override Widge
 class VouchersPage extends StatelessWidget{
  const VouchersPage({super.key});
  @override Widget build(BuildContext context)=>const SingleChildScrollView(padding:EdgeInsets.all(16),child:BusinessVoucherSection());
+}
+
+class BusinessMediaEditor extends StatefulWidget{
+ final BusinessApi api;final Map<String,dynamic> business;final VoidCallback onSaved;
+ const BusinessMediaEditor({super.key,required this.api,required this.business,required this.onSaved});
+ @override State<BusinessMediaEditor> createState()=>_BusinessMediaEditorState();
+}
+class _BusinessMediaEditorState extends State<BusinessMediaEditor>{
+ bool busy=false;
+ Future<void> upload(String kind)async{
+  if(busy)return;
+  try{
+   final picker=ImagePicker();final files=<String,String>{};
+   if(kind=='gallery'){
+    final selected=await picker.pickMultiImage(maxWidth:2000,maxHeight:2000,imageQuality:85);
+    if(selected.isEmpty)return;
+    for(var i=0;i<selected.length&&i<3;i++){files['gallery_$i']=selected[i].path;}
+   }else{
+    final selected=await picker.pickImage(source:ImageSource.gallery,maxWidth:2000,maxHeight:2000,imageQuality:85);
+    if(selected==null)return;files[kind]=selected.path;
+   }
+   if(!mounted)return;setState(()=>busy=true);
+   await widget.api.uploadMedia(files);if(!mounted)return;
+   widget.onSaved();ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Foto’s zijn verstuurd en wachten op redactionele controle.')));
+  }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(businessError(e))));}
+  finally{if(mounted)setState(()=>busy=false);}
+ }
+ @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:[
+  const Text('Bedrijfsfoto’s',style:TextStyle(fontFamily:'Dosis',fontSize:24,fontWeight:FontWeight.w600)),const SizedBox(height:8),
+  const Text('Pas je logo, omslagfoto en galerij aan. De redactie controleert nieuwe foto’s vóór publicatie.'),const SizedBox(height:16),
+  if(busy)const LinearProgressIndicator(),
+  for(final entry in const {'logo':'Logo wijzigen','cover':'Omslagfoto wijzigen','gallery':'Galerijfoto’s kiezen (maximaal 3)'}.entries)Padding(padding:const EdgeInsets.only(bottom:12),child:OutlinedButton.icon(onPressed:busy?null:()=>upload(entry.key),icon:const Icon(Icons.photo_library_outlined),label:Text(entry.value))),
+  const Text('Een nieuwe galerij vervangt na goedkeuring de huidige galerij. Kies daarom alle foto’s die je wilt tonen.'),
+ ]);
 }

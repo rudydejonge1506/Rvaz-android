@@ -119,6 +119,11 @@ try:
     time.sleep(3)
     xml, root = snapshot('account-categorized-menu')
     assert 'Account & menu' in text(root)
+    group = find(root, 'Nieuws & plaatsen')
+    assert group is not None
+    tap(group)
+    time.sleep(1)
+    xml, root = snapshot('account-news-category')
     family = find(root, 'Familieberichten')
     assert family is not None, 'Family notices are missing from the account menu'
     tap(family)
