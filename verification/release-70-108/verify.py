@@ -28,7 +28,7 @@ def tap(node):
     adb('shell', 'input', 'tap', str((x1 + x2) // 2), str((y1 + y2) // 2))
 
 def find(root, label):
-    return next((n for n in root.iter('node') if n.get('text', '') == label or n.get('content-desc', '').split('\n')[0] == label), None)
+    return next((n for n in root.iter('node') if n.get('text', '') == label or n.get('content-desc', '').split('\n')[0].removesuffix(', Collapsed').removesuffix(', Expanded') == label), None)
 
 def dismiss_launcher_anr(root):
     title = next((n for n in root.iter('node') if n.get('resource-id') == 'android:id/alertTitle'), None)
@@ -125,6 +125,11 @@ try:
     time.sleep(1)
     xml, root = snapshot('account-news-category')
     family = find(root, 'Familieberichten')
+    if family is None:
+        width, height = map(int, re.findall(r'(\d+)x(\d+)', adb('shell', 'wm', 'size'))[0])
+        adb('shell', 'input', 'swipe', str(width//2), str(height*3//4), str(width//2), str(height//3), '400')
+        xml, root = snapshot('account-news-category-scrolled')
+        family = find(root, 'Familieberichten')
     assert family is not None, 'Family notices are missing from the account menu'
     tap(family)
     for attempt in range(6):
@@ -163,7 +168,8 @@ try:
     assert search is not None, 'The central account menu must be searchable'
     tap(search)
     adb('shell', 'input', 'text', 'vouchers')
-    adb('shell', 'input', 'keyevent', '4')
+    if 'mInputShown=true' in adb('shell', 'dumpsys', 'input_method'):
+        adb('shell', 'input', 'keyevent', '4')
     time.sleep(2)
     xml, root = snapshot('vouchers-menu')
     assert 'Vouchers & aanbiedingen' in text(root), 'Public vouchers are missing from the central menu'
