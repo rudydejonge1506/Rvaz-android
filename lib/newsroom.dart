@@ -2,15 +2,15 @@ part of 'main.dart';
 
 const newsroomPale = Color(0xFFE5F4FB);
 const newsroomLine = Color(0xFFD9E5ED);
-const newsroomHeading = TextStyle(fontFamily:'Dosis',fontWeight:FontWeight.w600,color:navy,height:1.18);
+const newsroomHeading = RvazTypography.heading;
 
 class NewsroomHeading extends StatelessWidget {
  final String title; final String? action; final VoidCallback? onTap;
  const NewsroomHeading(this.title,{super.key,this.action,this.onTap});
  @override Widget build(BuildContext context)=>Container(
   color:newsroomPale,child:Row(children:[Expanded(child:Padding(
-   padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
-   child:Text(title,style:newsroomHeading.copyWith(fontSize:24)))),
+   padding:const EdgeInsets.symmetric(horizontal:16,vertical:12),
+   child:Text(title,style:newsroomHeading.copyWith(fontSize:MediaQuery.sizeOf(context).width<=760?22:23)))),
    if(action!=null)TextButton(onPressed:onTap,child:Text(action!))]));
 }
 
@@ -20,14 +20,15 @@ class NewsroomBatch {
 }
 typedef NewsroomLoader=Future<NewsroomBatch> Function(int page,String before);
 
-Future<NewsroomBatch> loadNewsroomBatch(int page,String before) async {
+Future<NewsroomBatch> loadNewsroomBatch(int page,String before,{int? categoryId,http.Client? client}) async {
  // Request only public listing metadata. Full article content is obtained via
  // the existing protected App API when the reader opens an article.
  // Keep list separators literal: the production site's redirect path encodes
  // percent-escaped separators a second time, producing empty metadata fields.
  final cursor=before.isEmpty?'':DateTime.parse(before).toUtc().toIso8601String();
- final uri=Uri.parse('https://www.regiovoorneaanzee.nl/wp-json/wp/v2/posts?per_page=15&page=$page&orderby=date&order=desc&_embed=wp:featuredmedia,wp:term&_fields=id,title,date,date_gmt,link,_links,_embedded${cursor.isEmpty?'':'&before=$cursor'}');
- final r=await http.get(uri,headers:const {'Accept':'application/json'}).timeout(const Duration(seconds:20));
+ final uri=Uri.parse('https://www.regiovoorneaanzee.nl/wp-json/wp/v2/posts?per_page=15&page=$page&orderby=date&order=desc&_embed=wp:featuredmedia,wp:term&_fields=id,title,date,date_gmt,link,_links,_embedded${cursor.isEmpty?'':'&before=$cursor'}${categoryId==null?'':'&categories=$categoryId'}');
+ final request=client==null?http.get(uri,headers:const {'Accept':'application/json'}):client.get(uri,headers:const {'Accept':'application/json'});
+ final r=await request.timeout(const Duration(seconds:20));
  if(r.statusCode==400){final d=jsonDecode(r.body);if(d is Map&&d['code']=='rest_post_invalid_page_number')return const NewsroomBatch([],false);}
  if(r.statusCode!=200)throw Exception('Nieuws ophalen: HTTP ${r.statusCode}');
  final raw=List<dynamic>.from(jsonDecode(r.body));
@@ -52,8 +53,8 @@ Future<NewsroomBatch> loadNewsroomBatch(int page,String before) async {
 }
 
 class NewsroomFeed extends StatefulWidget {
- final NewsroomLoader? loader; final bool showPromotions;
- const NewsroomFeed({super.key,this.loader,this.showPromotions=true});
+ final NewsroomLoader? loader; final bool showPromotions,showTopics; final String heading,emptyText;
+ const NewsroomFeed({super.key,this.loader,this.showPromotions=true,this.showTopics=true,this.heading='Laatste nieuws',this.emptyText='Er zijn nog geen nieuwsberichten.'});
  @override State<NewsroomFeed> createState()=>_NewsroomFeedState();
 }
 class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClientMixin {
@@ -87,10 +88,10 @@ class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClie
  @override Widget build(BuildContext context){
   super.build(context);
   return RefreshIndicator(onRefresh:()=>load(refresh:true),child:ListView(
-   key:const PageStorageKey('newsroom-feed'),controller:scroll,
+   key:PageStorageKey('newsroom-feed-${widget.heading}'),controller:scroll,
    physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,8,16,24),
    children:[
-    SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+    if(widget.showTopics)SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
      _topic('Alles',()=>load(refresh:true),active:true),
      _topic('Plaatsen',()=>ShellTabController.select('places')),
      _topic('112 & P2000',()=>ShellTabController.select('emergency')),
@@ -98,7 +99,7 @@ class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClie
      _topic('Vouchers',()=>ShellTabController.select('vouchers')),
     ])),
     if(widget.showPromotions)FutureBuilder<Map<String,dynamic>>(future:editorial,builder:(context,s)=>s.data?['can_submit_news']==true?ListTile(leading:const Icon(Icons.edit_note),title:const Text('Nieuws insturen'),subtitle:const Text('Voor redactieleden'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditorialSubmitPage()))):const SizedBox.shrink()),
-    const SizedBox(height:12),const NewsroomHeading('Laatste nieuws'),
+    const SizedBox(height:12),NewsroomHeading(widget.heading),
     if(posts.isNotEmpty)...[
      NewsroomArticleTile(post:posts.first,lead:true),
      for(var i=1;i<posts.length;i++)...[
@@ -115,7 +116,7 @@ class _NewsroomFeedState extends State<NewsroomFeed> with AutomaticKeepAliveClie
      child:FilledButton.icon(key:const ValueKey('newsroom-load-more'),onPressed:()=>load(),
       icon:const Icon(Icons.expand_more),label:Text(error.isNotEmpty?'Opnieuw proberen':'Meer laden')))),
     if(!busy&&!more&&posts.isNotEmpty)const Padding(padding:EdgeInsets.symmetric(vertical:20),child:Text('Je hebt alle nieuwsberichten bekeken.',textAlign:TextAlign.center)),
-    if(!busy&&posts.isEmpty&&error.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('Er zijn nog geen nieuwsberichten.')),
+    if(!busy&&posts.isEmpty&&error.isEmpty)Padding(padding:const EdgeInsets.all(24),child:Text(widget.emptyText)),
     if(widget.showPromotions)...[
      const SizedBox(height:12),
      NewsroomHeading('Wonen',action:'Alle woningen →',onTap:()=>ShellTabController.select('wonen')),
@@ -181,3 +182,26 @@ class NewsroomProBusinesses extends StatelessWidget {
  });
 }
 
+
+/// Resolve the existing WordPress place category, then paginate its full archive.
+/// Never filter only the latest site-wide posts by a title/place substring.
+class PlaceNewsSource {
+ final String place;
+ final http.Client? client;
+ int? categoryId;
+ PlaceNewsSource(this.place,{this.client});
+ Future<NewsroomBatch> call(int page,String before) async {
+  if(categoryId==null){
+   final slug=Uri.encodeQueryComponent(place.trim().toLowerCase().replaceAll(' ','-'));
+   final uri=Uri.parse('https://www.regiovoorneaanzee.nl/wp-json/wp/v2/categories?slug=$slug&_fields=id,slug');
+   final request=client==null?http.get(uri,headers:const {'Accept':'application/json'}):client!.get(uri,headers:const {'Accept':'application/json'});
+   final response=await request.timeout(const Duration(seconds:20));
+   if(response.statusCode!=200)throw Exception('Plaatsarchief kon niet worden opgehaald.');
+   final rows=jsonDecode(response.body);
+   if(rows is! List||rows.length!=1||rows.first is! Map||rows.first['id'] is! int)throw Exception('Geen plaatsarchief gevonden voor $place.');
+   categoryId=rows.first['id'] as int;
+  }
+  final batch=await loadNewsroomBatch(page,before,categoryId:categoryId,client:client);
+  return NewsroomBatch(batch.posts.map((p)=>{...Map<String,dynamic>.from(p),'place':place}).toList(),batch.hasMore);
+ }
+}
