@@ -43,7 +43,8 @@ String accountMenuLabel(String key){
 
 class AccountMenuSections extends StatefulWidget{
  final ValueChanged<String> onSelected;
- const AccountMenuSections({super.key,required this.onSelected});
+ final bool showVoucherScanner;
+ const AccountMenuSections({super.key,required this.onSelected,this.showVoucherScanner=false});
  @override State<AccountMenuSections> createState()=>_AccountMenuSectionsState();
 }
 class _AccountMenuSectionsState extends State<AccountMenuSections>{
@@ -51,7 +52,7 @@ class _AccountMenuSectionsState extends State<AccountMenuSections>{
  @override Widget build(BuildContext context){
   final groups=<String,List<AccountMenuEntry>>{};
   for(final group in accountMenuGroups.entries){
-   final entries=group.value.where((e)=>'${group.key} ${e.$2}'.toLowerCase().contains(query)).toList();
+   final entries=group.value.where((e)=>(e.$1 != 'scan' || widget.showVoucherScanner) && '${group.key} ${e.$2}'.toLowerCase().contains(query)).toList();
    if(entries.isNotEmpty)groups[group.key]=entries;
   }
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[

@@ -9,7 +9,7 @@ abstract final class RvazTypography {
  static Map<String,Style> articleStyles(double width){
   final result=<String,Style>{
    'body':Style(fontFamily:'OpenSans',fontSize:FontSize(16),fontWeight:FontWeight.w400,lineHeight:const LineHeight(1.7),color:const Color(0xff343d43),margin:Margins.zero,padding:HtmlPaddings.zero),
-   'p':Style(margin:Margins.only(top:0,bottom:22)),
+   'p':Style(margin:Margins.only(top:0,bottom:12)),
    'figure':Style(margin:Margins.zero),
    'a':Style(color:const Color(0xff073b66),textDecoration:TextDecoration.underline),
   };
