@@ -8,7 +8,7 @@ String agendaValue(dynamic event,List<String> keys){
 }
 String agendaTitle(dynamic event){
  final title=event is Map?event['title']:null;
- return clean(title is Map?'${title['rendered']??''}':'${title??''}');
+ return decodeHtmlEntities(title is Map?'${title['rendered']??''}':'${title??''}').replaceAll(RegExp(r'<[^>]*>'),'');
 }
 DateTime? agendaStart(dynamic event){
  final raw=agendaValue(event,['start_date','event_start_date','event_date','start','date','datum','datetime']);

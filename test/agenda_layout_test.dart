@@ -17,7 +17,7 @@ void main(){
  testWidgets('Agenda has date column, website title style and readable phone layout',(tester)async{
   tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(MaterialApp(home:Scaffold(body:AgendaPage(showPromotions:false,loader:()async=>[{'id':1,'title':'Een gezellige middag met muziek','date':'2099-11-04','time':'14:00','place':'Oostvoorne','venue':'Cultureel centrum','price':'Gratis'}])))));
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:AgendaPage(showPromotions:false,loader:()async=>[{'id':1,'title':'Een gezellige middag met muziek','date':'2099-11-04','time':'14:00','place':'Oostvoorne','venue':'Cultureel centrum','price':'Gratis'}]))));
   await tester.pumpAndSettle();
   expect(find.text('november 2099'),findsOneWidget);expect(find.text('14:00'),findsOneWidget);
   final title=tester.widget<Text>(find.text('Een gezellige middag met muziek'));expect(title.style?.fontFamily,'Dosis');expect(title.style?.fontWeight,FontWeight.w600);

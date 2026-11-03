@@ -17,7 +17,7 @@ void main(){
  testWidgets('WordPress heading children use Dosis 600; body emphasis stays Open Sans bold',(tester)async{
   tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(const MaterialApp(home:Scaffold(body:SingleChildScrollView(child:RvazArticleHtml(data:'<h2><strong>Tussenkop</strong> <span style="font-family:Arial;font-weight:900">naast</span></h2><p>Gewone tekst met <strong>belangrijk</strong>.</p><h4><b>Kleine kop</b></h4>'))))));
+  await tester.pumpWidget(const MaterialApp(home:Scaffold(body:SingleChildScrollView(child:RvazArticleHtml(data:'<h2><strong>Tussenkop</strong> <span style="font-family:Arial;font-weight:900">naast</span></h2><p>Gewone tekst met <strong>belangrijk</strong>.</p><h4><b>Kleine kop</b></h4>')))));
   await tester.pumpAndSettle();
   final text=tester.widgetList<RichText>(find.byType(RichText)).expand((w)=>spans(w.text)).toList();
   for(final label in ['Tussenkop','naast','Kleine kop']){
