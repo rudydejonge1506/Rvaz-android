@@ -45,9 +45,11 @@ void main(){
   expect(find.text('Komende week meer zon en kans op lichte vorst'),findsOneWidget);
   expect(tester.takeException(),isNull);
   if(Platform.environment['RVAZ_TYPOGRAPHY_PREVIEW']=='1'){
+   await tester.runAsync(()async{
    final image=await (boundary.currentContext!.findRenderObject() as RenderRepaintBoundary).toImage(pixelRatio:2);
    final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
    Directory('evidence').createSync(recursive:true);File('evidence/article-typography.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+   });
   }
  });
 }

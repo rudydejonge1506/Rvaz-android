@@ -2,6 +2,9 @@ name: Central app menu checks
 on:
   push:
     branches: [feature/central-app-menu, feature/newsroom-design]
+concurrency:
+  group: rvaz-checks-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
