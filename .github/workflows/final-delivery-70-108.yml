@@ -1,0 +1,117 @@
+name: Definitieve controle en levering Android70 Apple108
+on:
+  push:
+    branches: [feature/newsroom-design]
+    paths: ['.github/workflows/final-delivery-70-108.yml', 'verification/release-70-108/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rvaz-final-delivery-70-108
+  cancel-in-progress: true
+jobs:
+  verify-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original artifact provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/artifacts/13207284650 --jq '.workflow_run.head_sha')" = ebc71eddd061d98493337ff5962906d93e7954ff
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/artifacts/13207284650 --jq '.digest')" = sha256:8d789c9f16f320edc84834ef66605c747103c8447303d594adb3f1423cf0efa8
+      - uses: actions/download-artifact@v4
+        with:
+          name: RVAZ-Google-Play-70-account-menu
+          run-id: 41584796035
+          github-token: ${{ github.token }}
+          path: signed
+      - name: Verify exact signed bytes and version
+        run: |
+          echo '3b215b75fa000d6c260c403d42405f3364191117f8cc24c303bfaa7c19d2fd88  signed/build/app/outputs/flutter-apk/app-release.apk' | sha256sum --check
+          echo '32ec477b544f236e926b59e02294703000be63879bb9cdc6f81d5e314ab24cdb  signed/build/app/outputs/bundle/release/app-release.aab' | sha256sum --check
+          grep "versionCode='70' versionName='0.7.2'" signed/build/package.txt
+      - name: Check regular public site connectivity before starting device
+        run: |
+          curl --fail --location --connect-timeout 10 --max-time 40 --silent --show-error 'https://www.regiovoorneaanzee.nl/wp-json/wp/v2/posts?per_page=1&_fields=id,title' > /tmp/news-probe.json
+          python3 -c 'import json; d=json.load(open("/tmp/news-probe.json")); assert isinstance(d,list) and d[0]["id"]>0; print("Public news endpoint is reachable from this runner.")'
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify unchanged release against live website
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install signed/build/app/outputs/flutter-apk/app-release.apk
+            adb logcat -c
+            python3 verification/release-70-108/verify.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RVAZ-70-108-final-verification
+          path: evidence/
+          if-no-files-found: ignore
+  upload-apple:
+    needs: verify-android
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original IPA provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/artifacts/13207668895 --jq '.workflow_run.head_sha')" = ebc71eddd061d98493337ff5962906d93e7954ff
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/artifacts/13207668895 --jq '.digest')" = sha256:64023b7a9c79906e2535fad43f4a660a3d3ffe045f4abe400fbaeb6f231d077c
+      - uses: actions/download-artifact@v4
+        with:
+          name: RVAZ-iOS-1.2.2-build108-account-menu
+          run-id: 41584796037
+          github-token: ${{ github.token }}
+          path: signed-ios
+      - name: Verify IPA identity
+        run: |
+          python3 - <<'PY'
+          import pathlib,zipfile,plistlib
+          files=list(pathlib.Path('signed-ios').rglob('*.ipa'));assert len(files)==1
+          with zipfile.ZipFile(files[0]) as z:
+              n=next(n for n in z.namelist() if n.startswith('Payload/') and n.count('/')==2 and n.endswith('/Info.plist'))
+              d=plistlib.loads(z.read(n));assert d['CFBundleIdentifier']=='nl.regiovoorneaanzee.app';assert d['CFBundleVersion']=='108';assert d['CFBundleShortVersionString']=='1.2.2';assert d.get('CFBundleIcons')
+          print('Verified original signed IPA 1.2.2 (108).')
+          PY
+      - name: Guard unused Apple build identity
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography --break-system-packages
+          python3 scripts/check_newsroom_version.py
+      - name: Validate and upload original IPA to TestFlight
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          printf '%s\n' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          trap 'rm -f "$KEY_PATH"' EXIT
+          IPA=$(find signed-ios -name '*.ipa' -print -quit)
+          xcrun altool --validate-app -f "$IPA" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+          xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+      - name: Verify TestFlight processing
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: python3 scripts/verify_testflight.py

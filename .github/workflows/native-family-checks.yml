@@ -1,0 +1,32 @@
+name: Native family API integration
+on:
+  push:
+    branches: [feature/newsroom-design]
+    paths: ['backend/rvaz-family-native-api.php', 'backend/rvaz-waste-reminders/**', 'backend/tests/waste/**', 'backend/tests/family/**', '.github/workflows/native-family-checks.yml']
+permissions:
+  contents: read
+jobs:
+  wordpress:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only
+          MYSQL_DATABASE: family_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -pci-only" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - run: php -l backend/rvaz-family-native-api.php
+      - name: Test against disposable WordPress
+        run: |
+          curl --fail --location --silent https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp-cli.phar
+          mkdir /tmp/family-wp
+          php /tmp/wp-cli.phar core download --path=/tmp/family-wp
+          php /tmp/wp-cli.phar config create --path=/tmp/family-wp --dbname=family_test --dbuser=root --dbpass=ci-only --dbhost=127.0.0.1:3306
+          php /tmp/wp-cli.phar core install --path=/tmp/family-wp --url=http://localhost --title=CI --admin_user=ci_admin --admin_password=ci-only --admin_email=ci@example.invalid --skip-email
+          php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/backend/tests/family/integration.php" --path=/tmp/family-wp
+
+      - name: Waste reminders integration without sending real notifications
+        run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/backend/tests/waste/integration.php" --path=/tmp/family-wp

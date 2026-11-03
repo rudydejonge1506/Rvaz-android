@@ -1,13 +1,18 @@
-name: RVAZ iOS build101 and TestFlight only
+name: RVAZ iOS 1.2.4 build110 newsroom and account update to TestFlight
 
 on:
   push:
-    branches: [feature/central-app-menu]
-    paths: ['lib/**', 'test/**', 'assets/**', 'ios/**', 'scripts/**', 'pubspec.yaml', '.github/workflows/ios-current-features-safe.yml']
+    branches: [feature/newsroom-design]
+    paths: ['.github/workflows/rvaz-play-58.yml', '.github/workflows/ios-current-features-safe.yml']
   workflow_dispatch:
+
+concurrency:
+  group: rvaz-native-family-ios-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   build-ios:
@@ -57,6 +62,15 @@ jobs:
           python3 scripts/verify_icons.py
           git diff --exit-code FETCH_HEAD -- ios/Runner.xcodeproj/project.pbxproj ios/Runner/AppDelegate.swift ios/Runner/Info.plist ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/AppFrameworkInfo.plist ios/Runner/Base.lproj/LaunchScreen.storyboard ios/Runner/Base.lproj/Main.storyboard ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings ios/Runner/GoogleService-Info.plist ios/Runner/Runner-Bridging-Header.h ios/Runner/SceneDelegate.swift ios/Runner/Runner.entitlements
 
+      - name: Check Apple versions before building
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography --break-system-packages
+          python3 scripts/check_newsroom_version.py
+
       - name: Install Apple signing credentials
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
@@ -94,7 +108,7 @@ jobs:
           PLIST
 
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.1.5 --build-number=101
+        run: flutter build ios --release --no-codesign --build-name=1.2.4 --build-number=110
 
       - name: Archive with proven signing settings
         run: |
@@ -107,7 +121,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.5-build101-central-menu
+          name: RVAZ-iOS-1.2.4-build110-account-menu
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
@@ -123,12 +137,21 @@ jobs:
               assert len(names)==1
               info=plistlib.loads(z.read(names[0]))
               assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
-              assert info['CFBundleVersion']=='101'
-              assert info['CFBundleShortVersionString']=='1.1.5'
+              assert info['CFBundleVersion']=='110'
+              assert info['CFBundleShortVersionString']=='1.2.4'
               assert info.get('CFBundleIcons'), 'Compiled app icons missing'
           PY
 
-      - name: Validate and upload build 101 to TestFlight only
+      - name: Require successful live-news release verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow rvaz-play-58.yml --commit "$GITHUB_SHA" --limit 1 --json databaseId --jq '.[0].databaseId')
+          test -n "$RUN_ID" && test "$RUN_ID" != null
+          gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
+
+      - name: Validate and upload build 110 to TestFlight only
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
