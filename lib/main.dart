@@ -417,28 +417,60 @@ class LogoMark extends StatefulWidget {
   @override
   State<LogoMark> createState() => _LogoMarkState();
 }
-class _LogoMarkState extends State<LogoMark> {
+class _LogoMarkState extends State<LogoMark> with WidgetsBindingObserver {
   String logoUrl = '';
+  Timer? _refreshTimer;
+  bool _loading = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    // Pick up changes made in WordPress while the app remains open.
+    _refreshTimer = Timer.periodic(const Duration(minutes: 2), (_) => _load());
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
+  }
+
   Future<void> _load() async {
+    if (_loading) return;
+    _loading = true;
     try {
-      final r = await http.get(Uri.parse('$site/wp-json/rvaz-app/v1/config'));
+      final uri = Uri.parse('$site/wp-json/rvaz-app/v1/config')
+          .replace(queryParameters: {'_rvaz_refresh': DateTime.now().millisecondsSinceEpoch.toString()});
+      final r = await http.get(uri, headers: const {'Cache-Control': 'no-cache', 'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 15));
       if (r.statusCode == 200) {
         final j = jsonDecode(r.body);
-        final u = j['logo_url']?.toString() ?? '';
-        if (mounted && u.isNotEmpty) setState(() => logoUrl = u);
+        if (j is Map) {
+          // Empty logo_url means the local default logo should be restored.
+          final u = (j['logo_url'] ?? '').toString().trim();
+          if (mounted && u != logoUrl) setState(() => logoUrl = u);
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('RVAZ logo refresh: $e');
+    } finally {
+      _loading = false;
+    }
   }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 41,
     child: logoUrl.isNotEmpty
-      ? Image.network(logoUrl, width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft,
+      ? Image.network(logoUrl, key: ValueKey(logoUrl), width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft,
           errorBuilder: (_, __, ___) => Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft))
       : Image.asset('assets/rvaz-logo.png', width: 220, height: 41, fit: BoxFit.contain, alignment: Alignment.centerLeft),
   );
