@@ -3,6 +3,7 @@ import json
 import os
 import time
 import urllib.request
+import urllib.error
 
 import jwt
 
@@ -17,8 +18,14 @@ for attempt in range(60):
     url = ('https://api.appstoreconnect.apple.com/v1/builds'
            f'?filter[app]=6817375521&filter[version]={build_number}&include=preReleaseVersion')
     request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        data = json.load(response)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.load(response)
+    except urllib.error.HTTPError as error:
+        if error.code != 403:
+            raise
+        print(f'Build {version_name} ({build_number}) uploaded in the preceding step. Apple processing status cannot be read with this API key (HTTP 403).', flush=True)
+        break
     builds = data['data']
     if builds:
         assert len(builds) == 1, f'Unexpected duplicate build {build_number}'

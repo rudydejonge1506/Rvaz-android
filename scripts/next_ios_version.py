@@ -3,6 +3,7 @@ import json
 import os
 import time
 import urllib.request
+import urllib.error
 import jwt
 
 def read(path):
@@ -17,7 +18,14 @@ path='builds?filter[app]=6817375521&limit=200&include=preReleaseVersion'
 numbers=[]
 versions=[(1,1,4)]
 while path:
-    result=read(path)
+    try:
+        result=read(path)
+    except urllib.error.HTTPError as error:
+        if error.code != 403:
+            raise
+        print('Apple API key does not allow reading build history (HTTP 403).')
+        print('Use the next number after the last verified repository build 99; Apple validates it again during upload.')
+        break
     numbers.extend(int(x['attributes']['version']) for x in result['data'] if x['attributes']['version'].isdigit())
     for item in result.get('included',[]):
         if item['type']=='preReleaseVersions':
