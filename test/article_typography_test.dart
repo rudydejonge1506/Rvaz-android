@@ -14,6 +14,14 @@ Iterable<({String text,TextStyle style})> spans(InlineSpan span,[TextStyle inher
  }
 }
 void main(){
+ TestWidgetsFlutterBinding.ensureInitialized();
+ // Load bundled fonts outside testWidgets' fake async clock so font-change
+ // notifications cannot outlive the disposed editorial preview.
+ setUpAll(()async{
+  for(final font in ['Dosis','OpenSans']){
+   final loader=FontLoader(font)..addFont(rootBundle.load('assets/fonts/$font.ttf'));await loader.load();
+  }
+ });
  testWidgets('WordPress heading children use Dosis 600; body emphasis stays Open Sans bold',(tester)async{
   tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
@@ -33,9 +41,6 @@ void main(){
  testWidgets('Editorial preview fits a phone with enlarged text and preserves wording',(tester)async{
   tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
-  for(final font in ['Dosis','OpenSans']){
-   final loader=FontLoader(font)..addFont(rootBundle.load('assets/fonts/$font.ttf'));await loader.load();
-  }
   final boundary=GlobalKey();
   await tester.pumpWidget(MaterialApp(home:MediaQuery(data:const MediaQueryData(size:Size(390,844),textScaler:TextScaler.linear(1.3)),child:Scaffold(backgroundColor:Colors.white,body:RepaintBoundary(key:boundary,child:SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Text('Komende week meer zon en kans op lichte vorst',style:RvazTypography.articleTitle(390)),const SizedBox(height:24),
