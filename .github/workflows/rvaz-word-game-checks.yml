@@ -25,3 +25,28 @@ jobs:
           php backend/tests/word-game.php
       - name: Verify exact existing app icons
         run: python3 scripts/verify_icons.py
+  wordpress:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only
+          MYSQL_DATABASE: rvaz_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -pci-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated WordPress and the game plugin
+        run: |
+          curl --fail --location --silent https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp-cli.phar
+          mkdir /tmp/rvaz-word-wp
+          php /tmp/wp-cli.phar core download --path=/tmp/rvaz-word-wp
+          php /tmp/wp-cli.phar config create --path=/tmp/rvaz-word-wp --dbname=rvaz_test --dbuser=root --dbpass=ci-only --dbhost=127.0.0.1:3306
+          php /tmp/wp-cli.phar core install --path=/tmp/rvaz-word-wp --url=http://localhost --title=CI --admin_user=ci_admin --admin_password=ci-only --admin_email=ci@example.invalid --skip-email
+          cp -r backend/rvaz-woordspel /tmp/rvaz-word-wp/wp-content/plugins/
+          php /tmp/wp-cli.phar plugin activate rvaz-woordspel --path=/tmp/rvaz-word-wp
+      - name: Real session and database integration
+        run: php /tmp/wp-cli.phar eval-file "$GITHUB_WORKSPACE/backend/tests/word-game-integration.php" --path=/tmp/rvaz-word-wp
