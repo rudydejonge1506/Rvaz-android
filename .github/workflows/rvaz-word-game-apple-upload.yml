@@ -1,0 +1,99 @@
+name: Upload verified Apple 1.1.9 build111
+on:
+  push:
+    branches: [feature/newsroom-design]
+    paths: ['.github/workflows/rvaz-word-game-apple-upload.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rvaz-upload-apple-111
+  cancel-in-progress: false
+jobs:
+  upload:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify existing release checks and source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/$GITHUB_REPOSITORY/actions/runs/44037385088 > "$RUNNER_TEMP/android.json"
+          gh api repos/$GITHUB_REPOSITORY/actions/runs/44039062386 > "$RUNNER_TEMP/apple.json"
+          gh api repos/$GITHUB_REPOSITORY/actions/runs/44039062386/jobs > "$RUNNER_TEMP/jobs.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          android=json.loads((root/'android.json').read_text())
+          apple=json.loads((root/'apple.json').read_text())
+          assert android['head_sha']=='2e0739791dcaaf724f5340aab3753a086dc8bbd6'
+          assert android['conclusion']=='success'
+          assert apple['head_sha']=='d78102a55baa736941fa604185c215023c6df0de'
+          jobs=json.loads((root/'jobs.json').read_text())['jobs']
+          assert len(jobs)==1
+          steps={s['number']:s for s in jobs[0]['steps']}
+          assert all(steps[n]['conclusion']=='success' for n in range(1,17))
+          assert steps[18]['conclusion']=='skipped', 'Upload already attempted'
+          print('Verified tests, native identity, signed export and Android release.')
+          PY
+          git fetch --no-tags origin 2e0739791dcaaf724f5340aab3753a086dc8bbd6
+          git diff --exit-code 2e0739791dcaaf724f5340aab3753a086dc8bbd6 HEAD -- lib assets ios android-icon-original pubspec.yaml test
+      - name: Download exact signed IPA and verify identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/$GITHUB_REPOSITORY/actions/artifacts/14309480542/zip > "$RUNNER_TEMP/apple111.zip"
+          python3 - <<'PY'
+          import os, hashlib, zipfile, plistlib
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          archive=root/'apple111.zip'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()=='9bc9c27af8a24042cd46765191f2ac25e406ddf1ca51e35d4d1e5903ce3d279a'
+          with zipfile.ZipFile(archive) as z:
+              names=[n for n in z.namelist() if n.endswith('.ipa')]
+              assert len(names)==1
+              ipa=root/'RVAZ-1.1.9-111.ipa'
+              ipa.write_bytes(z.read(names[0]))
+          with zipfile.ZipFile(ipa) as z:
+              names=[n for n in z.namelist() if n.startswith('Payload/') and n.count('/')==2 and n.endswith('/Info.plist')]
+              assert len(names)==1
+              info=plistlib.loads(z.read(names[0]))
+              assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
+              assert info['CFBundleVersion']=='111'
+              assert info['CFBundleShortVersionString']=='1.1.9'
+              assert info.get('CFBundleIcons')
+          print('Verified original signed IPA: nl.regiovoorneaanzee.app 1.1.9 (111).')
+          PY
+      - name: Check Apple draft and unused build
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography --break-system-packages
+          python3 scripts/check_newsroom_version.py
+      - name: Validate and upload Apple 1.1.9 build111
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          printf '%s\n' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          trap 'rm -f "$KEY_PATH"' EXIT
+          xcrun altool --validate-app -f "$RUNNER_TEMP/RVAZ-1.1.9-111.ipa" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+          xcrun altool --upload-app -f "$RUNNER_TEMP/RVAZ-1.1.9-111.ipa" -t ios --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+      - name: Verify TestFlight processing
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: python3 scripts/verify_testflight.py
