@@ -30,13 +30,13 @@ highest = max((int(b['attributes']['version']) for b in builds
 print('Highest recent Apple build:', highest, flush=True)
 assert highest < 111, 'Build 111 is already used; choose a higher number before upload.'
 versions = get('apps/6817375521/appStoreVersions?limit=200')['data']
-def version_tuple(value):
-    return tuple((list(map(int,value.split('.')))+[0,0,0])[:3])
+drafts=[]
 for version in versions:
-    attrs = version['attributes']
-    print('Apple version:', attrs['versionString'], attrs['appStoreState'], flush=True)
-    if attrs.get('platform') == 'IOS':
-        existing=version_tuple(attrs['versionString'])
-        draft=existing==(1,1,9) and attrs['appStoreState']=='PREPARE_FOR_SUBMISSION'
-        assert existing < (1,1,9) or draft, 'Choose a newer marketing version.'
-print('Apple accepts the next proposed identity: 1.1.9 (111).', flush=True)
+    attrs=version['attributes']
+    print('Apple version:',attrs['versionString'],attrs['appStoreState'],flush=True)
+    if attrs.get('platform')=='IOS' and attrs['versionString']=='1.1.9' and attrs['appStoreState']=='PREPARE_FOR_SUBMISSION':
+        drafts.append(version)
+# Apple already has the owner's intended editable version. Older historical
+# version strings are not an instruction to create another marketing version.
+assert len(drafts)==1, 'The intended editable Apple 1.1.9 draft is missing or ambiguous.'
+print('Confirmed existing Apple draft 1.1.9 and unused build 111.',flush=True)
