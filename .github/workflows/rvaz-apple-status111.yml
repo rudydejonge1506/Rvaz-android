@@ -1,0 +1,42 @@
+name: Read Apple build111 status
+on:
+  push:
+    branches: [feature/newsroom-design]
+    paths: ['.github/workflows/rvaz-apple-status111.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read Apple processing state only
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography
+          python3 - <<'PY'
+          import json,os,time,urllib.request,urllib.error
+          import jwt
+          now=int(time.time())
+          token=jwt.encode({'iss':os.environ['API_ISSUER_ID'],'iat':now,'exp':now+600,'aud':'appstoreconnect-v1'},os.environ['API_KEY_P8'],algorithm='ES256',headers={'kid':os.environ['API_KEY_ID'],'typ':'JWT'})
+          def get(path):
+              req=urllib.request.Request('https://api.appstoreconnect.apple.com/v1/'+path,headers={'Authorization':'Bearer '+token})
+              with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
+          builds=get('builds?filter[app]=6817375521&sort=-uploadedDate&limit=20')['data']
+          found=False
+          for b in builds:
+              a=b['attributes']
+              print(json.dumps({k:a.get(k) for k in ['version','uploadedDate','processingState','expired','usesNonExemptEncryption']}),flush=True)
+              if a['version']=='111':
+                  found=True
+                  print('CONFIRMED_BUILD_111',a['processingState'],flush=True)
+          if not found: print('BUILD_111_NOT_YET_LISTED',flush=True)
+          versions=get('apps/6817375521/appStoreVersions?limit=20')['data']
+          for v in versions:
+              a=v['attributes']
+              if a.get('versionString') in ('1.1.8','1.1.9'):
+                  print('APPLE_VERSION',a['versionString'],a['appStoreState'],a.get('platform'),flush=True)
+          PY
