@@ -1,7 +1,10 @@
 name: Central app menu checks
 on:
   push:
-    branches: [feature/central-app-menu]
+    branches: [feature/central-app-menu, feature/newsroom-design]
+concurrency:
+  group: rvaz-checks-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -16,6 +19,16 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
+        env:
+          RVAZ_TYPOGRAPHY_PREVIEW: "1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RVAZ-typography-preview
+          path: evidence/article-typography.png
+          if-no-files-found: ignore
       - run: python3 scripts/verify_icons.py
 
       - run: php -l backend/rvaz-native-events.php
+
+      - run: php -l backend/rvaz-family-native-api.php

@@ -14,7 +14,7 @@ class _WonenPrivatePageState extends State<WonenPrivatePage> {
   Widget build(BuildContext context) => WonenDataPage(title: 'Mijn particuliere woning', path: '/particulier/woningen', content: (context, data, refresh) {
     final rows = wonenItems(data);
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('Zelf je woning of kamer aanbieden', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+      const Text('Zelf je woning of kamer aanbieden', style: TextStyle(fontFamily:'Dosis',fontSize: 22, fontWeight: FontWeight.w600)),
       const Text('Je kunt één woning tegelijk aanbieden. RVAZ beoordeelt je woning voordat deze verschijnt. Aanpassingen aan een gepubliceerde advertentie worden opnieuw beoordeeld.'),
       if (rows.isEmpty) FilledButton.icon(icon: const Icon(Icons.add_home_outlined), label: const Text('Woning toevoegen'), onPressed: () async {
         await Navigator.push(context, MaterialPageRoute(builder: (_) => const WoningEditorPage(privateOffer: true))); refresh();

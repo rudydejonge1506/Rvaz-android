@@ -28,7 +28,7 @@ class _FeaturedHomesState extends State<FeaturedHomes> {
       return Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [const Icon(Icons.home_outlined), const SizedBox(width: 8),
-            const Expanded(child: Text('Uitgelichte woningen', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
+            const Expanded(child: Text('Uitgelichte woningen', style: TextStyle(fontFamily:'Dosis',fontSize: 19, fontWeight: FontWeight.w600))),
             TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WonenPage())), child: const Text('Alle woningen'))]),
           SizedBox(height: 238, child: ListView.separated(scrollDirection: Axis.horizontal,
             itemCount: items.length, separatorBuilder: (_, __) => const SizedBox(width: 8),
