@@ -37,6 +37,5 @@ jobs:
           versions=get('apps/6817375521/appStoreVersions?limit=20')['data']
           for v in versions:
               a=v['attributes']
-              if a.get('versionString') in ('1.1.8','1.1.9'):
-                  print('APPLE_VERSION',a['versionString'],a['appStoreState'],a.get('platform'),flush=True)
+              print('APPLE_VERSION',a['versionString'],a['appStoreState'],a.get('platform'),flush=True)
           PY
