@@ -35,5 +35,8 @@ def version_tuple(value):
 for version in versions:
     attrs = version['attributes']
     print('Apple version:', attrs['versionString'], attrs['appStoreState'], flush=True)
-    assert attrs.get('platform') != 'IOS' or version_tuple(attrs['versionString']) < (1, 1, 9), 'Choose a newer marketing version.'
+    if attrs.get('platform') == 'IOS':
+        existing=version_tuple(attrs['versionString'])
+        draft=existing==(1,1,9) and attrs['appStoreState']=='PREPARE_FOR_SUBMISSION'
+        assert existing < (1,1,9) or draft, 'Choose a newer marketing version.'
 print('Apple accepts the next proposed identity: 1.1.9 (111).', flush=True)

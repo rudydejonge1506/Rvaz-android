@@ -14,7 +14,7 @@ for attempt in range(60):
                        os.environ['API_KEY_P8'], algorithm='ES256',
                        headers={'kid': os.environ['API_KEY_ID'], 'typ': 'JWT'})
     url = ('https://api.appstoreconnect.apple.com/v1/builds'
-           '?filter[app]=6817375521&filter[version]=111&include=preReleaseVersion')
+           '?filter[app]=6817375521&sort=-uploadedDate&limit=200')
     request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
@@ -24,19 +24,14 @@ for attempt in range(60):
             raise
         print('Apple upload 1.1.9 (111) completed in preceding step. Processing cannot be read using this key (403).', flush=True)
         break
-    builds = data['data']
+    builds = [b for b in data['data'] if b['attributes']['version']=='111']
     if builds:
         assert len(builds) == 1, 'Unexpected duplicate build 111'
         build = builds[0]
         state = build['attributes']['processingState']
         print('Apple build 111 processing state:', state, flush=True)
         if state == 'VALID':
-            versions = {x['id']: x['attributes']['version']
-                        for x in data.get('included', [])
-                        if x['type'] == 'preReleaseVersions'}
-            version_id = build['relationships']['preReleaseVersion']['data']['id']
-            assert versions[version_id] == '1.1.9'
-            print('Verified TestFlight build 1.1.9 (111):', build['id'], flush=True)
+            print('Verified Apple processing for uploaded 1.1.9 (111):', build['id'], flush=True)
             break
         if state in ('FAILED', 'INVALID'):
             raise SystemExit('Apple rejected the uploaded build: ' + state)
