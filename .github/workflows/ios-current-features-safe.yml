@@ -1,4 +1,4 @@
-name: RVAZ iOS build99 and TestFlight only
+name: RVAZ iOS word game update and Apple upload
 
 on:
   push:
@@ -93,8 +93,18 @@ jobs:
           </dict></plist>
           PLIST
 
+      - name: Determine unused Apple version and build number
+        id: version
+        env:
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          python3 -m pip install --quiet PyJWT cryptography --break-system-packages
+          python3 scripts/next_ios_version.py
+
       - name: Build current shared app on proven iOS project
-        run: flutter build ios --release --no-codesign --build-name=1.1.4 --build-number=99
+        run: flutter build ios --release --no-codesign --build-name=${{ steps.version.outputs.version }} --build-number=${{ steps.version.outputs.build }}
 
       - name: Archive with proven signing settings
         run: |
@@ -107,7 +117,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RVAZ-iOS-1.1.4-build99-native-wonen
+          name: RVAZ-iOS-${{ steps.version.outputs.version }}-build${{ steps.version.outputs.build }}-woordspel
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
@@ -123,12 +133,12 @@ jobs:
               assert len(names)==1
               info=plistlib.loads(z.read(names[0]))
               assert info['CFBundleIdentifier']=='nl.regiovoorneaanzee.app'
-              assert info['CFBundleVersion']=='99'
-              assert info['CFBundleShortVersionString']=='1.1.4'
+              assert info['CFBundleVersion']=='${{ steps.version.outputs.build }}'
+              assert info['CFBundleShortVersionString']=='${{ steps.version.outputs.version }}'
               assert info.get('CFBundleIcons'), 'Compiled app icons missing'
           PY
 
-      - name: Validate and upload build 99 to TestFlight only
+      - name: Validate and upload new build to App Store Connect
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
@@ -148,6 +158,8 @@ jobs:
 
       - name: Verify Apple finished TestFlight processing
         env:
+          RVAZ_IOS_BUILD: ${{ steps.version.outputs.build }}
+          RVAZ_IOS_VERSION: ${{ steps.version.outputs.version }}
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
           API_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
