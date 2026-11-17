@@ -25,6 +25,8 @@ jobs:
           def get(path):
               req=urllib.request.Request('https://api.appstoreconnect.apple.com/v1/'+path,headers={'Authorization':'Bearer '+token})
               with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
+          app=get('apps/6817375521')['data']
+          print('APPLE_APP',app['id'],app['attributes'].get('name'),app['attributes'].get('bundleId'),flush=True)
           builds=get('builds?filter[app]=6817375521&sort=-uploadedDate&limit=20')['data']
           found=False
           for b in builds:
