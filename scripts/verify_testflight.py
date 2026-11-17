@@ -22,21 +22,20 @@ for attempt in range(60):
     except urllib.error.HTTPError as error:
         if error.code != 403:
             raise
-        print('Apple upload 1.1.9 (111) completed in preceding step. Processing cannot be read using this key (403).', flush=True)
-        break
-    builds = [b for b in data['data'] if b['attributes']['version']=='111']
+        raise SystemExit('Apple processing cannot be verified using this key (403).')
+    builds = [b for b in data['data'] if b['attributes']['version']=='112']
     if builds:
-        assert len(builds) == 1, 'Unexpected duplicate build 111'
+        assert len(builds) == 1, 'Unexpected duplicate build 112'
         build = builds[0]
         state = build['attributes']['processingState']
-        print('Apple build 111 processing state:', state, flush=True)
+        print('Apple build 112 processing state:', state, flush=True)
         if state == 'VALID':
-            print('Verified Apple processing for uploaded 1.1.9 (111):', build['id'], flush=True)
+            print('Verified Apple processing for uploaded 1.2.5 (112):', build['id'], flush=True)
             break
         if state in ('FAILED', 'INVALID'):
             raise SystemExit('Apple rejected the uploaded build: ' + state)
     else:
-        print('Waiting for Apple to list build 111.', flush=True)
+        print('Waiting for Apple to list build 112.', flush=True)
     time.sleep(30)
 else:
     raise SystemExit('TestFlight processing was not verified within 30 minutes.')

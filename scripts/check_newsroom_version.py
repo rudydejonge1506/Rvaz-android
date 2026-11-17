@@ -21,22 +21,23 @@ def get(path):
     except urllib.error.HTTPError as error:
         if error.code != 403:
             raise
-        print('Apple build-history read permission unavailable (403). Proposed upload is 1.1.9 (111), following the confirmed 1.1.8 and repository build 110. Apple validates the identity during upload.', flush=True)
-        raise SystemExit(0)
+        raise SystemExit('Cannot verify Apple build history (403); stop before uploading.')
 
 builds = get('builds?filter[app]=6817375521&sort=-uploadedDate&limit=200')['data']
 highest = max((int(b['attributes']['version']) for b in builds
                if str(b['attributes']['version']).isdigit()), default=0)
 print('Highest recent Apple build:', highest, flush=True)
-assert highest < 111, 'Build 111 is already used; choose a higher number before upload.'
+assert highest < 112, 'Build 112 is already used; stop before uploading.'
 versions = get('apps/6817375521/appStoreVersions?limit=200')['data']
-drafts=[]
+def number(value):
+    parts=tuple(int(part) for part in value.split('.'))
+    return parts+(0,)*(3-len(parts))
 for version in versions:
     attrs=version['attributes']
     print('Apple version:',attrs['versionString'],attrs['appStoreState'],flush=True)
-    if attrs.get('platform')=='IOS' and attrs['versionString']=='1.1.9' and attrs['appStoreState']=='PREPARE_FOR_SUBMISSION':
-        drafts.append(version)
-# Apple already has the owner's intended editable version. Older historical
-# version strings are not an instruction to create another marketing version.
-assert len(drafts)==1, 'The intended editable Apple 1.1.9 draft is missing or ambiguous.'
-print('Confirmed existing Apple draft 1.1.9 and unused build 111.',flush=True)
+    if attrs.get('platform')=='IOS':
+        assert number(attrs['versionString']) < number('1.2.5'), 'Apple version is already at or above 1.2.5.'
+# Apple's binary validator explicitly reported an approved 1.2.4, even though
+# the listing API exposes older version records. The candidate must exceed both.
+assert number('1.2.5') > number('1.2.4')
+print('Confirmed Apple candidate 1.2.5 (112) exceeds listed versions and validation floor 1.2.4.',flush=True)
