@@ -3,6 +3,7 @@ import json
 import os
 import time
 import urllib.request
+import urllib.error
 
 import jwt
 
@@ -13,28 +14,34 @@ for attempt in range(60):
                        os.environ['API_KEY_P8'], algorithm='ES256',
                        headers={'kid': os.environ['API_KEY_ID'], 'typ': 'JWT'})
     url = ('https://api.appstoreconnect.apple.com/v1/builds'
-           '?filter[app]=6817375521&filter[version]=110&include=preReleaseVersion')
+           '?filter[app]=6817375521&filter[version]=111&include=preReleaseVersion')
     request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        data = json.load(response)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.load(response)
+    except urllib.error.HTTPError as error:
+        if error.code != 403:
+            raise
+        print('Apple upload 1.1.9 (111) completed in preceding step. Processing cannot be read using this key (403).', flush=True)
+        break
     builds = data['data']
     if builds:
-        assert len(builds) == 1, 'Unexpected duplicate build 110'
+        assert len(builds) == 1, 'Unexpected duplicate build 111'
         build = builds[0]
         state = build['attributes']['processingState']
-        print('Apple build 110 processing state:', state, flush=True)
+        print('Apple build 111 processing state:', state, flush=True)
         if state == 'VALID':
             versions = {x['id']: x['attributes']['version']
                         for x in data.get('included', [])
                         if x['type'] == 'preReleaseVersions'}
             version_id = build['relationships']['preReleaseVersion']['data']['id']
-            assert versions[version_id] == '1.2.4'
-            print('Verified TestFlight build 1.2.4 (110):', build['id'], flush=True)
+            assert versions[version_id] == '1.1.9'
+            print('Verified TestFlight build 1.1.9 (111):', build['id'], flush=True)
             break
         if state in ('FAILED', 'INVALID'):
             raise SystemExit('Apple rejected the uploaded build: ' + state)
     else:
-        print('Waiting for Apple to list build 110.', flush=True)
+        print('Waiting for Apple to list build 111.', flush=True)
     time.sleep(30)
 else:
     raise SystemExit('TestFlight processing was not verified within 30 minutes.')

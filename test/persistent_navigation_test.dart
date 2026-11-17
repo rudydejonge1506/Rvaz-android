@@ -15,7 +15,8 @@ void main(){
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:SingleChildScrollView(child:AccountMenuSections(onSelected:chosen.add,showBusinessManagement:true)))));
   final keys=accountMenuGroups.values.expand((x)=>x).map((x)=>x.$1).toList();
   expect(keys.toSet().length,keys.length);
-  for(final key in ['family','wonen','my-wonen','my-business','scan','coast','waste','feedback','my-family','vouchers']){expect(keys,contains(key));}
+  expect(keys, isNot(contains('waste')));
+  for(final key in ['family','wonen','my-wonen','my-business','scan','coast','feedback','my-family','vouchers']){expect(keys,contains(key));}
   await tester.enterText(find.byType(TextField),'strand');await tester.pumpAndSettle();expect(find.text('Strandweer & kust'),findsOneWidget);expect(find.text('Mijn bedrijf'),findsNothing);
   await tester.enterText(find.byType(TextField),'bedrijf');await tester.pumpAndSettle();await tester.tap(find.text('Mijn bedrijf'));expect(chosen,['my-business']);
  });

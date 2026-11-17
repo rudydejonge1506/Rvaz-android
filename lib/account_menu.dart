@@ -7,7 +7,7 @@ const accountMenuGroups=<String,List<AccountMenuEntry>>{
   ('family','Familieberichten',Icons.favorite_border),('emergency','112 & P2000',Icons.emergency_outlined),
  ],
  'Mijn Voorne & dagelijks leven':[
-  ('myvoorne','Mijn Voorne',Icons.today_outlined),('waste','Afvalkalender',Icons.recycling),
+  ('myvoorne','Mijn Voorne',Icons.today_outlined),
   ('address','Mijn adres',Icons.home_outlined),('traffic','Verkeer',Icons.traffic_outlined),('parking','Parkeren',Icons.local_parking),
  ],
  'Agenda & vrije tijd':[
@@ -56,7 +56,7 @@ class _AccountMenuSectionsState extends State<AccountMenuSections>{
    if(entries.isNotEmpty)groups[group.key]=entries;
   }
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   TextField(onChanged:(value)=>setState(()=>query=value.trim().toLowerCase()),decoration:const InputDecoration(labelText:'Zoek een onderdeel',hintText:'Bijvoorbeeld afval, strand of vouchers',prefixIcon:Icon(Icons.search))),
+   TextField(onChanged:(value)=>setState(()=>query=value.trim().toLowerCase()),decoration:const InputDecoration(labelText:'Zoek een onderdeel',hintText:'Bijvoorbeeld nieuws, strand of vouchers',prefixIcon:Icon(Icons.search))),
    const SizedBox(height:20),
    if(groups.isEmpty)const Padding(padding:EdgeInsets.all(16),child:Text('Geen onderdeel gevonden. Probeer een andere zoekterm.')),
    for(final group in groups.entries)Padding(padding:const EdgeInsets.only(bottom:12),child:Material(color:newsroomPale,child:ExpansionTile(
